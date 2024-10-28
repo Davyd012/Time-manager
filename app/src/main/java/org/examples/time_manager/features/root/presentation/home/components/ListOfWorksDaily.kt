@@ -1,6 +1,8 @@
 package org.examples.time_manager.features.root.presentation.home.components
 
 import android.annotation.SuppressLint
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -8,6 +10,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -21,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.airbnb.lottie.compose.LottieAnimation
 import com.airbnb.lottie.compose.LottieCompositionSpec
@@ -30,6 +34,7 @@ import com.airbnb.lottie.compose.rememberLottieComposition
 import org.examples.time_manager.core.database.project.Project
 import org.examples.time_manager.core.database.work.Work
 
+@RequiresApi(Build.VERSION_CODES.O)
 @SuppressLint("DefaultLocale")
 @Composable
 fun ListOfWorks(
@@ -66,37 +71,91 @@ fun ListOfWorks(
         return
     }
 
-    works.forEach {
-        var text = "0"
-        if (it.time > 0) text += it.time / 60
-        if (it.time % 60 > 0) text += "." + it.time % 60
 
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier
-                .padding(horizontal = 10.dp, vertical = 5.dp)
-                .clip(RoundedCornerShape(5.dp))
-                .background(Color.Gray)
-                .height(60.dp)
-        ) {
-            Box(
-                modifier = Modifier
-                    .width(10.dp)
-                    .fillMaxHeight()
-                    .background(Color.Yellow)
-                    .clip(RoundedCornerShape(5.dp))
-            )
-            Spacer(modifier = Modifier.width(10.dp))
-            Text(
-                projects.elementAt(it.project).name,
-                style = style.titleMedium.copy(color = colors.onPrimaryContainer)
-            )
-            Spacer(modifier = Modifier.weight(1f))
-            Text(
-                text,
-                style = style.bodyLarge.copy(color = colors.onPrimaryContainer)
-            )
-            Spacer(modifier = Modifier.width(10.dp))
+    val sortedMap = works
+        .groupBy { it.date.hour }
+        .toSortedMap()
+
+    Column(
+        modifier = Modifier
+            .padding(top = 6.dp)
+            .clip(RoundedCornerShape(topEnd = 30.dp, topStart = 30.dp))
+            .fillMaxHeight()
+            .background(colors.tertiaryContainer)
+            .padding(10.dp)
+    ) {
+        sortedMap.onEachIndexed { index, it ->
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Spacer(modifier = Modifier.width(5.dp))
+                Text(
+                    String.format("%02d", it.key),
+                    style = style.titleLarge.copy(
+                        color = colors.onPrimaryContainer,
+                        fontWeight = FontWeight.Bold
+                    )
+                )
+                Spacer(modifier = Modifier.width(5.dp))
+                Box(
+                    modifier = Modifier
+                        .width(25.dp)
+                        .height(2.dp)
+                        .background(colors.onPrimaryContainer)
+                )
+                Spacer(modifier = Modifier.width(5.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    it.value.forEach {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .padding(vertical = 5.dp)
+                                .clip(RoundedCornerShape(5.dp))
+                                .background(colors.onSecondaryContainer)
+                                .height(60.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .width(10.dp)
+                                    .fillMaxHeight()
+                                    .background(colors.secondaryContainer)
+                                    .clip(RoundedCornerShape(5.dp))
+                            )
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Text(
+                                projects.firstOrNull { p -> p.id == it.project }?.name
+                                    ?: "No project",
+                                style = style.titleMedium.copy(color = colors.secondaryContainer)
+                            )
+                            Spacer(modifier = Modifier.weight(1f))
+                            Text(
+                                formatTime(it.time),
+                                style = style.bodyLarge.copy(color = colors.secondaryContainer)
+                            )
+                            Spacer(modifier = Modifier.width(10.dp))
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.width(5.dp))
+            }
+            if (index < sortedMap.size - 1) {
+                Box(
+                    modifier = Modifier
+                        .padding(5.dp)
+                        .fillMaxWidth()
+//                        .height(1.5.dp)
+//                        .background(colors.onTertiaryContainer),
+                )
+            }
         }
+    }
+}
+
+@SuppressLint("DefaultLocale")
+fun formatTime(seconds: Int): String {
+    return when {
+        seconds >= 3600 -> String.format("%.1fh", seconds / 3600.0) // hours
+        seconds >= 60 -> String.format("%.1fm", seconds / 60.0)     // minutes
+        else -> "$seconds s"                                         // seconds
     }
 }

@@ -11,9 +11,8 @@ class App: Application() {
 
         val diContainer = DIContainer()
 
-        fun getAppContext(): Context {
-            return instance.applicationContext
-        }
+        val context: Context
+            get() = instance.applicationContext
     }
 
     override fun onCreate() {

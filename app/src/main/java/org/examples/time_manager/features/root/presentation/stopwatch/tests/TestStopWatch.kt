@@ -12,5 +12,5 @@ import org.examples.time_manager.features.root.presentation.stopwatch.Stopwatch
 @Preview
 @Composable
 fun TestStopWatch() {
-    Stopwatch(vm = HomeViewModel(), modifier = Modifier)
+//    Stopwatch(vm = HomeViewModel(stopwatchService), modifier = Modifier)
 }

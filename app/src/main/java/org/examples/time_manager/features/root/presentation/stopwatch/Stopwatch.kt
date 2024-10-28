@@ -1,8 +1,6 @@
 package org.examples.time_manager.features.root.presentation.stopwatch
 
-import android.annotation.SuppressLint
 import android.os.Build
-import android.util.Log
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -19,21 +17,15 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -54,29 +46,43 @@ fun Stopwatch(vm: HomeViewModel, modifier: Modifier) {
     val time = vm.timeCount.collectAsState().value
     val projects by state.projects.collectAsState(initial = emptyList())
 
+//    val systemUiController = rememberSystemUiController()
+//    systemUiController.setStatusBarColor(color = colors.surface)
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = modifier.fillMaxSize().background(colors.surface)
+        modifier = modifier
+            .fillMaxSize()
+            .background(colors.surface)
     ) {
-        Spacer(modifier = Modifier.height(70.dp))
-        Text(
-            normalizeTime(time),
-            fontSize = 60.sp,
-            fontWeight = FontWeight.Bold,
-            color = colors.onSurface
-        )
+        Box(
+            modifier = Modifier
+                .height(230.dp)
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(bottomEnd = 30.dp, bottomStart = 30.dp))
+                .background(colors.primary),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(
+                normalizeTime(time),
+                fontSize = 60.sp,
+                fontWeight = FontWeight.Bold,
+                color = colors.onSurface
+            )
+        }
         Spacer(modifier = Modifier.weight(1f))
-        projects.forEachIndexed { i, it ->
+        projects.forEach {
             Text(
                 text = it.name,
-                style = styles.titleMedium.copy(color = colors.onSecondaryContainer),
+                style = styles.titleMedium.copy(color = if (it.id == state.selectedProject) colors.onPrimaryContainer else colors.onSecondaryContainer),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 5.dp, horizontal = 15.dp)
                     .clip(
                         RoundedCornerShape(5.dp)
-                    ).clickable { vm.onEvent(SelectProjectEvent(value = i)) }
-                    .background(if (i == state.selectedProject) colors.primaryContainer else colors.secondaryContainer)
+                    )
+                    .clickable { vm.onEvent(SelectProjectEvent(value = it.id)) }
+                    .background(if (it.id == state.selectedProject) colors.primaryContainer else colors.secondaryContainer)
                     .padding(15.dp),
             )
         }
@@ -107,12 +113,12 @@ fun Stopwatch(vm: HomeViewModel, modifier: Modifier) {
             Text(
                 text = "Ferdig",
                 style = styles.titleMedium.copy(
-                    colors.onPrimaryContainer,
+                    colors.onSecondary,
                     fontWeight = FontWeight.W700,
                 ),
                 modifier = Modifier
                     .clip(RoundedCornerShape(15.dp))
-                    .background(colors.primaryContainer)
+                    .background(colors.secondary)
                     .clickable {
                         vm.onEvent(UpdateTimerEvent(TimerStates.SaveResult))
                     }

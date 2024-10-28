@@ -14,7 +14,7 @@ android {
 
     defaultConfig {
         applicationId = "org.examples.time_manager"
-        minSdk = 21
+        minSdk = 26
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
@@ -32,6 +32,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
     compileOptions {
@@ -54,6 +55,7 @@ android {
 room {
     schemaDirectory("$projectDir/schemas")
 }
+
 dependencies {
     implementation(libs.core.ktx)
     implementation(libs.lifecycle.runtime.ktx)
@@ -79,8 +81,9 @@ dependencies {
     implementation(libs.lottie.compose)
     implementation(libs.kotlinx.serialization.json)
 
-//    implementation(libs.poi)
-//    implementation(libs.poi.ooxml)
+
+    implementation(libs.poi)
+    implementation(libs.poi.ooxml)
 
     ksp(libs.room.compiler)
 }

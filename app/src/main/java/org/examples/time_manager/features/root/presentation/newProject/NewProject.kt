@@ -1,9 +1,16 @@
 package org.examples.time_manager.features.root.presentation.newProject
 
+import android.net.Uri
 import android.os.Build
+import android.content.Intent
+import android.util.Log
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.contract.ActivityResultContracts.CreateDocument
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -23,10 +30,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import org.examples.time_manager.features.root.HomeViewModel
+import org.examples.time_manager.features.root.data.RootScreenEvents.CreateExcelDocumentEvent
 import org.examples.time_manager.features.root.data.RootScreenEvents.NewProjectEvent
 import org.examples.time_manager.ui.theme.BorderColor
 
@@ -47,7 +56,7 @@ fun NewProject(vm: HomeViewModel, modifier: Modifier) {
             name, "Bedriften Min AS", { name = it }, 1,
             modifier = Modifier
                 .fillMaxWidth(),
-            background = colors.inverseSurface,
+            background = colors.surface,
             false,
         )
         Spacer(modifier = Modifier.height(10.dp))
@@ -57,7 +66,7 @@ fun NewProject(vm: HomeViewModel, modifier: Modifier) {
             description, "Veldig seriøst selskapet", { description = it }, 15,
             modifier = Modifier
                 .fillMaxWidth(),
-            background = colors.inverseSurface,
+            background = colors.surface,
             false,
         )
 
@@ -110,10 +119,10 @@ fun InfoTextField(
             .padding(15.dp)
             .height((maxLines * 17).dp),
         maxLines = maxLines,
-        textStyle = typography.bodyLarge.copy(color = colors.surface)
+        textStyle = typography.bodyLarge.copy(color = colors.onSurface)
     ) {
         if (value.isEmpty()) {
-            Text(hint, style = typography.labelMedium.copy(color = colors.surface))
+            Text(hint, style = typography.labelMedium.copy(color = colors.onSurface))
         }
         it()
     }

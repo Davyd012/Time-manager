@@ -1,6 +1,8 @@
 package org.examples.time_manager.features.root.presentation.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.automirrored.outlined.List
@@ -50,11 +52,11 @@ fun BottomBar(
         BottomBarItem(NavHomeRoutes.Timer, timerIcon(), timerIcon(), "Stoppeklokke"),
         BottomBarItem(
             NavHomeRoutes.Settings,
-            Icons.Default.Add, Icons.Outlined.Add, "Ny prosject"
+            Icons.Default.Add, Icons.Outlined.Add, "Ny prosjekt"
         )
     )
 
-    NavigationBar(modifier = Modifier.height(75.dp)) {
+    NavigationBar(modifier = Modifier.height(75.dp), containerColor = colors.primary) {
         bottomBarItems.forEach { destination ->
             val isSelected = isCurrent(destination.direction)
             NavigationBarItem(
@@ -70,10 +72,11 @@ fun BottomBar(
                 icon = {
                     Icon(
                         if (isSelected) destination.activeIcon else destination.icon,
-                        contentDescription = destination.label
+                        contentDescription = destination.label,
+                        tint = if (isSelected) colors.onPrimaryContainer else colors.onPrimary
                     )
                 },
-                label = { Text(destination.label) },
+                label = { Text(destination.label, color = if (isSelected) colors.onSecondaryContainer else colors.onPrimary) },
                 colors = NavigationBarItemDefaults.colors(indicatorColor = colors.primaryContainer)
             )
         }

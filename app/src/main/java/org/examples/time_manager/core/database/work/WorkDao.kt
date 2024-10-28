@@ -2,13 +2,14 @@ package org.examples.time_manager.core.database.work
 
 import androidx.room.Dao
 import androidx.room.Delete
+import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Upsert
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface WorkDao {
-    @Upsert
+    @Insert
     suspend fun upsert(person: Work)
 
     @Delete

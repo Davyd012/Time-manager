@@ -1,5 +1,6 @@
 package org.examples.time_manager.features.root
 
+import android.app.Activity
 import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
@@ -13,6 +14,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
 import androidx.navigation.NavHostController
 import kotlinx.coroutines.flow.drop
 import org.examples.time_manager.features.root.presentation.components.BottomBar
@@ -33,7 +38,7 @@ fun HomeScreen(
         vm.snackbarMessage.drop(1).collect { snackbarMessage ->
             snackbarMessage.let {
                 snackbarHostState.showSnackbar(
-                    message = "Skap et project først",
+                    message = "Skap et projekt først",
                     actionLabel = "Click me",
                     duration = SnackbarDuration.Short
                 )

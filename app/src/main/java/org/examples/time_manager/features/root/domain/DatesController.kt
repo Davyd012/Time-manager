@@ -1,7 +1,5 @@
 package org.examples.time_manager.features.root.domain
 
-import android.os.Build
-import androidx.annotation.RequiresApi
 import org.examples.time_manager.core.database.work.WorkDao
 import org.examples.time_manager.features.root.DayModel
 import java.time.LocalDate
@@ -28,7 +26,6 @@ class DatesController(private val worksDao: WorkDao) {
     val weekDays =
         listOf("Mandag", "Tirsdag", "Onsdag", "Torsdag", "Fredag", "Lørdag", "Søndag")
 
-    @RequiresApi(Build.VERSION_CODES.O)
     fun getDatesForCurrentMonth(): List<DayModel> {
         val today = LocalDate.now()
         val firstDayOfMonth = today.with(TemporalAdjusters.firstDayOfMonth())
@@ -40,7 +37,7 @@ class DatesController(private val worksDao: WorkDao) {
         while (!current.isAfter(lastDayOfMonth)) {
             val (startOfDay, endOfDay) = getBoundariesOfDay(current)
             dates.add(
-                getDateModel(current, hours = worksDao.getHoursByDay(startOfDay, endOfDay))
+                getDateModel(current, hours = worksDao.getHoursByDay(startOfDay / 1000, endOfDay / 1000))
             )
             current = current.plusDays(1)
         }
@@ -49,14 +46,12 @@ class DatesController(private val worksDao: WorkDao) {
     }
 
 
-    @RequiresApi(Build.VERSION_CODES.O)
     private fun getDateModel(date: LocalDate, hours: Int = 0) = DayModel(
-        weekDays.elementAt(date.dayOfWeek.value - 1),
-        date.dayOfMonth,
-        hours
+        day = weekDays.elementAt(date.dayOfWeek.value - 1),
+        date = date,
+        time = hours
     )
 
-    @RequiresApi(Build.VERSION_CODES.O)
     fun getBoundariesOfDay(current: LocalDate): Pair<Long, Long> {
         val startOfDay =
             current.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
@@ -72,14 +67,13 @@ class DatesController(private val worksDao: WorkDao) {
     ): List<DayModel> {
         return dayModels.mapIndexed { x, dayModel ->
             if (x == dayToUpdate) {
-                dayModel.copy(hours = dayModel.hours + newHours)
+                dayModel.copy(time = dayModel.time + newHours)
             } else {
                 dayModel
             }
         }
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
     fun getDate(localDate: ZonedDateTime?): Date {
 //        val zonedDateTime = localDate.atStartOfDay(ZoneId.systemDefault())
         // Convert ZonedDateTime to Instant, then to Date

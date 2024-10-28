@@ -3,6 +3,7 @@ package org.examples.time_manager.features.root
 import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresApi
+import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
@@ -11,9 +12,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.examples.time_manager.App
@@ -22,18 +22,23 @@ import org.examples.time_manager.core.database.work.WorkDao
 import org.examples.time_manager.core.database.getDatabase
 import org.examples.time_manager.core.database.project.Project
 import org.examples.time_manager.core.database.project.ProjectDao
+import org.examples.time_manager.core.service.ServiceHelper
+import org.examples.time_manager.core.service.StopwatchService
+import org.examples.time_manager.core.service.util.Constants.ACTION_SERVICE_CANCEL
+import org.examples.time_manager.core.service.util.Constants.ACTION_SERVICE_START
+import org.examples.time_manager.core.service.util.Constants.ACTION_SERVICE_STOP
 import org.examples.time_manager.features.root.data.RootScreenEvents
 import org.examples.time_manager.features.root.data.TimerStates
 import org.examples.time_manager.features.root.domain.DatesController
+import org.examples.time_manager.features.root.domain.ExcelController
 import java.time.LocalDate
 import java.time.LocalDateTime
-import java.time.ZoneId
-import java.time.temporal.TemporalUnit
-import java.util.Date
 
 
 @RequiresApi(Build.VERSION_CODES.O)
-class HomeViewModel : ViewModel() {
+class HomeViewModel(
+    private val stopwatchService: StopwatchService?,
+) : ViewModel() {
     private val _state = MutableStateFlow(HomeState())
     val state = _state.asStateFlow()
 
@@ -43,40 +48,24 @@ class HomeViewModel : ViewModel() {
     private val _snackbarMessage = MutableStateFlow(false)
     val snackbarMessage: StateFlow<Boolean> = _snackbarMessage.asStateFlow()
 
-    private val worksDao: WorkDao = getDatabase(null).workDao()
-    private val projectDao: ProjectDao = getDatabase(null).projectDao()
-//    private val worksDao: WorkDao = getDatabase(App.getAppContext()).workDao()
-//    private val projectDao: ProjectDao = getDatabase(App.getAppContext()).projectDao()
+    //    private val worksDao: WorkDao = getDatabase(null).workDao()
+//    private val projectDao: ProjectDao = getDatabase(null).projectDao()
+    private val worksDao: WorkDao = getDatabase(App.context).workDao()
+    private val projectDao: ProjectDao = getDatabase(App.context).projectDao()
+
+    private val excelController = ExcelController()
 
     private val datesController = DatesController(worksDao = worksDao)
 
     init {
         viewModelScope.launch(Dispatchers.IO) {
             Log.d("RootViewModel", "init")
+
+            _timeCount.value = stopwatchService?.seconds?.intValue?.toDouble() ?: 0.0
+
             val today = LocalDate.now()
             val days = datesController.getDatesForCurrentMonth()
-//            val works = getWorksForCertainDate(today)
-            val works = emptyFlow<List<Work>>()
-//            val works = flowOf(
-//                listOf(
-//                    Work(
-//                        description = "",
-//                        date = Date(),
-//                        project = 3,
-//                        task = 0,
-//                        time = 156,
-//                        id = 0
-//                    ),
-//                    Work(
-//                        description = "",
-//                        date = datesController.getDate(localDate.atZone(ZoneId.systemDefault())),
-//                        project = 3,
-//                        task = 0,
-//                        time = 156,
-//                        id = 0
-//                    ),
-//                )
-//            )
+            val works = getWorksForCertainDate(today)
 
             _state.update {
                 it.copy(
@@ -88,30 +77,36 @@ class HomeViewModel : ViewModel() {
                         day = today.dayOfMonth,
                         month = today.month.name,
                         year = today.year
-                    )
+                    ),
+                    counting = stopwatchService?.running ?: false
                 )
             }
 
             val projects = projectDao.getAllProjects()
 //            val projects = projectDao.getAllProjects().stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
             _state.update { it.copy(projects = projects) }
+
+            runStopwatch()
         }
     }
 
     private fun getWorksForCertainDate(date: LocalDate): Flow<List<Work>> {
         val (startOfDay, endOfDay) = datesController.getBoundariesOfDay(date)
-        val works = worksDao.getAllWorks(startOfDay, endOfDay)
+        val works = worksDao.getAllWorks(startOfDay / 1000, endOfDay / 1000)
         return works
     }
 
+    @OptIn(ExperimentalAnimationApi::class)
     fun onEvent(event: RootScreenEvents) {
         when (event) {
             is RootScreenEvents.NewProjectEvent -> viewModelScope.launch(Dispatchers.IO) {
+                Log.d("HomeViewModel", "New project")
                 val newProject = Project(name = event.name, description = event.description)
                 projectDao.upsert(newProject)
             }
 
             is RootScreenEvents.SelectDayEvent -> viewModelScope.launch(Dispatchers.IO) {
+                Log.d("HomeViewModel", "Selecting another day")
                 val works = getWorksForCertainDate(LocalDate.now().withDayOfMonth(event.value))
                 _state.update {
                     it.copy(selectedDay = event.value, workQueries = works)
@@ -121,25 +116,34 @@ class HomeViewModel : ViewModel() {
             is RootScreenEvents.UpdateTimerEvent -> when (event.type) {
                 TimerStates.StartStopwatch -> viewModelScope.launch(Dispatchers.IO) {
                     Log.d("HomeViewModel", "Starting a stopwatch")
-                    val count = state.value.projects.first()
+                    val count = state.value.projects.firstOrNull()?.isEmpty() ?: false
 
-                    if (count.isEmpty()) {
+                    if (count) {
+                        Log.d("HomeViewModel", "Starting a service11111")
                         _snackbarMessage.value = !snackbarMessage.value
                         return@launch
                     }
 
+                    Log.d("HomeViewModel", "Starting a service")
+                    ServiceHelper.triggerForegroundService(
+                        context = App.context, action = ACTION_SERVICE_START
+                    )
+
                     _state.update {
                         it.copy(counting = true)
                     }
-                    while (state.value.counting) {
-                        delay(100L)
-                        _timeCount.update { it + 0.1 }
-                    }
+                    runStopwatch()
                 }
 
-                TimerStates.PauseStopwatch -> _state.update {
-                    it.copy(
-                        counting = false,
+                TimerStates.PauseStopwatch -> viewModelScope.launch(Dispatchers.IO) {
+                    _state.update {
+                        it.copy(
+                            counting = false,
+                        )
+                    }
+
+                    ServiceHelper.triggerForegroundService(
+                        context = App.context, action = ACTION_SERVICE_STOP
                     )
                 }
 
@@ -151,6 +155,9 @@ class HomeViewModel : ViewModel() {
                         return@launch
                     }
                     if (timeCount.value == 0.0) return@launch
+                    ServiceHelper.triggerForegroundService(
+                        context = App.context, action = ACTION_SERVICE_CANCEL
+                    )
 
                     val time = timeCount.value.toInt()
                     _timeCount.update { 0.0 }
@@ -160,12 +167,14 @@ class HomeViewModel : ViewModel() {
                         time
                     )
                     _state.update {
-                        it.copy(dayPerMonth = newMonthDays)
+                        it.copy(dayPerMonth = newMonthDays, counting = false)
                     }
+                    val date = LocalDateTime.now().minusSeconds(time.toLong())
+
                     worksDao.upsert(
                         Work(
                             description = "",
-                            date = LocalDateTime.now(),
+                            date = date,
                             project = state.value.selectedProject,
                             task = 0,
                             time = time,
@@ -186,9 +195,9 @@ class HomeViewModel : ViewModel() {
                     return@launch
                 }
 
-                val dayOfMonth = event.date?.dayOfMonth ?: state.value.selectedDay
+                val dayOfMonth = event.date.dayOfMonth
 //                val date = datesController.getDate(event.date)
-                if (event.date == null || (event.date.month == LocalDate.now().month && event.date.year == LocalDate.now().year)) {
+                if (event.date.month == LocalDate.now().month && event.date.year == LocalDate.now().year) {
                     val newMonthDays = datesController.updateHoursForDay(
                         state.value.dayPerMonth,
                         dayOfMonth - 1,
@@ -212,6 +221,22 @@ class HomeViewModel : ViewModel() {
             is RootScreenEvents.SelectProjectEvent -> viewModelScope.launch(Dispatchers.IO) {
                 _state.update { it.copy(selectedProject = event.value) }
             }
+
+            is RootScreenEvents.CreateExcelDocumentEvent -> viewModelScope.launch(Dispatchers.IO) {
+                Log.d("RootViewModel", "Launching a creating document activity")
+                excelController.createExcelFile(
+                    context = event.context,
+                    uri = event.uri,
+                    dayPerMonth = state.value.dayPerMonth
+                )
+            }
+        }
+    }
+
+    private suspend fun runStopwatch() {
+        while (state.value.counting) {
+            delay(100L)
+            _timeCount.update { it + 0.1 }
         }
     }
 }

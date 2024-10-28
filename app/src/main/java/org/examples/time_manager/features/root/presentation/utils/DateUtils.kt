@@ -2,15 +2,16 @@ package org.examples.time_manager.features.root.presentation.utils
 
 import android.os.Build
 import androidx.annotation.RequiresApi
-import java.time.Instant
 import java.time.LocalDateTime
-import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
 class DateUtils {
+    @RequiresApi(Build.VERSION_CODES.O)
+    val formatter = DateTimeFormatter.ofPattern("dd-MM-yyyy")
+
     @RequiresApi(Build.VERSION_CODES.O)
     fun convertMillisToLocalDate(millis: Long): LocalDateTime {
         return LocalDateTime.ofEpochSecond(millis, 0, ZoneOffset.UTC)
@@ -35,5 +36,10 @@ class DateUtils {
             return date.format(dateFormatter)
         }
         return "EEEE, dd MMMM, yyyy"
+    }
+
+    @RequiresApi(Build.VERSION_CODES.O)
+    fun formatLocalDateTime(localDateTime: LocalDateTime): String {
+        return localDateTime.format(formatter)
     }
 }
