@@ -12,14 +12,11 @@ import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.annotation.RequiresApi
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.core.app.ActivityCompat
 import androidx.navigation.compose.rememberNavController
 import org.examples.time_manager.core.service.StopwatchService
-import org.examples.time_manager.di.DIContainer
 import org.examples.time_manager.navigation.AppNavHost
 import org.examples.time_manager.ui.theme.TimeMangerTheme
 
@@ -83,17 +80,5 @@ class MainActivity : ComponentActivity() {
         super.onStop()
         unbindService(connection)
         isBound = false
-    }
-
-
-    @RequiresApi(Build.VERSION_CODES.S)
-    private fun requestStoragePermissions() {
-        val permissions = arrayOf(
-            Manifest.permission.MANAGE_MEDIA,
-            Manifest.permission.MANAGE_DOCUMENTS,
-            Manifest.permission.READ_EXTERNAL_STORAGE,
-            Manifest.permission.WRITE_EXTERNAL_STORAGE
-        )
-        ActivityCompat.requestPermissions(this, permissions, 1)
     }
 }

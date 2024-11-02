@@ -39,8 +39,6 @@ import java.time.LocalDate
 
 @Composable
 fun MonthSelectorDialog(
-    selectedMonth: String,
-    onMonthSelected: (String) -> Unit,
     onDismiss: () -> Unit,
     vm: HomeViewModel
 ) {
@@ -48,8 +46,8 @@ fun MonthSelectorDialog(
 
     val months = remember {
         listOf(
-            "January", "February", "March", "April", "May", "June",
-            "July", "August", "September", "October", "November", "December"
+            "Januar", "Februar", "Mars", "April", "Mai", "Juni",
+            "Juli", "August", "September", "Oktober", "November", "Desember"
         )
     }
 

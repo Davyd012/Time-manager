@@ -1,11 +1,8 @@
 package org.examples.time_manager.core.database
 
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.room.TypeConverter
 import java.time.LocalDateTime
 import java.time.ZoneOffset
-import java.util.Date
 
 class Converters {
     @TypeConverter

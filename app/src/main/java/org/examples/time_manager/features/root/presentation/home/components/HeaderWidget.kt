@@ -1,9 +1,5 @@
 package org.examples.time_manager.features.root.presentation.home.components
 
-import android.content.Intent
-import android.util.Log
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -28,11 +24,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import org.examples.time_manager.features.root.HomeViewModel
 import org.examples.time_manager.features.root.data.HomeState
-import org.examples.time_manager.features.root.data.RootScreenEvents.CreateExcelDocumentEvent
 import org.examples.time_manager.features.root.data.RootScreenEvents.ModifyWorkStateEvent
 import org.examples.time_manager.features.root.presentation.home.MonthSelectorDialog
 import org.examples.time_manager.ui.theme.exportIcon
@@ -50,8 +44,6 @@ fun HeaderWidget(
 
     if (showMonthPicker) {
         MonthSelectorDialog(
-            selectedMonth = "March",
-            onMonthSelected = { a: String -> Log.d("MainPageViewModel", a) },
             onDismiss = { showMonthPicker = false },
             vm = vm,
         )

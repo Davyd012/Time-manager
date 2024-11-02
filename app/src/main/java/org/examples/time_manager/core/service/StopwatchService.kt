@@ -6,9 +6,7 @@ import android.app.NotificationManager
 import android.app.Service
 import android.content.Intent
 import android.os.Binder
-import android.os.Build
 import android.os.IBinder
-import androidx.annotation.RequiresApi
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -40,8 +38,7 @@ class StopwatchService : Service() {
     private lateinit var timer: Timer
 
     var seconds = mutableIntStateOf(0)
-    var currentState = mutableStateOf(StopwatchState.Idle)
-        private set
+    private var currentState = mutableStateOf(StopwatchState.Idle)
 
     var running = false
 

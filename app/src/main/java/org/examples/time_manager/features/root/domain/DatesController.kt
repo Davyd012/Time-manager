@@ -3,33 +3,12 @@ package org.examples.time_manager.features.root.domain
 import org.examples.time_manager.core.database.work.WorkDao
 import org.examples.time_manager.features.root.data.DayModel
 import java.time.LocalDate
-import java.time.ZoneId
 import java.time.ZoneOffset
-import java.time.ZonedDateTime
 import java.time.temporal.TemporalAdjusters
-import java.util.Date
 
 class DatesController(private val worksDao: WorkDao) {
-    private val months = listOf(
-        "January",
-        "February",
-        "March",
-        "April",
-        "May",
-        "June",
-        "July",
-        "August",
-        "September",
-        "October",
-        "November",
-        "December"
-    )
     val weekDays =
         listOf("Mandag", "Tirsdag", "Onsdag", "Torsdag", "Fredag", "Lørdag", "Søndag")
-
-    fun getIndexOfAMonth(month: String): Int {
-        return month.indexOf(month)
-    }
 
     fun getDatesForCurrentMonth(): List<DayModel> {
         val today = LocalDate.now()
@@ -86,12 +65,4 @@ class DatesController(private val worksDao: WorkDao) {
         }
     }
 
-    fun getDate(localDate: ZonedDateTime?): Date {
-//        val zonedDateTime = localDate.atStartOfDay(ZoneId.systemDefault())
-        // Convert ZonedDateTime to Instant, then to Date
-        if (localDate != null) {
-            return Date.from(localDate.toInstant())
-        }
-        return Date()
-    }
 }

@@ -1,8 +1,6 @@
 package org.examples.time_manager.navigation
 
-import android.os.Build
 import android.util.Log
-import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
@@ -12,7 +10,6 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-import org.examples.time_manager.core.service.StopwatchService
 import org.examples.time_manager.di.DIContainer
 import org.examples.time_manager.features.root.HomeScreen
 import org.examples.time_manager.features.root.HomeViewModel

@@ -1,7 +1,5 @@
 package org.examples.time_manager.features.root.presentation.stopwatch
 
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -36,7 +34,6 @@ import org.examples.time_manager.features.root.data.TimerStates
 import org.examples.time_manager.features.root.presentation.utils.normalizeTime
 import org.examples.time_manager.ui.theme.pauseTimerIcon
 
-@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun Stopwatch(vm: HomeViewModel, modifier: Modifier) {
     val colors = MaterialTheme.colorScheme
@@ -45,9 +42,6 @@ fun Stopwatch(vm: HomeViewModel, modifier: Modifier) {
     val state = vm.state.collectAsState().value
     val time = vm.timeCount.collectAsState().value
     val projects by state.projects.collectAsState(initial = emptyList())
-
-//    val systemUiController = rememberSystemUiController()
-//    systemUiController.setStatusBarColor(color = colors.surface)
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
