@@ -1,9 +1,8 @@
 package org.examples.time_manager.features.root.presentation.home.components
 
 import android.annotation.SuppressLint
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -23,7 +22,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.airbnb.lottie.compose.LottieAnimation
@@ -34,10 +32,10 @@ import com.airbnb.lottie.compose.rememberLottieComposition
 import org.examples.time_manager.core.database.project.Project
 import org.examples.time_manager.core.database.work.Work
 
-@RequiresApi(Build.VERSION_CODES.O)
 @SuppressLint("DefaultLocale")
 @Composable
 fun ListOfWorks(
+    showWork: (Int) -> Unit,
     works: List<Work>,
     projects: List<Project>,
 ) {
@@ -84,13 +82,13 @@ fun ListOfWorks(
             .background(colors.tertiaryContainer)
             .padding(10.dp)
     ) {
-        sortedMap.onEachIndexed { index, it ->
+        sortedMap.onEachIndexed { index, time ->
             Row(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Spacer(modifier = Modifier.width(5.dp))
                 Text(
-                    String.format("%02d", it.key),
+                    String.format("%02d", time.key),
                     style = style.titleLarge.copy(
                         color = colors.onPrimaryContainer,
                         fontWeight = FontWeight.Bold
@@ -105,12 +103,15 @@ fun ListOfWorks(
                 )
                 Spacer(modifier = Modifier.width(5.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    it.value.forEach {
+                    time.value.forEach { work ->
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
                                 .padding(vertical = 5.dp)
                                 .clip(RoundedCornerShape(5.dp))
+                                .clickable {
+                                    showWork(works.indexOf(work))
+                                }
                                 .background(colors.onSecondaryContainer)
                                 .height(60.dp)
                         ) {
@@ -123,13 +124,13 @@ fun ListOfWorks(
                             )
                             Spacer(modifier = Modifier.width(10.dp))
                             Text(
-                                projects.firstOrNull { p -> p.id == it.project }?.name
+                                projects.firstOrNull { p -> p.id == work.project }?.name
                                     ?: "No project",
                                 style = style.titleMedium.copy(color = colors.secondaryContainer)
                             )
                             Spacer(modifier = Modifier.weight(1f))
                             Text(
-                                formatTime(it.time),
+                                formatTime(work.time),
                                 style = style.bodyLarge.copy(color = colors.secondaryContainer)
                             )
                             Spacer(modifier = Modifier.width(10.dp))

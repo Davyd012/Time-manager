@@ -3,7 +3,6 @@ package org.examples.time_manager.core.service
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import androidx.compose.animation.ExperimentalAnimationApi
 import org.examples.time_manager.MainActivity
 import org.examples.time_manager.core.service.util.Constants.CANCEL_REQUEST_CODE
@@ -15,15 +14,14 @@ import org.examples.time_manager.core.service.util.Constants.STOP_REQUEST_CODE
 @ExperimentalAnimationApi
 object ServiceHelper {
 
-    private val flag =
-        PendingIntent.FLAG_IMMUTABLE.takeIf { Build.VERSION.SDK_INT >= Build.VERSION_CODES.M } ?: 0
+    private const val FLAG = PendingIntent.FLAG_IMMUTABLE
 
     fun clickPendingIntent(context: Context): PendingIntent {
         val clickIntent = Intent(context, MainActivity::class.java).apply {
             putExtra(STOPWATCH_STATE, StopwatchState.Started.name)
         }
         return PendingIntent.getActivity(
-            context, CLICK_REQUEST_CODE, clickIntent, flag
+            context, CLICK_REQUEST_CODE, clickIntent, FLAG
         )
     }
 
@@ -32,7 +30,7 @@ object ServiceHelper {
             putExtra(STOPWATCH_STATE, StopwatchState.Stopped.name)
         }
         return PendingIntent.getService(
-            context, STOP_REQUEST_CODE, stopIntent, flag
+            context, STOP_REQUEST_CODE, stopIntent, FLAG
         )
     }
 
@@ -41,7 +39,7 @@ object ServiceHelper {
             putExtra(STOPWATCH_STATE, StopwatchState.Started.name)
         }
         return PendingIntent.getService(
-            context, RESUME_REQUEST_CODE, resumeIntent, flag
+            context, RESUME_REQUEST_CODE, resumeIntent, FLAG
         )
     }
 
@@ -50,7 +48,7 @@ object ServiceHelper {
             putExtra(STOPWATCH_STATE, StopwatchState.Canceled.name)
         }
         return PendingIntent.getService(
-            context, CANCEL_REQUEST_CODE, cancelIntent, flag
+            context, CANCEL_REQUEST_CODE, cancelIntent, FLAG
         )
     }
 

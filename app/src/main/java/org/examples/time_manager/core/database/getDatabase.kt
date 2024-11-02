@@ -1,9 +1,7 @@
 package org.examples.time_manager.core.database
 
 import android.content.Context
-import androidx.room.Delete
 import androidx.room.InvalidationTracker
-import androidx.room.Query
 import androidx.room.Room
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
@@ -43,11 +41,11 @@ class DummyDatabase : Database() {
 }
 
 class DummyWorkDao : WorkDao {
-    override suspend fun upsert(person: Work) {
+    override suspend fun upsert(work: Work) {
 
     }
 
-    override suspend fun delete(person: Work) {
+    override suspend fun delete(work: Work) {
 
     }
 

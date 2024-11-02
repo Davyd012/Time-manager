@@ -1,13 +1,11 @@
 package org.examples.time_manager.features.root.presentation.home.components
 
 import android.content.Intent
-import android.os.Build
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.padding
@@ -16,24 +14,27 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.AddCircle
-import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import org.examples.time_manager.features.root.HomeState
 import org.examples.time_manager.features.root.HomeViewModel
+import org.examples.time_manager.features.root.data.HomeState
 import org.examples.time_manager.features.root.data.RootScreenEvents.CreateExcelDocumentEvent
+import org.examples.time_manager.features.root.data.RootScreenEvents.ModifyWorkStateEvent
+import org.examples.time_manager.features.root.presentation.home.MonthSelectorDialog
 import org.examples.time_manager.ui.theme.exportIcon
 
 @Composable
@@ -41,30 +42,19 @@ fun HeaderWidget(
     state: HomeState,
     listState: LazyListState,
     vm: HomeViewModel,
-    showNewCategoryModal: () -> Unit,
 ) {
     val colors = MaterialTheme.colorScheme
     val texts = MaterialTheme.typography
 
-    val context = LocalContext.current
-    val saveFileLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-            if (result.resultCode == android.app.Activity.RESULT_OK) {
-                result.data?.data?.let { uri ->
-                    vm.onEvent(CreateExcelDocumentEvent(context, uri))
-                }
-            }
-        }
+    var showMonthPicker by remember { mutableStateOf(false) }
 
-    val openSaveFilePicker = remember {
-        {
-            val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
-                addCategory(Intent.CATEGORY_OPENABLE)
-                type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                putExtra(Intent.EXTRA_TITLE, "sample_data.xlsx")  // Suggest a file name
-            }
-            saveFileLauncher.launch(intent)
-        }
+    if (showMonthPicker) {
+        MonthSelectorDialog(
+            selectedMonth = "March",
+            onMonthSelected = { a: String -> Log.d("MainPageViewModel", a) },
+            onDismiss = { showMonthPicker = false },
+            vm = vm,
+        )
     }
 
     Column(
@@ -77,23 +67,17 @@ fun HeaderWidget(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Spacer(modifier = Modifier.padding(start = 2.dp))
-            //        Box {
-            //            Text(
-            //                "Bedriften Min AS",
-            //                style = style.bodyLarge.copy(color = colors.onPrimaryContainer)
-            //            )
-            //        }
             Spacer(modifier = Modifier.width(5.dp))
             Text(
                 state.today.weekDay,
-                style = texts.headlineMedium.copy(color = colors.onPrimary)
+                style = texts.headlineSmall.copy(color = colors.onPrimary)
             )
             Icon(
                 Icons.Default.KeyboardArrowDown, contentDescription = null,
                 tint = colors.onPrimary,
             )
             Spacer(modifier = Modifier.weight(1f))
-            IconButton(onClick = openSaveFilePicker) {
+            IconButton(onClick = { showMonthPicker = true }) {
                 Icon(
                     exportIcon(),
                     contentDescription = null,
@@ -101,7 +85,7 @@ fun HeaderWidget(
                     modifier = Modifier.size(30.dp)
                 )
             }
-            IconButton(onClick = { showNewCategoryModal() }) {
+            IconButton(onClick = { vm.onEvent(ModifyWorkStateEvent(show = true)) }) {
                 Icon(
                     Icons.Outlined.AddCircle,
                     contentDescription = null,

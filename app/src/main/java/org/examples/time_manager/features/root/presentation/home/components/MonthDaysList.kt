@@ -16,8 +16,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
-import org.examples.time_manager.features.root.HomeState
 import org.examples.time_manager.features.root.HomeViewModel
+import org.examples.time_manager.features.root.data.HomeState
 import org.examples.time_manager.features.root.data.RootScreenEvents.SelectDayEvent
 import org.examples.time_manager.features.root.presentation.utils.formatHoursFromSeconds
 

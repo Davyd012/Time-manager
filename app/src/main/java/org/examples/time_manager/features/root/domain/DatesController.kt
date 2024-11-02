@@ -1,9 +1,10 @@
 package org.examples.time_manager.features.root.domain
 
 import org.examples.time_manager.core.database.work.WorkDao
-import org.examples.time_manager.features.root.DayModel
+import org.examples.time_manager.features.root.data.DayModel
 import java.time.LocalDate
 import java.time.ZoneId
+import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.time.temporal.TemporalAdjusters
 import java.util.Date
@@ -26,18 +27,29 @@ class DatesController(private val worksDao: WorkDao) {
     val weekDays =
         listOf("Mandag", "Tirsdag", "Onsdag", "Torsdag", "Fredag", "Lørdag", "Søndag")
 
+    fun getIndexOfAMonth(month: String): Int {
+        return month.indexOf(month)
+    }
+
     fun getDatesForCurrentMonth(): List<DayModel> {
         val today = LocalDate.now()
         val firstDayOfMonth = today.with(TemporalAdjusters.firstDayOfMonth())
         val lastDayOfMonth = today.with(TemporalAdjusters.lastDayOfMonth())
 
+        return getDatesForAMonth(firstDayOfMonth, lastDayOfMonth)
+    }
+
+    fun getDatesForAMonth(
+        firstDayOfMonth: LocalDate,
+        lastDayOfMonth: LocalDate?
+    ): MutableList<DayModel> {
         val dates = mutableListOf<DayModel>()
         var current = firstDayOfMonth
 
         while (!current.isAfter(lastDayOfMonth)) {
             val (startOfDay, endOfDay) = getBoundariesOfDay(current)
             dates.add(
-                getDateModel(current, hours = worksDao.getHoursByDay(startOfDay / 1000, endOfDay / 1000))
+                getDateModel(current, hours = worksDao.getHoursByDay(startOfDay, endOfDay))
             )
             current = current.plusDays(1)
         }
@@ -54,9 +66,9 @@ class DatesController(private val worksDao: WorkDao) {
 
     fun getBoundariesOfDay(current: LocalDate): Pair<Long, Long> {
         val startOfDay =
-            current.atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
-        val endOfDay = current.atTime(23, 59, 59).atZone(ZoneId.systemDefault()).toInstant()
-            .toEpochMilli()
+            current.atStartOfDay(ZoneOffset.UTC).toInstant().epochSecond
+        val endOfDay = current.atTime(23, 59, 59).atZone(ZoneOffset.UTC).toInstant()
+            .epochSecond
         return Pair(startOfDay, endOfDay)
     }
 

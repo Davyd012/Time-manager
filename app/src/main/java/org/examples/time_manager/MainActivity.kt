@@ -19,6 +19,7 @@ import androidx.compose.runtime.setValue
 import androidx.core.app.ActivityCompat
 import androidx.navigation.compose.rememberNavController
 import org.examples.time_manager.core.service.StopwatchService
+import org.examples.time_manager.di.DIContainer
 import org.examples.time_manager.navigation.AppNavHost
 import org.examples.time_manager.ui.theme.TimeMangerTheme
 
@@ -27,41 +28,44 @@ class MainActivity : ComponentActivity() {
     private var stopwatchService: StopwatchService? = null
     private val connection = object : ServiceConnection {
         override fun onServiceConnected(className: ComponentName, service: IBinder) {
-            Log.d("MainActivity", "Bound stopwatchService activity")
+            Log.d("MainViewModel", "Bound stopwatchService activity")
             val binder = service as StopwatchService.StopwatchBinder
             stopwatchService = binder.getService()
+            App.diContainer.stopwatchService = stopwatchService
             isBound = true
         }
 
         override fun onServiceDisconnected(arg0: ComponentName) {
-            Log.d("MainActivity", "Bound error activity")
+            Log.d("MainViewModel", "Bound error activity")
             isBound = false
         }
     }
 
     override fun onStart() {
         super.onStart()
-        Log.d("MainActivity", "Starting activity")
         Intent(this, StopwatchService::class.java).also { intent ->
-            Log.d("MainActivity", "Binding stopwatchService activity")
-
             bindService(intent, connection, Context.BIND_AUTO_CREATE)
         }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        Log.d("MainViewModel", "Stopwatch service state: ${(stopwatchService == null)}")
+        Log.d("MainViewModel", "Is bound: $isBound")
+
         setContent {
             TimeMangerTheme {
                 AppNavHost(
                     diContainer = App.diContainer,
                     navController = rememberNavController(),
-                    stopwatchService = stopwatchService,
                 )
-
             }
         }
-        requestPermissions(Manifest.permission.POST_NOTIFICATIONS)
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            requestPermissions(Manifest.permission.POST_NOTIFICATIONS)
+        }
     }
 
     private fun requestPermissions(vararg permissions: String) {

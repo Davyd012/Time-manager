@@ -20,19 +20,17 @@ import org.examples.time_manager.features.root.presentation.home.MainPage
 import org.examples.time_manager.features.root.presentation.newProject.NewProject
 import org.examples.time_manager.features.root.presentation.stopwatch.Stopwatch
 
-@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun AppNavHost(
     diContainer: DIContainer,
     navController: NavHostController,
-    stopwatchService: StopwatchService?,
 ) {
     val navigator = Navigator(navController)
     Log.d("NavHost", "Created a Nav host")
     NavHost(navController = navController, startDestination = Root) {
         composable<Root> {
             Log.d("NavHost", "Created a Root composable")
-            val vm = remember { HomeViewModel(stopwatchService) }
+            val vm = remember { HomeViewModel(diContainer.stopwatchService) }
             val homeNavController = rememberNavController()
             HomeScreen(
                 vm = vm, rootNav = homeNavController,

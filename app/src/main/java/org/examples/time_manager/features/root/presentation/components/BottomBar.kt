@@ -1,6 +1,7 @@
 package org.examples.time_manager.features.root.presentation.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
@@ -25,7 +26,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import org.examples.time_manager.navigation.NavHomeRoutes
 import org.examples.time_manager.navigation.PageNavigator
@@ -37,6 +41,7 @@ fun BottomBar(
 ) {
     var currentRoute by remember { mutableStateOf<NavHomeRoutes>(NavHomeRoutes.Home) }
     val colors = MaterialTheme.colorScheme
+    val texts = MaterialTheme.typography
 
     fun isCurrent(route: NavHomeRoutes): Boolean {
         return route == currentRoute
@@ -73,11 +78,18 @@ fun BottomBar(
                     Icon(
                         if (isSelected) destination.activeIcon else destination.icon,
                         contentDescription = destination.label,
-                        tint = if (isSelected) colors.onPrimaryContainer else colors.onPrimary
+                        tint = if (isSelected) colors.onPrimary else colors.onSecondaryContainer,
+                        modifier = Modifier.size(26.dp)
                     )
                 },
-                label = { Text(destination.label, color = if (isSelected) colors.onSecondaryContainer else colors.onPrimary) },
-                colors = NavigationBarItemDefaults.colors(indicatorColor = colors.primaryContainer)
+                label = {
+                    Text(
+                        destination.label,
+                        style = if (isSelected) texts.bodyLarge.copy(fontWeight = FontWeight.Bold) else  texts.bodyMedium,
+                        color = if (isSelected) colors.onPrimary else colors.onSecondaryContainer
+                    )
+                },
+                colors = NavigationBarItemDefaults.colors(indicatorColor = colors.onSecondaryContainer)
             )
         }
     }

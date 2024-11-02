@@ -30,6 +30,7 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
 class StopwatchService : Service() {
+    var project: Int = 1
     private val notificationManager by lazy { NotificationModule.provideNotificationManager(App.context) }
     private val notificationBuilder by lazy { NotificationModule.provideNotificationBuilder(App.context) }
 
@@ -48,7 +49,6 @@ class StopwatchService : Service() {
         return binder
     }
 
-    @RequiresApi(Build.VERSION_CODES.N)
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.getStringExtra(STOPWATCH_STATE)) {
             StopwatchState.Started.name -> {
@@ -128,7 +128,6 @@ class StopwatchService : Service() {
         startForeground(NOTIFICATION_ID, notificationBuilder.build())
     }
 
-    @RequiresApi(Build.VERSION_CODES.N)
     private fun stopForegroundService() {
         notificationManager.cancel(NOTIFICATION_ID)
         stopForeground(STOP_FOREGROUND_REMOVE)
@@ -136,14 +135,12 @@ class StopwatchService : Service() {
     }
 
     private fun createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                NOTIFICATION_CHANNEL_ID,
-                NOTIFICATION_CHANNEL_NAME,
-                NotificationManager.IMPORTANCE_LOW
-            )
-            notificationManager.createNotificationChannel(channel)
-        }
+        val channel = NotificationChannel(
+            NOTIFICATION_CHANNEL_ID,
+            NOTIFICATION_CHANNEL_NAME,
+            NotificationManager.IMPORTANCE_LOW
+        )
+        notificationManager.createNotificationChannel(channel)
     }
 
     private fun updateNotification(seconds: Int) {

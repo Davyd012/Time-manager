@@ -1,8 +1,6 @@
 package org.examples.time_manager.features.root
 
-import android.os.Build
 import android.util.Log
-import androidx.annotation.RequiresApi
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -27,15 +25,18 @@ import org.examples.time_manager.core.service.StopwatchService
 import org.examples.time_manager.core.service.util.Constants.ACTION_SERVICE_CANCEL
 import org.examples.time_manager.core.service.util.Constants.ACTION_SERVICE_START
 import org.examples.time_manager.core.service.util.Constants.ACTION_SERVICE_STOP
+import org.examples.time_manager.features.root.data.HomeState
+import org.examples.time_manager.features.root.data.ModifyWork
 import org.examples.time_manager.features.root.data.RootScreenEvents
 import org.examples.time_manager.features.root.data.TimerStates
+import org.examples.time_manager.features.root.data.Today
 import org.examples.time_manager.features.root.domain.DatesController
 import org.examples.time_manager.features.root.domain.ExcelController
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.temporal.TemporalAdjusters
 
 
-@RequiresApi(Build.VERSION_CODES.O)
 class HomeViewModel(
     private val stopwatchService: StopwatchService?,
 ) : ViewModel() {
@@ -60,6 +61,7 @@ class HomeViewModel(
     init {
         viewModelScope.launch(Dispatchers.IO) {
             Log.d("RootViewModel", "init")
+            Log.d("RootViewModel", "init ${stopwatchService == null}")
 
             _timeCount.value = stopwatchService?.seconds?.intValue?.toDouble() ?: 0.0
 
@@ -78,6 +80,7 @@ class HomeViewModel(
                         month = today.month.name,
                         year = today.year
                     ),
+                    selectedProject = stopwatchService?.project ?: 1,
                     counting = stopwatchService?.running ?: false
                 )
             }
@@ -87,18 +90,41 @@ class HomeViewModel(
             _state.update { it.copy(projects = projects) }
 
             runStopwatch()
+            Log.d("HomeViewModel", "Started a stopwatch from the init")
         }
     }
 
     private fun getWorksForCertainDate(date: LocalDate): Flow<List<Work>> {
         val (startOfDay, endOfDay) = datesController.getBoundariesOfDay(date)
-        val works = worksDao.getAllWorks(startOfDay / 1000, endOfDay / 1000)
+        val works = worksDao.getAllWorks(startOfDay, endOfDay)
         return works
     }
 
     @OptIn(ExperimentalAnimationApi::class)
     fun onEvent(event: RootScreenEvents) {
         when (event) {
+            is RootScreenEvents.ModifyWorkEvent -> viewModelScope.launch(Dispatchers.IO) {
+                if (event.delete) {
+                    worksDao.delete(event.work)
+                } else worksDao.upsert(event.work)
+
+                val days = datesController.getDatesForCurrentMonth()
+                _state.update {
+                    it.copy(dayPerMonth = days)
+                }
+            }
+
+            is RootScreenEvents.ModifyWorkStateEvent -> viewModelScope.launch(Dispatchers.IO) {
+                _state.update {
+                    it.copy(
+                        selectedWork = ModifyWork(
+                            selectedWork = event.selected,
+                            showModal = event.show
+                        )
+                    )
+                }
+            }
+
             is RootScreenEvents.NewProjectEvent -> viewModelScope.launch(Dispatchers.IO) {
                 Log.d("HomeViewModel", "New project")
                 val newProject = Project(name = event.name, description = event.description)
@@ -220,15 +246,63 @@ class HomeViewModel(
 
             is RootScreenEvents.SelectProjectEvent -> viewModelScope.launch(Dispatchers.IO) {
                 _state.update { it.copy(selectedProject = event.value) }
+                if (stopwatchService != null) {
+                    stopwatchService.project = event.value
+                }
             }
 
             is RootScreenEvents.CreateExcelDocumentEvent -> viewModelScope.launch(Dispatchers.IO) {
                 Log.d("RootViewModel", "Launching a creating document activity")
+                var dayPerMonth = state.value.dayPerMonth
+                if (event.month != null) {
+                    val today =
+                        LocalDate.now().withMonth(event.month)
+                    val firstDayOfMonth = today.with(TemporalAdjusters.firstDayOfMonth())
+                    val lastDayOfMonth = today.with(TemporalAdjusters.lastDayOfMonth())
+
+                    dayPerMonth = datesController.getDatesForAMonth(firstDayOfMonth, lastDayOfMonth)
+                }
+
                 excelController.createExcelFile(
                     context = event.context,
                     uri = event.uri,
-                    dayPerMonth = state.value.dayPerMonth
+                    dayPerMonth = dayPerMonth
                 )
+            }
+
+            is RootScreenEvents.WriteRangeWorkEvent -> viewModelScope.launch(Dispatchers.IO) {
+                Log.d("RootViewModel", "Launching a write range event")
+
+                val date = LocalDateTime.now()
+
+                var newInfoForCurrentMonth = state.value.dayPerMonth
+                for (day in event.dates) {
+                    if (listOf(5, 6).contains(day.dayOfWeek.ordinal)) continue
+                    val time = if (day.dayOfWeek.ordinal == 4) (5.5 * 3600).toInt() else 8 * 3600
+                    if (day.year == date.year && day.month == date.month) {
+                        newInfoForCurrentMonth = datesController.updateHoursForDay(
+                            newInfoForCurrentMonth,
+                            day.dayOfMonth - 1,
+                            time
+                        )
+                    }
+                    worksDao.upsert(
+                        Work(
+                            description = "",
+                            date = day.withHour(event.started.hour)
+                                .withMinute(event.started.minute),
+                            project = event.project,
+                            task = 0,
+                            time = time,
+                        )
+                    )
+                }
+
+                Log.d("RootViewModel", "Done inserting new work events")
+                _state.update {
+                    it.copy(dayPerMonth = newInfoForCurrentMonth)
+                }
+                Log.d("RootViewModel", "Done updating the state")
             }
         }
     }

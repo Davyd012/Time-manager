@@ -1,9 +1,6 @@
 package org.examples.time_manager.features.root.presentation.home
 
-import android.app.TimePickerDialog
-import android.os.Build
 import android.util.Log
-import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -20,11 +17,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 import org.examples.time_manager.features.root.HomeViewModel
-import org.examples.time_manager.features.root.Today
+import org.examples.time_manager.features.root.data.RootScreenEvents.ModifyWorkStateEvent
 import org.examples.time_manager.features.root.presentation.home.components.ListOfWorks
 import org.examples.time_manager.features.root.presentation.home.components.HeaderWidget
 
@@ -40,22 +36,20 @@ fun MainPage(vm: HomeViewModel, modifier: Modifier) {
 
     LaunchedEffect(Unit) {
         coroutineScope.launch {
-            val index = if (state.selectedDay > 4) state.selectedDay - 4 else state.selectedDay
-            listState.scrollToItem(index)
+            if (state.selectedDay > 4) {
+                listState.scrollToItem(state.selectedDay - 4)
+            }
         }
     }
 
-//    val systemUiController = rememberSystemUiController()
-//    systemUiController.setStatusBarColor(color = colors.primary)
-
-    var showNewCategoryModal by remember { mutableStateOf(false) }
-
-    if (showNewCategoryModal) {
+    if (state.selectedWork.showModal) {
+        val index = state.selectedWork.selectedWork
         NewWorkInput(
-            onDismiss = { showNewCategoryModal = false },
+            onDismiss = { vm.onEvent(ModifyWorkStateEvent(show = false)) },
             vm = vm,
             projects = projects,
-            day = state.selectedDay
+            day = state.selectedDay,
+            work = works.takeIf { index >= 0 }?.elementAt(index)
         )
     }
 
@@ -64,15 +58,12 @@ fun MainPage(vm: HomeViewModel, modifier: Modifier) {
             .background(colors.surface)
             .fillMaxSize()
     ) {
-        HeaderWidget(state, listState, vm, showNewCategoryModal = { showNewCategoryModal = true })
+        HeaderWidget(state, listState, vm = vm)
         Spacer(modifier = Modifier.height(5.dp))
         ListOfWorks(
+            showWork = { i: Int -> vm.onEvent(ModifyWorkStateEvent(selected = i, show = true)) },
             works = works,
             projects = projects
         )
     }
 }
-
-
-private fun getDatString(today: Today) =
-    today.day.toString() + ". " + today.month.lowercase() + " " + today.year

@@ -1,28 +1,28 @@
 package org.examples.time_manager.features.root.presentation.home
 
-import android.os.Build
-import androidx.annotation.RequiresApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
+import androidx.compose.material3.DateRangePickerState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDatePickerState
+import androidx.compose.material3.rememberDateRangePickerState
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -37,51 +37,86 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.examples.time_manager.core.database.project.Project
+import org.examples.time_manager.core.database.work.Work
+import org.examples.time_manager.core.service.util.pad
 import org.examples.time_manager.features.root.HomeViewModel
-import org.examples.time_manager.features.root.data.RootScreenEvents
+import org.examples.time_manager.features.root.presentation.home.components.OutlinedButton
 import org.examples.time_manager.features.root.presentation.home.components.getTimePicker
+import org.examples.time_manager.features.root.presentation.home.new_work.DatePickerWidget
+import org.examples.time_manager.features.root.presentation.home.new_work.ListOfProjects
+import org.examples.time_manager.features.root.presentation.home.new_work.SaveButtons
 import org.examples.time_manager.features.root.presentation.utils.DateUtils
+import org.examples.time_manager.ui.theme.timerIcon
 import java.time.LocalDateTime
+import java.time.ZoneOffset
 
-@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NewWorkInput(onDismiss: () -> Unit, vm: HomeViewModel, projects: List<Project>, day: Int) {
+fun NewWorkInput(
+    onDismiss: () -> Unit,
+    vm: HomeViewModel,
+    projects: List<Project>,
+    day: Int,
+    work: Work?
+) {
     val colors = MaterialTheme.colorScheme
     val typography = MaterialTheme.typography
 
-    var selectedProject by remember { mutableIntStateOf(projects.firstOrNull()?.id ?: 0) }
-    var countHours by remember { mutableIntStateOf(0) }
+    var selectedProject by remember {
+        mutableIntStateOf(
+            work?.project ?: projects.firstOrNull()?.id ?: 0
+        )
+    }
 
-    val currentDate = LocalDateTime.now()
+    val currentDate = LocalDateTime.now().withDayOfMonth(day).withHour(0).withMinute(0)
     val dateUtils = DateUtils()
-    val dateState = rememberDatePickerState()
+    val dateState = rememberDatePickerState(
+        initialSelectedDateMillis = work?.date?.toEpochSecond(ZoneOffset.UTC)?.times(1000)
+    )
 
     val millisToLocalDate: LocalDateTime = dateState.selectedDateMillis?.let {
         dateUtils.convertMillisToLocalDate(it / 1000)
-    } ?: LocalDateTime.of(currentDate.year, currentDate.month, day, 0, 0)
-
-//    val dateToString = millisToLocalDate?.let {
-//        DateUtils().dateToString(millisToLocalDate)
-//    } ?: "Choose date"
+    } ?: currentDate
 
     var showDatePicker by remember { mutableStateOf(false) }
 
-    if (showDatePicker) {
-        DatePickerDialog(
-            onDismissRequest = { showDatePicker = false },
-            confirmButton = { /*TODO*/ }) {
-            DatePicker(
-                state = dateState,
-                showModeToggle = true
-            )
-        }
+
+    val state = rememberDateRangePickerState()
+    val datesRange = state.let {
+        if (it.selectedEndDateMillis == null || it.selectedStartDateMillis == null) emptyList()
+        else extractDates(dateUtils, it)
     }
 
-    var time by remember { mutableStateOf("00:00") }
+
+    var updateRange by remember { mutableStateOf(false) }
+    DatePickerWidget(
+        showDatePicker = showDatePicker,
+        updateRange = updateRange,
+        onDismissDateRange = { updateRange = false },
+        onDismissDate = { showDatePicker = false },
+        state = state,
+        dateState = dateState,
+    )
+
+    val formattedTime = work?.let {
+        val hours = (it.time / 3600).pad()
+        val minutes = ((it.time % 3600) / 60).pad()
+        "$hours:$minutes"
+    } ?: "00:00"
+
+    var time by remember { mutableStateOf(formattedTime) }
     val timePickerDialog = getTimePicker(updateTime = { it: String -> time = it })
 
-    val scrollState = rememberScrollState()
+    val formattedStartTime = work?.let {
+        val hours = it.date.hour.pad()
+        val minutes = it.date.minute.pad()
+        "$hours:$minutes"
+    } ?: "00:00"
+    var startedJob by remember { mutableStateOf(formattedStartTime) }
+    val startTimePickerDialog = getTimePicker(updateTime = { it: String ->
+        startedJob = it
+    })
+
     ModalBottomSheet(
         onDismissRequest = {
             onDismiss()
@@ -99,6 +134,7 @@ fun NewWorkInput(onDismiss: () -> Unit, vm: HomeViewModel, projects: List<Projec
                 .clip(RoundedCornerShape(topStart = 10.dp, topEnd = 10.dp))
                 .background(colors.surface)
                 .padding(10.dp)
+                .heightIn(min = 300.dp)
         ) {
             Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Text(
@@ -113,109 +149,107 @@ fun NewWorkInput(onDismiss: () -> Unit, vm: HomeViewModel, projects: List<Projec
 
             Text("Prosjekt", style = typography.titleMedium.copy(color = colors.onSurface))
             Spacer(modifier = Modifier.height(5.dp))
-            Row(modifier = Modifier.horizontalScroll(state = scrollState)) {
-                projects.forEachIndexed { i, it ->
-                    val paddingModifier = Modifier.padding(
-                        start = if (i == projects.size) 5.dp else 0.dp,
-                        top = 5.dp,
-                        end = 7.dp,
-                        bottom = 5.dp
-                    )
+            ListOfProjects(
+                projects,
+                selectedProject,
+                selectProject = { it: Int -> selectedProject = it },
+            )
+            Spacer(modifier = Modifier.height(10.dp))
 
-                    Text(
-                        text = it.name,
-                        style = typography.titleMedium.copy(color = if (it.id == selectedProject) colors.onPrimaryContainer else colors.onSecondaryContainer),
-                        modifier = paddingModifier
-                            .clip(
-                                RoundedCornerShape(5.dp)
-                            )
-                            .clickable { selectedProject = it.id }
-                            .background(if (it.id == selectedProject) colors.primaryContainer else colors.secondaryContainer)
-                            .padding(15.dp),
+            Text("Tid & dato", style = typography.titleMedium.copy(color = colors.onSurface))
+            Spacer(modifier = Modifier.height(5.dp))
+            OutlinedButton(
+                value = time,
+                text = "Timer",
+                icon = timerIcon(),
+                action = { timePickerDialog.show() },
+            )
+
+            Spacer(modifier = Modifier.height(5.dp))
+            val dateContent = when {
+                updateRange.not() -> millisToLocalDate.formatDate()
+                datesRange.isEmpty() || datesRange.size == 1 -> "Velg datoer"
+                else -> "${datesRange.first().formatDate()} / ${datesRange.last().formatDate()}"
+            }
+            OutlinedButton(
+                value = dateContent,
+                text = "Dag",
+                icon = Icons.Default.DateRange,
+                action = { showDatePicker = true },
+            )
+
+            Spacer(modifier = Modifier.height(5.dp))
+            OutlinedButton(
+                value = startedJob,
+                text = "Start arbeidet",
+                icon = timerIcon(),
+                action = { startTimePickerDialog.show() },
+            )
+
+            Spacer(modifier = Modifier.height(5.dp))
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { updateRange = !updateRange }
+            ) {
+                Box {
+                    Checkbox(
+                        checked = updateRange,
+                        onCheckedChange = { updateRange = !updateRange },
+                        enabled = true,
+                        colors = CheckboxDefaults.colors(colors.onPrimaryContainer),
+                        modifier = Modifier
+                            .padding(start = 20.dp)
+                            .size(3.dp),
                     )
                 }
-            }
-            Spacer(modifier = Modifier.height(10.dp))
-
-            Text("Timer", style = typography.titleMedium.copy(color = colors.onSurface))
-            Spacer(modifier = Modifier.height(5.dp))
-            Text(
-                time,
-                style = typography.titleSmall.copy(color = colors.onSurface),
-                modifier = Modifier
-                    .clip(RoundedCornerShape(5.dp))
-                    .background(colors.primaryContainer.copy(alpha = 0.7f))
-                    .clickable { timePickerDialog.show() }
-                    .padding(15.dp),
-            )
-//            Row(verticalAlignment = Alignment.CenterVertically) {
-//                Icon(
-//                    imageVector = Icons.Default.Delete,
-//                    contentDescription = "Minus hours",
-//                    modifier = Modifier
-//                        .clip(RoundedCornerShape(25.dp))
-//                        .background(colors.secondaryContainer)
-//                        .clickable { if (countHours > 0) countHours-- }
-//                        .padding(10.dp)
-//                        .size(25.dp),
-//                )
-//                Spacer(modifier = Modifier.width(5.dp))
-//                InfoTextField(
-//                    countHours.toString(), "", { countHours = it.toInt() }, 1,
-//                    background = colors.surface,
-//                    modifier = Modifier.width(70.dp),
-//                    intInput = true,
-//                )
-//                Spacer(modifier = Modifier.width(5.dp))
-//                Icon(
-//                    imageVector = Icons.Default.Add,
-//                    contentDescription = "Add hours",
-//                    modifier = Modifier
-//                        .clip(RoundedCornerShape(25.dp))
-//                        .background(colors.secondaryContainer)
-//                        .clickable { countHours++ }
-//                        .padding(10.dp)
-//                        .size(30.dp),
-//                )
-//            }
-            Spacer(modifier = Modifier.height(10.dp))
-
-            Text("Date", style = typography.titleMedium.copy(color = colors.onSurface))
-            Spacer(modifier = Modifier.height(5.dp))
-            Text(
-                dateUtils.formatLocalDateTime(millisToLocalDate),
-                style = typography.titleSmall.copy(color = colors.onSurface),
-                modifier = Modifier
-                    .clip(RoundedCornerShape(5.dp))
-                    .background(colors.primaryContainer.copy(alpha = 0.7f))
-                    .clickable { showDatePicker = true }
-                    .padding(15.dp),
-            )
-
-            Spacer(modifier = Modifier.height(10.dp))
-            Button(
-                onClick = {
-                    onDismiss()
-                    vm.onEvent(
-                        RootScreenEvents.WriteWorkEvent(
-                            project = selectedProject,
-                            hours = time.split(":").let {
-                                it[0].toInt() * 3600 + it[1].toInt() * 60
-                            },
-                            date = millisToLocalDate
-                        )
-                    )
-                },
-                colors = ButtonDefaults.elevatedButtonColors()
-                    .copy(containerColor = colors.primary),
-                modifier = Modifier.fillMaxWidth()
-            ) {
                 Text(
-                    "Ferdig",
-                    modifier = Modifier.padding(10.dp),
-                    style = typography.titleMedium.copy(color = colors.onPrimary)
+                    text = "Periode registrering",
+                    modifier = Modifier
+                        .padding(10.dp)
+                        .padding(start = 15.dp),
+                    style = typography.titleSmall.copy(color = colors.onSurface)
                 )
             }
+
+            Spacer(modifier = Modifier.height(50.dp))
+            SaveButtons(
+                work,
+                onDismiss,
+                vm,
+                selectedProject,
+                time,
+                millisToLocalDate,
+                startedJob,
+                dates = datesRange,
+                updateRange = updateRange,
+            )
         }
     }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun extractDates(
+    dateUtils: DateUtils,
+    it: DateRangePickerState
+): List<LocalDateTime> {
+    val startDate = dateUtils.convertMillisToLocalDate(it.selectedStartDateMillis!! / 1000)
+    val endDate = dateUtils.convertMillisToLocalDate(it.selectedEndDateMillis!! / 1000)
+
+    var current = startDate
+    var rangeOfDates = emptyList<LocalDateTime>()
+
+    while (!current.isAfter(endDate)) {
+        rangeOfDates = rangeOfDates.plus(current)
+        current = current.plusDays(1)
+    }
+    return rangeOfDates
+}
+
+fun LocalDateTime.formatDate(): String {
+    val dateUtils = DateUtils()
+    return dateUtils.formatLocalDateTime(this)
 }

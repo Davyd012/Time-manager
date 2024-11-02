@@ -57,7 +57,7 @@ fun Stopwatch(vm: HomeViewModel, modifier: Modifier) {
     ) {
         Box(
             modifier = Modifier
-                .height(230.dp)
+                .height(200.dp)
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(bottomEnd = 30.dp, bottomStart = 30.dp))
                 .background(colors.primary),
@@ -67,7 +67,7 @@ fun Stopwatch(vm: HomeViewModel, modifier: Modifier) {
                 normalizeTime(time),
                 fontSize = 60.sp,
                 fontWeight = FontWeight.Bold,
-                color = colors.onSurface
+                color = colors.onPrimary
             )
         }
         Spacer(modifier = Modifier.weight(1f))
