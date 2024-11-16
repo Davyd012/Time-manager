@@ -3,9 +3,7 @@ package org.examples.time_manager.features.root.presentation.components
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.Home
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -24,7 +22,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.examples.time_manager.navigation.NavHomeRoutes
 import org.examples.time_manager.navigation.PageNavigator
-import org.examples.time_manager.ui.theme.timerIcon
+import org.examples.time_manager.ui.theme.watchIconFilled
+import org.examples.time_manager.ui.theme.watchIconOutlined
 
 @Composable
 fun BottomBar(
@@ -45,11 +44,16 @@ fun BottomBar(
             activeIcon = Icons.Default.Home,
             "Hjem"
         ),
-        BottomBarItem(NavHomeRoutes.Timer, timerIcon(), timerIcon(), "Stoppeklokke"),
         BottomBarItem(
-            NavHomeRoutes.Settings,
-            Icons.Default.Add, Icons.Outlined.Add, "Ny prosjekt"
-        )
+            NavHomeRoutes.Stopwatch,
+            watchIconOutlined(),
+            activeIcon = watchIconFilled(),
+            "Stoppeklokke",
+        ),
+//        BottomBarItem(
+//            NavHomeRoutes.Settings,
+//            Icons.Default.Add, Icons.Outlined.Add, "Ny prosjekt"
+//        )
     )
 
     NavigationBar(modifier = Modifier.height(75.dp), containerColor = colors.primary) {
@@ -76,7 +80,7 @@ fun BottomBar(
                 label = {
                     Text(
                         destination.label,
-                        style = if (isSelected) texts.bodyLarge.copy(fontWeight = FontWeight.Bold) else  texts.bodyMedium,
+                        style = if (isSelected) texts.bodyLarge.copy(fontWeight = FontWeight.Bold) else texts.bodyMedium,
                         color = if (isSelected) colors.onPrimary else colors.onSecondaryContainer
                     )
                 },
