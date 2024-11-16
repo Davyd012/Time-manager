@@ -1,9 +1,5 @@
 package org.examples.time_manager.features.root.presentation.home
 
-import android.content.Intent
-import android.util.Log
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -27,20 +23,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInParent
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import org.examples.time_manager.features.root.HomeViewModel
-import org.examples.time_manager.features.root.data.RootScreenEvents.CreateExcelDocumentEvent
 import java.time.LocalDate
 
 @Composable
 fun MonthSelectorDialog(
-    onDismiss: () -> Unit,
-    vm: HomeViewModel
+    onDismiss: (Int) -> Unit
 ) {
     val currentMonth = LocalDate.now().month.ordinal
 
@@ -51,7 +43,7 @@ fun MonthSelectorDialog(
         )
     }
 
-    val state = rememberLazyListState(1200 + currentMonth - 1)
+    val state = rememberLazyListState(1200 + currentMonth - 2)
 
     var displayIndices by remember { mutableStateOf((0..7).toList()) }
 
@@ -69,40 +61,8 @@ fun MonthSelectorDialog(
     val itemHeight = 35.dp
     val itemHalfHeight = LocalDensity.current.run { itemHeight.toPx() / 2f }
 
-
-    val context = LocalContext.current
-    val saveFileLauncher =
-        rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-            Log.d("MonthPickerViewModel", "Got a result")
-            if (result.resultCode == android.app.Activity.RESULT_OK) {
-                result.data?.data?.let { uri ->
-                    vm.onEvent(
-                        CreateExcelDocumentEvent(context, uri, lastSelectedIndex % 12 + 1)
-                    )
-                }
-            }
-        }
-
-    val openSaveFilePicker = remember {
-        { month: String ->
-            val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
-                addCategory(Intent.CATEGORY_OPENABLE)
-                type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                putExtra(Intent.EXTRA_TITLE, "$month.xlsx")  // Suggest a file name
-            }
-            saveFileLauncher.launch(intent)
-        }
-    }
-
-
-
-
-
-
-
-
     AlertDialog(
-        onDismissRequest = onDismiss,
+        onDismissRequest = { onDismiss(-1) },
         title = { Text("Select Month") },
         text = {
             LazyColumn(
@@ -120,10 +80,7 @@ fun MonthSelectorDialog(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clickable {
-//                                4 = displayIndex
-//                                onMonthSelected(displayIndex)
-                                openSaveFilePicker(months.elementAt(lastSelectedIndex % 12))
-                                onDismiss()
+                                onDismiss(lastSelectedIndex % 12)
                             }
                             .padding(itemHeight / 2f)
                             .onGloballyPositioned { coordinates ->
@@ -146,8 +103,7 @@ fun MonthSelectorDialog(
 
         },
         confirmButton = { TextButton(onClick = {
-            openSaveFilePicker(months.elementAt(lastSelectedIndex % 12))
-//            onDismiss()
+            onDismiss(lastSelectedIndex % 12)
         }) { Text("OK") } }
     )
 }

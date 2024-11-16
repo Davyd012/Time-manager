@@ -19,3 +19,13 @@ fun pauseTimerIcon(): ImageVector {
 fun exportIcon(): ImageVector {
     return ImageVector.vectorResource(id = R.drawable.baseline_import_export_24)
 }
+
+@Composable
+fun watchIconFilled(): ImageVector {
+    return ImageVector.vectorResource(id = R.drawable.baseline_access_time_filled_24)
+}
+
+@Composable
+fun watchIconOutlined(): ImageVector {
+    return ImageVector.vectorResource(id = R.drawable.baseline_access_time_24)
+}

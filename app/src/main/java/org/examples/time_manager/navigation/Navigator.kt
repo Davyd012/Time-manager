@@ -5,8 +5,14 @@ import androidx.navigation.NavHostController
 class Navigator(
     private val navController: NavHostController
 ) {
+    fun toCalendar() {
+        navController.navigate(Calendar) {
+            launchSingleTop = true
+        }
+    }
+
     fun close() {
-        navController.popBackStack()
+        navController.navigateUp()
     }
 }
 
@@ -24,7 +30,4 @@ class PageNavigator(
         }
     }
 
-    fun close() {
-        navController.popBackStack()
-    }
 }

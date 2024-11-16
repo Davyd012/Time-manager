@@ -127,7 +127,13 @@ class HomeViewModel(
 
             is RootScreenEvents.NewProjectEvent -> viewModelScope.launch(Dispatchers.IO) {
                 Log.d("HomeViewModel", "New project")
-                val newProject = Project(name = event.name, description = event.description)
+                val newProject = Project(
+                    name = event.name,
+                    description = event.description
+                ).takeIf { event.project == null } ?: event.project!!.copy(
+                    name = event.name,
+                    description = event.description
+                )
                 projectDao.upsert(newProject)
             }
 
@@ -303,6 +309,14 @@ class HomeViewModel(
                     it.copy(dayPerMonth = newInfoForCurrentMonth)
                 }
                 Log.d("RootViewModel", "Done updating the state")
+            }
+
+            is RootScreenEvents.ModifyProjectEvent -> viewModelScope.launch(Dispatchers.IO) {
+                if (event.delete) {
+                    projectDao.delete(event.project)
+                    return@launch
+                }
+
             }
         }
     }

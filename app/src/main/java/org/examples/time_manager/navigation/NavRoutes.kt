@@ -2,16 +2,11 @@ package org.examples.time_manager.navigation
 
 import kotlinx.serialization.Serializable
 
-sealed class NavRoutes(internal open val path: String) {
-    data object Root : NavRoutes("/")
-    data object BooksList : NavRoutes("/books")
-}
-
 @Serializable
 data object Root
 
 @Serializable
-data object BooksList
+data object Calendar
 
 sealed class NavHomeRoutes {
     @Serializable
@@ -21,5 +16,5 @@ sealed class NavHomeRoutes {
     data object Settings : NavHomeRoutes()
 
     @Serializable
-    data object Timer : NavHomeRoutes()
+    data object Stopwatch : NavHomeRoutes()
 }

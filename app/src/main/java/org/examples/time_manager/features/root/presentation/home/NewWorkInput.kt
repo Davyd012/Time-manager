@@ -134,7 +134,7 @@ fun NewWorkInput(
                 .clip(RoundedCornerShape(topStart = 10.dp, topEnd = 10.dp))
                 .background(colors.surface)
                 .padding(10.dp)
-                .heightIn(min = 300.dp)
+                .heightIn(min = 350.dp)
         ) {
             Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Text(

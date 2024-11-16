@@ -19,9 +19,10 @@ import org.examples.time_manager.features.root.HomeViewModel
 import org.examples.time_manager.features.root.data.RootScreenEvents.ModifyWorkStateEvent
 import org.examples.time_manager.features.root.presentation.home.components.ListOfWorks
 import org.examples.time_manager.features.root.presentation.home.components.HeaderWidget
+import org.examples.time_manager.navigation.Navigator
 
 @Composable
-fun MainPage(vm: HomeViewModel, modifier: Modifier) {
+fun MainPage(vm: HomeViewModel, modifier: Modifier, navigator: Navigator) {
     val colors = MaterialTheme.colorScheme
     val state = vm.state.collectAsState().value
     val works by state.workQueries.collectAsState(initial = emptyList())
@@ -54,7 +55,7 @@ fun MainPage(vm: HomeViewModel, modifier: Modifier) {
             .background(colors.surface)
             .fillMaxSize()
     ) {
-        HeaderWidget(state, listState, vm = vm)
+        HeaderWidget(state, listState, vm = vm, navigator = navigator)
         Spacer(modifier = Modifier.height(5.dp))
         ListOfWorks(
             showWork = { i: Int -> vm.onEvent(ModifyWorkStateEvent(selected = i, show = true)) },

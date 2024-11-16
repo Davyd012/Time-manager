@@ -11,6 +11,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import org.examples.time_manager.di.DIContainer
+import org.examples.time_manager.features.calendar.CalendarScreen
+import org.examples.time_manager.features.calendar.CalendarViewModel
 import org.examples.time_manager.features.root.HomeScreen
 import org.examples.time_manager.features.root.HomeViewModel
 import org.examples.time_manager.features.root.presentation.home.MainPage
@@ -39,9 +41,13 @@ fun AppNavHost(
                     ) {
                         composable<NavHomeRoutes.Home> {
                             Log.d("NavHost", "Created a Main page composable")
-                            MainPage(vm, modifier = Modifier.padding(contentPadding))
+                            MainPage(
+                                vm,
+                                modifier = Modifier.padding(contentPadding),
+                                navigator = navigator
+                            )
                         }
-                        composable<NavHomeRoutes.Timer> {
+                        composable<NavHomeRoutes.Stopwatch> {
                             Log.d("NavHost", "Created a Stopwatch page composable")
                             Stopwatch(vm, modifier = Modifier.padding(contentPadding))
                         }
@@ -52,6 +58,11 @@ fun AppNavHost(
                     }
                 },
             )
+        }
+
+        composable<Calendar> {
+            val vm = CalendarViewModel()
+            CalendarScreen(vm = vm)
         }
     }
 }
