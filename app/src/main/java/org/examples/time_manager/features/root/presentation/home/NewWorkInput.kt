@@ -1,5 +1,6 @@
 package org.examples.time_manager.features.root.presentation.home
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -76,6 +77,7 @@ fun NewWorkInput(
     )
 
     val millisToLocalDate: LocalDateTime = dateState.selectedDateMillis?.let {
+        Log.d("SaveButtons", "Some info $it")
         dateUtils.convertMillisToLocalDate(it / 1000)
     } ?: currentDate
 
@@ -111,7 +113,7 @@ fun NewWorkInput(
         val hours = it.date.hour.pad()
         val minutes = it.date.minute.pad()
         "$hours:$minutes"
-    } ?: "00:00"
+    }
     var startedJob by remember { mutableStateOf(formattedStartTime) }
     val startTimePickerDialog = getTimePicker(updateTime = { it: String ->
         startedJob = it
@@ -180,7 +182,7 @@ fun NewWorkInput(
 
             Spacer(modifier = Modifier.height(5.dp))
             OutlinedButton(
-                value = startedJob,
+                value = startedJob ?: "00:00",
                 text = "Start arbeidet",
                 icon = timerIcon(),
                 action = { startTimePickerDialog.show() },
@@ -229,16 +231,16 @@ fun NewWorkInput(
 
             Spacer(modifier = Modifier.height(50.dp))
             SaveButtons(
-                work,
-                onDismiss,
-                vm,
-                selectedProject,
-                time,
-                millisToLocalDate,
-                startedJob,
                 notes = notes,
                 dates = datesRange,
                 updateRange = updateRange,
+                work = work,
+                onDismiss = onDismiss,
+                vm = vm,
+                selectedProject = selectedProject,
+                time = time,
+                millisToLocalDate = millisToLocalDate,
+                startedJob = startedJob,
             )
         }
     }

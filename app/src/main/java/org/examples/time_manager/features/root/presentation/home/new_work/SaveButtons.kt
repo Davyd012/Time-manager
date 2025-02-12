@@ -1,5 +1,6 @@
 package org.examples.time_manager.features.root.presentation.home.new_work
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Row
@@ -26,6 +27,7 @@ import org.examples.time_manager.features.root.data.RootScreenEvents.ModifyWorkE
 import org.examples.time_manager.features.root.data.RootScreenEvents.WriteWorkEvent
 import org.examples.time_manager.features.root.data.RootScreenEvents.WriteRangeWorkEvent
 import org.examples.time_manager.features.root.presentation.home.utils.getIntFromTime
+import org.examples.time_manager.features.root.presentation.home.utils.localDateTime
 import org.examples.time_manager.features.root.presentation.home.utils.localDateTimeWithStartTime
 import java.time.LocalDateTime
 
@@ -38,7 +40,7 @@ fun SaveButtons(
     selectedProject: Int,
     time: String,
     millisToLocalDate: LocalDateTime,
-    startedJob: String,
+    startedJob: String?,
     notes: String,
     dates: List<LocalDateTime>,
     updateRange: Boolean,
@@ -55,7 +57,7 @@ fun SaveButtons(
                     WriteRangeWorkEvent(
                         project = selectedProject,
                         dates = dates,
-                        started = localDateTimeWithStartTime(millisToLocalDate, startedJob),
+                        started = localDateTimeWithStartTime(millisToLocalDate, startedJob!!),
                         notes = notes,
                     )
                 )
@@ -73,6 +75,9 @@ fun SaveButtons(
         return
     }
 
+    val startedJobDateTime = startedJob?.let { localDateTimeWithStartTime(millisToLocalDate, startedJob) }
+        ?: localDateTime(time)
+    Log.d("SaveButtons", "$startedJobDateTime / $millisToLocalDate")
     if (work == null) {
         Button(
             onClick = {
@@ -81,7 +86,7 @@ fun SaveButtons(
                     WriteWorkEvent(
                         project = selectedProject,
                         hours = getIntFromTime(time),
-                        date = localDateTimeWithStartTime(millisToLocalDate, startedJob),
+                        date = startedJobDateTime,
                         notes = notes,
                     )
                 )
@@ -127,10 +132,7 @@ fun SaveButtons(
                     vm.onEvent(
                         ModifyWorkEvent(
                             work = work.copy(
-                                date = localDateTimeWithStartTime(
-                                    millisToLocalDate,
-                                    startedJob
-                                ),
+                                date = startedJobDateTime,
                                 project = selectedProject,
                                 time = getIntFromTime(time),
                                 description = notes,
