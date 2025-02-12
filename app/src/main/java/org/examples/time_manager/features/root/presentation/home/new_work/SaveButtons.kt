@@ -39,6 +39,7 @@ fun SaveButtons(
     time: String,
     millisToLocalDate: LocalDateTime,
     startedJob: String,
+    notes: String,
     dates: List<LocalDateTime>,
     updateRange: Boolean,
 ) {
@@ -55,6 +56,7 @@ fun SaveButtons(
                         project = selectedProject,
                         dates = dates,
                         started = localDateTimeWithStartTime(millisToLocalDate, startedJob),
+                        notes = notes,
                     )
                 )
             },
@@ -79,7 +81,8 @@ fun SaveButtons(
                     WriteWorkEvent(
                         project = selectedProject,
                         hours = getIntFromTime(time),
-                        date = localDateTimeWithStartTime(millisToLocalDate, startedJob)
+                        date = localDateTimeWithStartTime(millisToLocalDate, startedJob),
+                        notes = notes,
                     )
                 )
             },
@@ -130,6 +133,7 @@ fun SaveButtons(
                                 ),
                                 project = selectedProject,
                                 time = getIntFromTime(time),
+                                description = notes,
                             )
                         )
                     )

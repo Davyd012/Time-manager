@@ -38,7 +38,7 @@ import org.examples.time_manager.features.root.HomeViewModel
 import org.examples.time_manager.features.root.data.HomeState
 import org.examples.time_manager.features.root.data.RootScreenEvents.CreateExcelDocumentEvent
 import org.examples.time_manager.features.root.data.RootScreenEvents.ModifyWorkStateEvent
-import org.examples.time_manager.features.root.presentation.home.MonthSelectorDialog
+import org.examples.time_manager.features.root.presentation.home.MonthPickerDialog
 import org.examples.time_manager.navigation.Navigator
 import org.examples.time_manager.ui.theme.exportIcon
 
@@ -89,13 +89,15 @@ fun HeaderWidget(
     }
 
     if (showMonthPicker) {
-        MonthSelectorDialog(
+        MonthPickerDialog(
             onDismiss = { month: Int ->
                 if (month >= 0) {
                     openSaveFilePicker(month)
                 }
                 showMonthPicker = false
             },
+            onEvent = vm::onEvent,
+            projectValues = state.projects,
         )
     }
 

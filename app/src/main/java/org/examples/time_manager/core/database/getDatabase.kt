@@ -56,6 +56,10 @@ class DummyWorkDao : WorkDao {
     override fun getHoursByDay(startOfDay: Long, endOfDay: Long): Int {
         return 0
     }
+
+    override fun getHoursByDayAndProject(startOfDay: Long, endOfDay: Long, ids: List<Int>): Int {
+        return 0
+    }
 }
 
 class DummyProjectDao : ProjectDao {

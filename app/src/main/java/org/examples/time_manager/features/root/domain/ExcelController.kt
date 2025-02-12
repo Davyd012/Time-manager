@@ -5,7 +5,7 @@ import android.net.Uri
 import android.util.Log
 import org.apache.poi.ss.usermodel.HorizontalAlignment
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
-import org.examples.time_manager.features.root.data.DayModel
+import org.examples.time_manager.core.dates.models.DayModel
 import org.examples.time_manager.features.root.presentation.utils.formatHoursFromSeconds
 import java.io.IOException
 import java.time.format.DateTimeFormatter

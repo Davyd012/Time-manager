@@ -1,4 +1,4 @@
-package org.examples.time_manager.features.root.presentation.home.new_work
+package org.examples.time_manager.features.calendar.presentation.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -16,10 +16,10 @@ import androidx.compose.ui.unit.dp
 import org.examples.time_manager.core.database.project.Project
 
 @Composable
-fun ListOfProjects(
+fun ProjectsList(
     projects: List<Project>,
-    selectedProjects: List<Int>,
-    selectProject: (Int) -> Unit,
+    selectedProjects: List<Project>,
+    selectProject: (Project) -> Unit,
 ) {
     val colors = MaterialTheme.colorScheme
     val typography = MaterialTheme.typography
@@ -38,7 +38,7 @@ fun ListOfProjects(
             Text(
                 text = it.name,
                 style = typography.titleMedium.copy(
-                    color = if (selectedProjects.contains(it.id))
+                    color = if (selectedProjects.contains(it))
                         colors.onPrimaryContainer
                     else colors.onSecondaryContainer
                 ),
@@ -46,8 +46,8 @@ fun ListOfProjects(
                     .clip(
                         RoundedCornerShape(5.dp)
                     )
-                    .clickable { selectProject(it.id) }
-                    .background(if (selectedProjects.contains(it.id)) colors.primaryContainer else colors.secondaryContainer)
+                    .clickable { selectProject(it) }
+                    .background(if (selectedProjects.contains(it)) colors.primaryContainer else colors.secondaryContainer)
                     .padding(15.dp),
             )
         }

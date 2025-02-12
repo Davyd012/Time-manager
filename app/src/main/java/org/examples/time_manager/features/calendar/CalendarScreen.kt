@@ -1,6 +1,7 @@
 package org.examples.time_manager.features.calendar
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,10 +27,14 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import org.examples.time_manager.core.database.project.Project
+import org.examples.time_manager.features.calendar.data.CalendarScreenEvents
+import org.examples.time_manager.features.calendar.presentation.components.ProjectsList
 import org.examples.time_manager.features.calendar.utils.formatHoursFromSeconds
 
 @Composable
@@ -40,7 +45,7 @@ fun CalendarScreen(vm: CalendarViewModel) {
 
     val firstDay = (state.dayPerMonth.firstOrNull()?.date?.dayOfWeek?.ordinal
         ?: 0)
-    val month by remember {
+    var month by remember {
         mutableIntStateOf(
             (state.dayPerMonth.firstOrNull()?.date?.month?.ordinal
                 ?: 0)
@@ -57,11 +62,14 @@ fun CalendarScreen(vm: CalendarViewModel) {
         )
     }
 
+    val projects = state.projects.collectAsState(initial = emptyList()).value
+
     Column(
         modifier = Modifier
             .background(colors.primary)
             .fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.SpaceEvenly
     ) {
         Row(
             modifier = Modifier
@@ -73,10 +81,16 @@ fun CalendarScreen(vm: CalendarViewModel) {
             Icon(
                 Icons.AutoMirrored.Filled.KeyboardArrowLeft,
                 contentDescription = null,
-                tint = colors.onPrimary
+                tint = colors.onPrimary,
+                modifier = Modifier
+                    .padding(5.dp)
+                    .clickable {
+                        month -= 1
+                        vm.onEvent(CalendarScreenEvents.UpdateMonth(-1))
+                    }
             )
             Text(
-                months.elementAt(month),
+                months.elementAt(normalizeIndex(month)),
                 style = texts.headlineMedium.copy(
                     color = colors.onPrimary,
                     fontWeight = FontWeight.Bold
@@ -85,9 +99,25 @@ fun CalendarScreen(vm: CalendarViewModel) {
             Icon(
                 Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = null,
-                tint = colors.onPrimary
+                tint = colors.onPrimary,
+                modifier = Modifier
+                    .padding(5.dp)
+                    .clickable {
+                        month += 1
+                        vm.onEvent(CalendarScreenEvents.UpdateMonth(1))
+                    }
             )
         }
+
+        ProjectsList(
+            projects = projects,
+            selectedProjects = state.selectedProjects,
+            selectProject = { project: Project ->
+                vm.onEvent(
+                    CalendarScreenEvents.UpdateSelectedProjects(project)
+                )
+            },
+        )
 
         LazyVerticalGrid(
             columns = GridCells.Fixed(7),
@@ -143,4 +173,10 @@ fun CalendarScreen(vm: CalendarViewModel) {
             )
         )
     }
+}
+
+private fun normalizeIndex(month: Int): Int {
+    val value = if (month < 0) month * -1 else month
+    val result = value % 12
+    return if (month < 0) 12 - result else result
 }

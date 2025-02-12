@@ -20,6 +20,7 @@ import androidx.compose.material3.DateRangePickerState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberDateRangePickerState
@@ -80,13 +81,11 @@ fun NewWorkInput(
 
     var showDatePicker by remember { mutableStateOf(false) }
 
-
     val state = rememberDateRangePickerState()
     val datesRange = state.let {
         if (it.selectedEndDateMillis == null || it.selectedStartDateMillis == null) emptyList()
         else extractDates(dateUtils, it)
     }
-
 
     var updateRange by remember { mutableStateOf(false) }
     DatePickerWidget(
@@ -105,6 +104,7 @@ fun NewWorkInput(
     } ?: "00:00"
 
     var time by remember { mutableStateOf(formattedTime) }
+    var notes by remember { mutableStateOf(work?.description ?: "") }
     val timePickerDialog = getTimePicker(updateTime = { it: String -> time = it })
 
     val formattedStartTime = work?.let {
@@ -134,7 +134,7 @@ fun NewWorkInput(
                 .clip(RoundedCornerShape(topStart = 10.dp, topEnd = 10.dp))
                 .background(colors.surface)
                 .padding(10.dp)
-                .heightIn(min = 350.dp)
+                .heightIn(min = 500.dp)
         ) {
             Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Text(
@@ -151,7 +151,7 @@ fun NewWorkInput(
             Spacer(modifier = Modifier.height(5.dp))
             ListOfProjects(
                 projects,
-                selectedProject,
+                listOf(selectedProject),
                 selectProject = { it: Int -> selectedProject = it },
             )
             Spacer(modifier = Modifier.height(10.dp))
@@ -184,6 +184,19 @@ fun NewWorkInput(
                 text = "Start arbeidet",
                 icon = timerIcon(),
                 action = { startTimePickerDialog.show() },
+            )
+
+            Spacer(modifier = Modifier.height(5.dp))
+
+            OutlinedTextField(
+                value = notes,
+                onValueChange = { notes = it },
+                label = {
+                    Text("Kommentar", color = colors.onSurface)
+                },
+                minLines = 3,
+                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier.fillMaxWidth()
             )
 
             Spacer(modifier = Modifier.height(5.dp))
@@ -223,6 +236,7 @@ fun NewWorkInput(
                 time,
                 millisToLocalDate,
                 startedJob,
+                notes = notes,
                 dates = datesRange,
                 updateRange = updateRange,
             )

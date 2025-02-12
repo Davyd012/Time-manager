@@ -2,6 +2,7 @@ package org.examples.time_manager.features.root
 
 import android.util.Log
 import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
@@ -29,8 +30,8 @@ import org.examples.time_manager.features.root.data.HomeState
 import org.examples.time_manager.features.root.data.ModifyWork
 import org.examples.time_manager.features.root.data.RootScreenEvents
 import org.examples.time_manager.features.root.data.TimerStates
-import org.examples.time_manager.features.root.data.Today
-import org.examples.time_manager.features.root.domain.DatesController
+import org.examples.time_manager.core.dates.DatesController
+import org.examples.time_manager.core.dates.models.Today
 import org.examples.time_manager.features.root.domain.ExcelController
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -57,6 +58,8 @@ class HomeViewModel(
     private val excelController = ExcelController()
 
     private val datesController = DatesController(worksDao = worksDao)
+
+    private var exportProjects = mutableStateOf(emptyList<Project>())
 
     init {
         viewModelScope.launch(Dispatchers.IO) {
@@ -241,7 +244,7 @@ class HomeViewModel(
                 }
                 worksDao.upsert(
                     Work(
-                        description = "",
+                        description = event.notes,
                         date = event.date,
                         project = event.project,
                         task = 0,
@@ -259,21 +262,32 @@ class HomeViewModel(
 
             is RootScreenEvents.CreateExcelDocumentEvent -> viewModelScope.launch(Dispatchers.IO) {
                 Log.d("RootViewModel", "Launching a creating document activity")
-                var dayPerMonth = state.value.dayPerMonth
-                if (event.month != null) {
+                val dayPerMonth = if (event.month != null) {
                     val today =
                         LocalDate.now().withMonth(event.month)
                     val firstDayOfMonth = today.with(TemporalAdjusters.firstDayOfMonth())
                     val lastDayOfMonth = today.with(TemporalAdjusters.lastDayOfMonth())
 
-                    dayPerMonth = datesController.getDatesForAMonth(firstDayOfMonth, lastDayOfMonth)
-                }
+                    datesController.getDatesForAMonth(
+                        firstDayOfMonth,
+                        lastDayOfMonth,
+                        projects = exportProjects.value
+                    )
+                } else datesController.getDatesForCurrentMonth(projects = exportProjects.value)
 
                 excelController.createExcelFile(
                     context = event.context,
                     uri = event.uri,
                     dayPerMonth = dayPerMonth
                 )
+                exportProjects.value = emptyList()
+            }
+
+            is RootScreenEvents.ModifyExportProjects -> viewModelScope.launch(Dispatchers.IO) {
+                val selected = exportProjects.value.firstOrNull { it.id == event.project.id }
+                exportProjects.value =
+                    if (selected != null) exportProjects.value.filter { it.id != event.project.id }
+                    else exportProjects.value.plus(event.project)
             }
 
             is RootScreenEvents.WriteRangeWorkEvent -> viewModelScope.launch(Dispatchers.IO) {
@@ -294,7 +308,7 @@ class HomeViewModel(
                     }
                     worksDao.upsert(
                         Work(
-                            description = "",
+                            description = event.notes,
                             date = day.withHour(event.started.hour)
                                 .withMinute(event.started.minute),
                             project = event.project,

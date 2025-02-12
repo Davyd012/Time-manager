@@ -19,4 +19,7 @@ interface WorkDao {
 
     @Query("SELECT SUM(time) FROM work WHERE date >= :startOfDay AND date <= :endOfDay")
     fun getHoursByDay(startOfDay: Long, endOfDay: Long): Int
+
+    @Query("SELECT SUM(time) FROM work WHERE date >= :startOfDay AND date <= :endOfDay AND project IN (:ids)")
+    fun getHoursByDayAndProject(startOfDay: Long, endOfDay: Long, ids: List<Int>): Int
 }
