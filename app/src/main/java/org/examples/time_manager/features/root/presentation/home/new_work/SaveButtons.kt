@@ -75,9 +75,8 @@ fun SaveButtons(
         return
     }
 
-    val startedJobDateTime = startedJob?.let { localDateTimeWithStartTime(millisToLocalDate, startedJob) }
-        ?: localDateTime(time)
-    Log.d("SaveButtons", "$startedJobDateTime / $millisToLocalDate")
+    val startedJobDateTime = localDateTime(millisToLocalDate, time, startedJob)
+    Log.d("SaveButtons", "$startedJobDateTime / $millisToLocalDate / $startedJob")
     if (work == null) {
         Button(
             onClick = {

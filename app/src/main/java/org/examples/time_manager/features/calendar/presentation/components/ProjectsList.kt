@@ -26,7 +26,10 @@ fun ProjectsList(
 
     val scrollState = rememberScrollState()
 
-    Row(modifier = Modifier.horizontalScroll(state = scrollState)) {
+    Row(modifier = Modifier
+        .padding(15.dp)
+        .horizontalScroll(state = scrollState)
+    ) {
         projects.forEachIndexed { i, it ->
             val paddingModifier = Modifier.padding(
                 start = if (i == projects.size) 5.dp else 0.dp,

@@ -242,6 +242,7 @@ class HomeViewModel(
                         it.copy(dayPerMonth = newMonthDays)
                     }
                 }
+                Log.d("HomeViewModel", "Saving result ${event.date}")
                 worksDao.upsert(
                     Work(
                         description = event.notes,

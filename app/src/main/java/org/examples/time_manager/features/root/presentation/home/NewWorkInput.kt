@@ -77,7 +77,6 @@ fun NewWorkInput(
     )
 
     val millisToLocalDate: LocalDateTime = dateState.selectedDateMillis?.let {
-        Log.d("SaveButtons", "Some info $it")
         dateUtils.convertMillisToLocalDate(it / 1000)
     } ?: currentDate
 
@@ -115,9 +114,9 @@ fun NewWorkInput(
         "$hours:$minutes"
     }
     var startedJob by remember { mutableStateOf(formattedStartTime) }
-    val startTimePickerDialog = getTimePicker(updateTime = { it: String ->
-        startedJob = it
-    })
+    val startTimePickerDialog = getTimePicker(
+        updateTime = { it: String -> startedJob = it }
+    )
 
     ModalBottomSheet(
         onDismissRequest = {
@@ -231,9 +230,6 @@ fun NewWorkInput(
 
             Spacer(modifier = Modifier.height(50.dp))
             SaveButtons(
-                notes = notes,
-                dates = datesRange,
-                updateRange = updateRange,
                 work = work,
                 onDismiss = onDismiss,
                 vm = vm,
@@ -241,6 +237,9 @@ fun NewWorkInput(
                 time = time,
                 millisToLocalDate = millisToLocalDate,
                 startedJob = startedJob,
+                notes = notes,
+                dates = datesRange,
+                updateRange = updateRange,
             )
         }
     }
