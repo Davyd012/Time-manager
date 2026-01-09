@@ -16,6 +16,11 @@ kotlin {
     }
 }
 
+object Version {
+    const val versionCode = 2
+    const val versionName = "1.0.$versionCode"
+}
+
 android {
     namespace = "org.examples.time_manager"
     compileSdk = 36
@@ -24,8 +29,8 @@ android {
         applicationId = "org.examples.time_manager"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = Version.versionCode
+        versionName = Version.versionName
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
