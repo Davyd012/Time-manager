@@ -18,19 +18,23 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
-import androidx.navigation.NavHostController
+import androidx.navigation3.runtime.NavBackStack
+import androidx.navigation3.runtime.NavKey
 import kotlinx.coroutines.flow.drop
 import org.examples.time_manager.features.root.presentation.components.BottomBar
+import org.examples.time_manager.navigation.HomeRoute
+import org.examples.time_manager.navigation.HomeTab
 import org.examples.time_manager.navigation.PageNavigator
 
 @RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun HomeScreen(
     vm: HomeViewModel,
-    rootNav: NavHostController,
+    pageBackStack: NavBackStack<NavKey>,
     content: @Composable (PaddingValues) -> Unit,
 ) {
-    val pageNavigator = PageNavigator(rootNav)
+    val pageNavigator = remember(pageBackStack) { PageNavigator(pageBackStack) }
+    val currentRoute = pageBackStack.lastOrNull() as? HomeRoute ?: HomeTab
 
     val snackbarHostState = remember { SnackbarHostState() }
 
@@ -49,7 +53,7 @@ fun HomeScreen(
 
     Scaffold(
         bottomBar = {
-            BottomBar(pageNavigator)
+            BottomBar(pageNavigator, currentRoute)
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
     ) {

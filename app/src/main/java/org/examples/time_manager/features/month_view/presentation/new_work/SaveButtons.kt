@@ -9,8 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -29,6 +27,7 @@ import org.examples.time_manager.features.root.data.RootScreenEvents.WriteRangeW
 import org.examples.time_manager.features.root.presentation.home.utils.getIntFromTime
 import org.examples.time_manager.features.root.presentation.home.utils.localDateTime
 import org.examples.time_manager.features.root.presentation.home.utils.localDateTimeWithStartTime
+import org.examples.time_manager.ui.theme.deleteIcon
 import java.time.LocalDateTime
 
 
@@ -104,7 +103,7 @@ fun SaveButtons(
 
     Row(modifier = Modifier.padding(5.dp)) {
         Icon(
-            Icons.Default.Delete,
+            deleteIcon(),
             contentDescription = "Fjerne",
             tint = colors.onError,
             modifier = Modifier

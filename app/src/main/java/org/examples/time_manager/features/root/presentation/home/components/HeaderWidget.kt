@@ -16,9 +16,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.outlined.AddCircle
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -43,6 +40,8 @@ import org.examples.time_manager.features.root.data.RootScreenEvents.ModifyWorkS
 import org.examples.time_manager.features.root.data.RootScreenEvents.SelectDayEvent
 import org.examples.time_manager.features.root.presentation.home.MonthPickerDialog
 import org.examples.time_manager.navigation.Navigator
+import org.examples.time_manager.ui.theme.addIcon
+import org.examples.time_manager.ui.theme.arrowDownIcon
 import org.examples.time_manager.ui.theme.exportIcon
 
 @Composable
@@ -142,7 +141,7 @@ fun HeaderWidget(
                 style = texts.headlineSmall.copy(color = colors.onPrimary),
             )
             Icon(
-                Icons.Default.KeyboardArrowDown, contentDescription = null,
+                arrowDownIcon(), contentDescription = null,
                 tint = colors.onPrimary,
             )
             Spacer(modifier = Modifier.weight(1f))
@@ -156,7 +155,7 @@ fun HeaderWidget(
             }
             IconButton(onClick = { vm.onEvent(ModifyWorkStateEvent(show = true)) }) {
                 Icon(
-                    Icons.Outlined.AddCircle,
+                    addIcon(),
                     contentDescription = null,
                     tint = colors.onPrimary,
                     modifier = Modifier.size(30.dp)

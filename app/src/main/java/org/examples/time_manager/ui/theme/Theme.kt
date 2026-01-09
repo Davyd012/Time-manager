@@ -40,7 +40,7 @@ fun TimeMangerTheme(
         val insets = current.rootWindowInsets?.let { insets ->
             WindowInsetsCompat.toWindowInsetsCompat(insets)
         }
-        if (insets?.displayCutout != null) {
+        if (insets != null) {
             val density = current.resources.displayMetrics.density
             val statusBarHeightDp =
                 insets.getInsets(WindowInsetsCompat.Type.statusBars()).top.let { (it / density).dp }
@@ -49,12 +49,13 @@ fun TimeMangerTheme(
         }
     }
 
-    if (!current.isInEditMode) {
+    val view = LocalView.current
+    if (!view.isInEditMode) {
         LaunchedEffect(true) {
-            val window = (current.context as Activity).window
+            val window = (view.context as Activity).window
             window.statusBarColor = Color.TRANSPARENT
-            WindowCompat.getInsetsController(window, current).isAppearanceLightStatusBars =
-                darkTheme
+            window.navigationBarColor = Color.TRANSPARENT
+            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = darkTheme
         }
     }
 

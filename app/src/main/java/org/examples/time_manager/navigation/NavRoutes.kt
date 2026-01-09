@@ -1,23 +1,47 @@
 package org.examples.time_manager.navigation
 
+import androidx.navigation3.runtime.NavKey
+import androidx.savedstate.serialization.SavedStateConfiguration
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.modules.SerializersModule
+import kotlinx.serialization.modules.polymorphic
+import kotlinx.serialization.modules.subclass
 
 @Serializable
-data object Root
+sealed interface RootRoute : NavKey
 
 @Serializable
-data object Calendar
+sealed interface HomeRoute : NavKey
 
 @Serializable
-data class MonthView(val date: String, val day: Int = 1)
+data object Root : RootRoute
 
-sealed class NavHomeRoutes {
-    @Serializable
-    data object Home : NavHomeRoutes()
+@Serializable
+data object Calendar : RootRoute
 
-    @Serializable
-    data object Settings : NavHomeRoutes()
+@Serializable
+data class MonthView(val date: String, val day: Int = 1) : RootRoute
 
-    @Serializable
-    data object Stopwatch : NavHomeRoutes()
-}
+@Serializable
+data object HomeTab : HomeRoute
+
+@Serializable
+data object SettingsTab : HomeRoute
+
+@Serializable
+data object StopwatchTab : HomeRoute
+
+val navSavedStateConfiguration: SavedStateConfiguration =
+    SavedStateConfiguration {
+        serializersModule =
+            SerializersModule {
+                polymorphic(NavKey::class) {
+                    subclass(Root::class, Root.serializer())
+                    subclass(Calendar::class, Calendar.serializer())
+                    subclass(MonthView::class, MonthView.serializer())
+                    subclass(HomeTab::class, HomeTab.serializer())
+                    subclass(SettingsTab::class, SettingsTab.serializer())
+                    subclass(StopwatchTab::class, StopwatchTab.serializer())
+                }
+            }
+    }

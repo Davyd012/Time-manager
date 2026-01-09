@@ -11,8 +11,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Done
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -34,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import org.examples.time_manager.ui.theme.doneIcon
 
 @OptIn(ExperimentalComposeUiApi::class)
 @Composable
@@ -63,7 +62,7 @@ fun InputTextDialog(onDismissRequest: () -> Unit, saveText: (String) -> Unit, in
                             saveText(value)
                             onDismissRequest()
                         }) {
-                            Icon(Icons.Default.Done, contentDescription = null)
+                            Icon(doneIcon(), contentDescription = null)
                         }
                         Text(
                             text = "Input Tape text",

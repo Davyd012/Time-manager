@@ -1,40 +1,47 @@
 package org.examples.time_manager.navigation
 
-import androidx.navigation.NavHostController
+import androidx.navigation3.runtime.NavBackStack
+import androidx.navigation3.runtime.NavKey
 
 class Navigator(
-    private val navController: NavHostController
+    private val backStack: NavBackStack<NavKey>
 ) {
     fun toCalendar() {
-        navController.navigate(Calendar) {
-            launchSingleTop = true
-        }
+        navigateTo(Calendar)
     }
 
     fun toMonthView(date: String, day: Int = 1) {
-        val route = MonthView(date = date, day = day)
-        navController.navigate(route) {
-            launchSingleTop = true
-        }
+        navigateTo(MonthView(date = date, day = day))
     }
 
     fun close() {
-        navController.navigateUp()
+        if (backStack.size > 1) {
+            backStack.removeLast()
+        }
+    }
+
+    private fun navigateTo(route: RootRoute) {
+        if (backStack.lastOrNull() != route) {
+            backStack.add(route)
+        }
     }
 }
 
 class PageNavigator(
-    private val navController: NavHostController
+    private val backStack: NavBackStack<NavKey>
 ) {
-    fun changePage(route: NavHomeRoutes) {
-        navController.navigate(route) {
-            popUpTo(NavHomeRoutes.Home) {
-                saveState = true
-            }
+    fun changePage(route: HomeRoute) {
+        if (backStack.isEmpty()) {
+            backStack.add(route)
+            return
+        }
 
-            launchSingleTop = true
-            restoreState = true
+        while (backStack.size > 1) {
+            backStack.removeLast()
+        }
+
+        if (backStack.lastOrNull() != route) {
+            backStack[backStack.lastIndex] = route
         }
     }
-
 }

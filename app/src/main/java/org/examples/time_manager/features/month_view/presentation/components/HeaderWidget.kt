@@ -17,15 +17,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.filled.KeyboardArrowDown
-import androidx.compose.material.icons.filled.KeyboardArrowLeft
-import androidx.compose.material.icons.outlined.AddCircle
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -44,7 +38,7 @@ import org.examples.time_manager.features.month_view.MonthViewModel
 import org.examples.time_manager.features.month_view.data.MonthViewState
 import org.examples.time_manager.features.root.data.RootScreenEvents.SelectDayEvent
 import org.examples.time_manager.navigation.Navigator
-import org.examples.time_manager.ui.theme.exportIcon
+import org.examples.time_manager.ui.theme.arrowLeftIcon
 
 @Composable
 fun HeaderWidget(
@@ -148,7 +142,7 @@ fun HeaderWidget(
                 onClick = { navigator.close() },
                 content = {
                     Icon(
-                        Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                        arrowLeftIcon(),
                         contentDescription = null,
                         tint = colors.onPrimary,
                         modifier = Modifier.size(30.dp)

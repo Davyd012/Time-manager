@@ -12,13 +12,13 @@ plugins {
 
 kotlin {
     compilerOptions {
-        jvmTarget = JvmTarget.fromTarget("17")
+        jvmTarget.set(JvmTarget.JVM_17)
     }
 }
 
 android {
     namespace = "org.examples.time_manager"
-    compileSdk = 34
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "org.examples.time_manager"
@@ -44,8 +44,8 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_1_8
-        targetCompatibility = JavaVersion.VERSION_1_8
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     buildFeatures {
         compose = true
@@ -70,8 +70,9 @@ dependencies {
     implementation(libs.ui.graphics)
     implementation(libs.ui.tooling.preview)
     implementation(libs.material3)
-    implementation(libs.androidx.navigation.runtime.ktx)
-    implementation(libs.androidx.navigation.compose)
+    implementation(libs.androidx.navigation3.runtime)
+    implementation(libs.androidx.navigation3.ui)
+    implementation(libs.lifecycle.viewmodel.navigation3)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.espresso.core)

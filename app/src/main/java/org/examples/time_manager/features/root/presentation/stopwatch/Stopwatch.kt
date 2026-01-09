@@ -16,9 +16,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AddCircle
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -43,7 +40,9 @@ import org.examples.time_manager.features.root.data.RootScreenEvents.UpdateTimer
 import org.examples.time_manager.features.root.data.TimerStates
 import org.examples.time_manager.features.root.presentation.stopwatch.components.SwipeToDeleteContainer
 import org.examples.time_manager.features.root.presentation.utils.normalizeTime
+import org.examples.time_manager.ui.theme.addIcon
 import org.examples.time_manager.ui.theme.pauseTimerIcon
+import org.examples.time_manager.ui.theme.playIcon
 
 @Composable
 fun Stopwatch(vm: HomeViewModel, modifier: Modifier) {
@@ -129,7 +128,7 @@ fun Stopwatch(vm: HomeViewModel, modifier: Modifier) {
         }
 
         val imageVector =
-            if (state.counting) pauseTimerIcon() else Icons.Default.PlayArrow
+            if (state.counting) pauseTimerIcon() else playIcon()
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier.height(70.dp)
@@ -168,7 +167,8 @@ fun Stopwatch(vm: HomeViewModel, modifier: Modifier) {
             Spacer(modifier = Modifier.width(15.dp))
 
             Icon(
-                Icons.Default.AddCircle, contentDescription = null,
+                imageVector = addIcon(),
+                contentDescription = null,
                 tint = colors.onTertiary,
                 modifier = Modifier
                     .clip(RoundedCornerShape(30.dp))

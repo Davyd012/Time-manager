@@ -13,8 +13,6 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.DateRangePickerState
@@ -48,6 +46,7 @@ import org.examples.time_manager.features.root.presentation.home.new_work.DatePi
 import org.examples.time_manager.features.root.presentation.home.new_work.ListOfProjects
 import org.examples.time_manager.features.root.presentation.home.new_work.SaveButtons
 import org.examples.time_manager.features.root.presentation.utils.DateUtils
+import org.examples.time_manager.ui.theme.dateRangeIcon
 import org.examples.time_manager.ui.theme.timerIcon
 import java.time.LocalDateTime
 import java.time.ZoneOffset
@@ -175,7 +174,7 @@ fun NewWorkInput(
             OutlinedButton(
                 value = dateContent,
                 text = "Dag",
-                icon = Icons.Default.DateRange,
+                icon = dateRangeIcon(),
                 action = { showDatePicker = true },
             )
 

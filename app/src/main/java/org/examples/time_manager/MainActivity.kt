@@ -17,7 +17,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.view.WindowCompat
-import androidx.navigation.compose.rememberNavController
 import org.examples.time_manager.core.service.StopwatchService
 import org.examples.time_manager.navigation.AppNavHost
 import org.examples.time_manager.ui.theme.TimeMangerTheme
@@ -59,7 +58,6 @@ class MainActivity : ComponentActivity() {
             TimeMangerTheme {
                 AppNavHost(
                     diContainer = App.diContainer,
-                    navController = rememberNavController(),
                 )
             }
         }
