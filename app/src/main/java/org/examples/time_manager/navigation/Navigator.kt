@@ -7,11 +7,11 @@ class Navigator(
     private val backStack: NavBackStack<NavKey>
 ) {
     fun toCalendar() {
-        navigateTo(Calendar)
+        navigateTo(Route.Calendar)
     }
 
     fun toMonthView(date: String, day: Int = 1) {
-        navigateTo(MonthView(date = date, day = day))
+        navigateTo(Route.MonthView(date = date, day = day))
     }
 
     fun close() {
@@ -20,7 +20,7 @@ class Navigator(
         }
     }
 
-    private fun navigateTo(route: RootRoute) {
+    private fun navigateTo(route: Route) {
         if (backStack.lastOrNull() != route) {
             backStack.add(route)
         }
@@ -30,7 +30,7 @@ class Navigator(
 class PageNavigator(
     private val backStack: NavBackStack<NavKey>
 ) {
-    fun changePage(route: HomeRoute) {
+    fun changePage(route: Route) {
         if (backStack.isEmpty()) {
             backStack.add(route)
             return

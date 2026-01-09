@@ -19,7 +19,11 @@ import java.time.YearMonth
 import kotlin.math.roundToInt
 
 @Composable
-fun CalendarScreen(vm: CalendarViewModel, navigator: Navigator) {
+fun CalendarScreen(
+    vm: CalendarViewModel,
+    navigator: Navigator,
+    modifier: Modifier = Modifier,
+) {
     val state by vm.state.collectAsState()
     var selectedDate by rememberSaveable { mutableStateOf<java.time.LocalDate?>(null) }
 
@@ -50,6 +54,6 @@ fun CalendarScreen(vm: CalendarViewModel, navigator: Navigator) {
             selectedDate = date
             navigator.toMonthView(date = monthYear.atDay(1).toString(), day = date.dayOfMonth)
         },
-        modifier = Modifier.padding(top = App.statusBarHeight),
+        modifier = modifier.padding(top = App.statusBarHeight),
     )
 }

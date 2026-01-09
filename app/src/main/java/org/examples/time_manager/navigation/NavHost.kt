@@ -1,7 +1,16 @@
 package org.examples.time_manager.navigation
 
 import android.util.Log
-import androidx.compose.foundation.layout.padding
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
@@ -17,26 +26,15 @@ import org.examples.time_manager.features.calendar.CalendarScreen
 import org.examples.time_manager.features.calendar.CalendarViewModel
 import org.examples.time_manager.features.month_view.MonthViewModel
 import org.examples.time_manager.features.month_view.MonthViewScreen
-import org.examples.time_manager.features.root.HomeScreen
-import org.examples.time_manager.features.root.HomeViewModel
-import org.examples.time_manager.features.root.presentation.home.MainPage
-import org.examples.time_manager.features.root.presentation.newProject.NewProject
-import org.examples.time_manager.features.root.presentation.stopwatch.Stopwatch
 import java.time.LocalDate
 
 @Composable
 fun AppNavHost(
     diContainer: DIContainer,
 ) {
-    val rootBackStack = rememberNavBackStack(navSavedStateConfiguration, Root)
-    val homeBackStack = rememberNavBackStack(navSavedStateConfiguration, HomeTab)
+    val rootBackStack = rememberNavBackStack(navSavedStateConfiguration, Route.RootRoute.Root)
     val navigator = remember(rootBackStack) { Navigator(rootBackStack) }
     val rootEntryDecorators =
-        listOf(
-            rememberSaveableStateHolderNavEntryDecorator(),
-            rememberViewModelStoreNavEntryDecorator<NavKey>(),
-        )
-    val homeEntryDecorators =
         listOf(
             rememberSaveableStateHolderNavEntryDecorator(),
             rememberViewModelStoreNavEntryDecorator<NavKey>(),
@@ -46,65 +44,59 @@ fun AppNavHost(
     NavDisplay(
         backStack = rootBackStack,
         entryDecorators = rootEntryDecorators,
+        onBack = { rootBackStack.removeLastOrNull() },
+        transitionSpec = {
+            val fromKey = initialState.key
+            val toKey = targetState.key
+            if (fromKey == Route.RootRoute.Root.toString() && toKey == Route.Calendar.toString()) {
+                Log.d("NavHost", "Created a Calendar composable")
+                (slideInVertically(
+                    initialOffsetY = { fullHeight -> -fullHeight },
+                    animationSpec = tween(600, easing = FastOutSlowInEasing),
+                ) + fadeIn(animationSpec = tween(120)))
+                    .togetherWith(ExitTransition.KeepUntilTransitionsFinished)
+            } else {
+                EnterTransition.None togetherWith ExitTransition.None
+            }
+        },
+        popTransitionSpec = {
+            val fromKey = initialState.key
+            val toKey = targetState.key
+            if (fromKey == Route.Calendar.toString() && toKey == Route.RootRoute.Root.toString()) {
+                EnterTransition.None.togetherWith(
+                    slideOutVertically(
+                        targetOffsetY = { fullHeight -> -fullHeight },
+                        animationSpec = tween(260, easing = FastOutSlowInEasing),
+                    ) + fadeOut(animationSpec = tween(120)),
+                )
+            } else {
+                EnterTransition.None togetherWith ExitTransition.None
+            }
+        },
+        predictivePopTransitionSpec = {
+            val fromKey = initialState.key
+            val toKey = targetState.key
+            if (fromKey == Route.Calendar.toString() && toKey == Route.RootRoute.Root.toString()) {
+                EnterTransition.None.togetherWith(
+                    slideOutVertically(
+                        targetOffsetY = { fullHeight -> -fullHeight },
+                        animationSpec = tween(260, easing = FastOutSlowInEasing),
+                    ) + fadeOut(animationSpec = tween(120)),
+                )
+            } else {
+                EnterTransition.None togetherWith ExitTransition.None
+            }
+        },
         entryProvider =
             entryProvider {
-                entry<Root> {
-                    Log.d("NavHost", "Created a Root composable")
-                    val vm =
-                        viewModel<HomeViewModel>(
-                            factory =
-                                getHomeViewModelFactory(
-                                    diContainer = diContainer,
-                                )
-                        )
-                    HomeScreen(
-                        vm = vm,
-                        pageBackStack = homeBackStack,
-                        content = { contentPadding ->
-                            Log.d("NavHost", "Created a Home Nav host")
-                            NavDisplay(
-                                backStack = homeBackStack,
-                                entryDecorators = homeEntryDecorators,
-                                entryProvider =
-                                    entryProvider {
-                                        entry<HomeTab> {
-                                            Log.d("NavHost", "Created a Main page composable")
-                                            MainPage(
-                                                vm,
-                                                modifier =
-                                                    Modifier.padding(
-                                                        bottom = contentPadding.calculateBottomPadding()
-                                                    ),
-                                                navigator = navigator,
-                                            )
-                                        }
-                                        entry<StopwatchTab> {
-                                            Log.d("NavHost", "Created a Stopwatch page composable")
-                                            Stopwatch(
-                                                vm,
-                                                modifier =
-                                                    Modifier.padding(
-                                                        bottom = contentPadding.calculateBottomPadding()
-                                                    ),
-                                            )
-                                        }
-                                        entry<SettingsTab> {
-                                            Log.d("NavHost", "Created a New project page composable")
-                                            NewProject(
-                                                vm,
-                                                modifier =
-                                                    Modifier.padding(
-                                                        bottom = contentPadding.calculateBottomPadding()
-                                                    ),
-                                            )
-                                        }
-                                    },
-                            )
-                        },
+                entry<Route.RootRoute.Root> {
+                    HomeNavGraph(
+                        diContainer = diContainer,
+                        navigator = navigator,
                     )
                 }
 
-                entry<Calendar> {
+                entry<Route.Calendar> {
                     val vm =
                         viewModel<CalendarViewModel>(
                             factory =
@@ -115,10 +107,11 @@ fun AppNavHost(
                     CalendarScreen(
                         vm = vm,
                         navigator = navigator,
+                        modifier = Modifier.fillMaxSize(),
                     )
                 }
 
-                entry<MonthView> { monthDetail ->
+                entry<Route.MonthView> { monthDetail ->
                     Log.d("NavHost", "Created a Month view composable ${monthDetail.date}")
                     val month = LocalDate.parse(monthDetail.date)
                     val vm =

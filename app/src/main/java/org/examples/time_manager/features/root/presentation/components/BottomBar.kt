@@ -24,31 +24,29 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
-import org.examples.time_manager.navigation.HomeRoute
-import org.examples.time_manager.navigation.HomeTab
 import org.examples.time_manager.navigation.PageNavigator
-import org.examples.time_manager.navigation.StopwatchTab
+import org.examples.time_manager.navigation.Route
 import org.examples.time_manager.ui.theme.homeIcon
 import org.examples.time_manager.ui.theme.watchIcon
 
 @Composable
 fun BottomBar(
     navigator: PageNavigator,
-    currentRoute: HomeRoute,
+    currentRoute: Route,
 ) {
     val colors = MaterialTheme.colorScheme
 
-    fun isCurrent(route: HomeRoute) = route == currentRoute
+    fun isCurrent(route: Route) = route == currentRoute
 
     val items = listOf(
         BottomBarItem(
-            direction = HomeTab,
+            direction = Route.HomeRoute.HomeTab,
             icon = homeIcon(filled = false),
             activeIcon = homeIcon(),
             label = "Hjem"
         ),
         BottomBarItem(
-            direction = StopwatchTab,
+            direction = Route.HomeRoute.StopwatchTab,
             icon = watchIcon(filled = false),
             activeIcon = watchIcon(),
             label = "Stoppeklokke"
@@ -139,7 +137,7 @@ fun BottomBarItemView(
 
 
 data class BottomBarItem(
-    val direction: HomeRoute,
+    val direction: Route,
     val icon: ImageVector,
     val activeIcon: ImageVector,
     val label: String

@@ -4,7 +4,6 @@ import android.content.Intent
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -21,7 +20,6 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -103,35 +101,19 @@ fun HeaderWidget(
         )
     }
 
-    var isExpanded by remember { mutableStateOf(false) }
-    val animatedHeight by animateDpAsState(
-        targetValue = if (isExpanded) 1000.dp else 100.dp,
-        label = ""
-    )
-
-    // Trigger navigation when expanded to full size
-    LaunchedEffect(isExpanded) {
-        if (isExpanded) {
-            // Small delay to let animation complete visually before navigating
-            kotlinx.coroutines.delay(100)
-            navigator.toCalendar()
-        }
-    }
-
     Column(
         modifier = Modifier
-            .clip(if (isExpanded) RoundedCornerShape(0.dp) else RoundedCornerShape(bottomEnd = 30.dp, bottomStart = 30.dp))
+            .clip(RoundedCornerShape(bottomEnd = 30.dp, bottomStart = 30.dp))
             .background(colors.primary)
             .padding(top = App.statusBarHeight)
-            .padding(10.dp)
-            .then(if (isExpanded) Modifier.height(animatedHeight) else Modifier),
+            .padding(10.dp),
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
                 .clip(RoundedCornerShape(10.dp))
                 .clickable {
-                    isExpanded = true
+                    navigator.toCalendar()
                 }
         ) {
             Spacer(modifier = Modifier.padding(start = 2.dp))
