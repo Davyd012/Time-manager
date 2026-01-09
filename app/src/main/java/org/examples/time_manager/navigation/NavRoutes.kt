@@ -8,6 +8,9 @@ data object Root
 @Serializable
 data object Calendar
 
+@Serializable
+data class MonthView(val date: String, val day: Int = 1)
+
 sealed class NavHomeRoutes {
     @Serializable
     data object Home : NavHomeRoutes()

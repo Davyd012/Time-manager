@@ -29,3 +29,8 @@ fun watchIconFilled(): ImageVector {
 fun watchIconOutlined(): ImageVector {
     return ImageVector.vectorResource(id = R.drawable.baseline_access_time_24)
 }
+
+@Composable
+fun visibilityIcon(): ImageVector {
+    return ImageVector.vectorResource(id = R.drawable.baseline_visibility_24)
+}

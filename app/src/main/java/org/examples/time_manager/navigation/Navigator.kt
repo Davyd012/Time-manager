@@ -11,6 +11,13 @@ class Navigator(
         }
     }
 
+    fun toMonthView(date: String, day: Int = 1) {
+        val route = MonthView(date = date, day = day)
+        navController.navigate(route) {
+            launchSingleTop = true
+        }
+    }
+
     fun close() {
         navController.navigateUp()
     }

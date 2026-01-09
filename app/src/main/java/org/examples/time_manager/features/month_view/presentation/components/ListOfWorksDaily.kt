@@ -1,4 +1,4 @@
-package org.examples.time_manager.features.root.presentation.home.components
+package org.examples.time_manager.features.month_view.presentation.components
 
 import android.annotation.SuppressLint
 import androidx.compose.foundation.background
@@ -15,8 +15,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.Typography
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -43,32 +45,8 @@ fun ListOfWorks(
     val colors = MaterialTheme.colorScheme
 
     if (works.isEmpty()) {
-        val composition by rememberLottieComposition(
-            LottieCompositionSpec.Asset("animations/empty.json")
-        )
-
-        val progress by animateLottieCompositionAsState(
-            composition,
-            iterations = LottieConstants.IterateForever,
-            restartOnPlay = false
-        )
-
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                LottieAnimation(
-                    composition,
-                    progress = { progress },
-                    modifier = Modifier.size(400.dp)
-                )
-                Text(
-                    text = "Ingen arbeidsregnskap",
-                    style = style.titleMedium.copy(color = colors.onSurface)
-                )
-            }
-        }
-        return
+        return NoJobsView()
     }
-
 
     val sortedMap = works
         .groupBy { it.date.hour }
@@ -154,6 +132,37 @@ fun ListOfWorks(
 //                        .background(colors.onTertiaryContainer),
                 )
             }
+        }
+    }
+}
+
+@Composable
+fun NoJobsView(
+) {
+    val style = MaterialTheme.typography
+    val colors = MaterialTheme.colorScheme
+
+    val composition by rememberLottieComposition(
+        LottieCompositionSpec.Asset("animations/empty.json")
+    )
+
+    val progress by animateLottieCompositionAsState(
+        composition,
+        iterations = LottieConstants.IterateForever,
+        restartOnPlay = false
+    )
+
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            LottieAnimation(
+                composition,
+                progress = { progress },
+                modifier = Modifier.size(400.dp)
+            )
+            Text(
+                text = "Ingen arbeidsregnskap",
+                style = style.titleMedium.copy(color = colors.onSurface)
+            )
         }
     }
 }

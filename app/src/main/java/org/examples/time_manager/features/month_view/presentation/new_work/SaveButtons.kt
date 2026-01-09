@@ -1,4 +1,4 @@
-package org.examples.time_manager.features.root.presentation.home.new_work
+package org.examples.time_manager.features.month_view.presentation.new_work
 
 import android.util.Log
 import androidx.compose.foundation.background

@@ -34,6 +34,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import org.examples.time_manager.App
 import org.examples.time_manager.core.database.project.Project
 import org.examples.time_manager.features.root.HomeViewModel
 import org.examples.time_manager.features.root.data.RootScreenEvents.ModifyProjectEvent
@@ -76,10 +77,11 @@ fun Stopwatch(vm: HomeViewModel, modifier: Modifier) {
     ) {
         Box(
             modifier = Modifier
-                .height(200.dp)
+                .height(200.dp + App.statusBarHeight)
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(bottomEnd = 30.dp, bottomStart = 30.dp))
-                .background(colors.primary),
+                .background(colors.primary)
+                .padding(top = App.statusBarHeight),
             contentAlignment = Alignment.Center,
         ) {
             Text(

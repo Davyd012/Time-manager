@@ -1,4 +1,4 @@
-package org.examples.time_manager.features.root.presentation.home.utils
+package org.examples.time_manager.features.month_view.utils
 
 import android.util.Log
 import java.time.LocalDate

@@ -26,7 +26,6 @@ sealed interface RootScreenEvents {
     data class WriteRangeWorkEvent(
         val project: Int,
         val dates: List<LocalDateTime>,
-        val started: LocalDateTime,
         val notes: String
     ) :
         RootScreenEvents

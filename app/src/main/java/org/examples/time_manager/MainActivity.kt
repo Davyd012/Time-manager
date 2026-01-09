@@ -9,12 +9,14 @@ import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
 import android.util.Log
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.core.view.WindowCompat
 import androidx.navigation.compose.rememberNavController
 import org.examples.time_manager.core.service.StopwatchService
 import org.examples.time_manager.navigation.AppNavHost
@@ -51,6 +53,8 @@ class MainActivity : ComponentActivity() {
         Log.d("MainViewModel", "Stopwatch service state: ${(stopwatchService == null)}")
         Log.d("MainViewModel", "Is bound: $isBound")
 
+        makeFullscreen()
+
         setContent {
             TimeMangerTheme {
                 AppNavHost(
@@ -74,6 +78,16 @@ class MainActivity : ComponentActivity() {
             }
         }
         requestPermissionLauncher.launch(permissions.asList().toTypedArray())
+    }
+
+
+    private fun makeFullscreen() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            window.attributes.layoutInDisplayCutoutMode =
+                WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+            WindowCompat.setDecorFitsSystemWindows(window, false)
+            return
+        }
     }
 
     override fun onStop() {

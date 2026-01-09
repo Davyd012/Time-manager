@@ -1,5 +1,6 @@
-package org.examples.time_manager.features.root.presentation.home.components
+package org.examples.time_manager.features.month_view.presentation.components
 
+import android.app.Activity
 import android.content.Intent
 import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -17,7 +18,9 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.filled.KeyboardArrowDown
+import androidx.compose.material.icons.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.outlined.AddCircle
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -34,22 +37,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
 import org.examples.time_manager.App
 import org.examples.time_manager.features.components.MonthDaysList
-import org.examples.time_manager.features.root.HomeViewModel
-import org.examples.time_manager.features.root.data.HomeState
-import org.examples.time_manager.features.root.data.RootScreenEvents.CreateExcelDocumentEvent
-import org.examples.time_manager.features.root.data.RootScreenEvents.ModifyWorkStateEvent
+import org.examples.time_manager.features.month_view.MonthViewModel
+import org.examples.time_manager.features.month_view.data.MonthViewState
 import org.examples.time_manager.features.root.data.RootScreenEvents.SelectDayEvent
-import org.examples.time_manager.features.root.presentation.home.MonthPickerDialog
 import org.examples.time_manager.navigation.Navigator
 import org.examples.time_manager.ui.theme.exportIcon
 
 @Composable
 fun HeaderWidget(
-    state: HomeState,
+    state: MonthViewState,
     listState: LazyListState,
-    vm: HomeViewModel,
+    vm: MonthViewModel,
     navigator: Navigator,
 ) {
     val colors = MaterialTheme.colorScheme
@@ -68,13 +69,14 @@ fun HeaderWidget(
     val saveFileLauncher =
         rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
             Log.d("MonthPickerViewModel", "Got a result")
-            if (result.resultCode == android.app.Activity.RESULT_OK) {
+            if (result.resultCode == Activity.RESULT_OK) {
                 val data = result.data?.getStringExtra("stringKey")?.toInt()
                 Log.d("MonthPickerViewModel", "Got a result $data")
                 result.data?.data?.let { uri ->
-                    vm.onEvent(
-                        CreateExcelDocumentEvent(context, uri, data)
-                    )
+                    TODO("Create excel document function")
+//                    vm.onEvent(
+//                        CreateExcelDocumentEvent(context, uri, data)
+//                    )
                 }
             }
         }
@@ -92,16 +94,17 @@ fun HeaderWidget(
     }
 
     if (showMonthPicker) {
-        MonthPickerDialog(
-            onDismiss = { month: Int ->
-                if (month >= 0) {
-                    openSaveFilePicker(month)
-                }
-                showMonthPicker = false
-            },
-            onEvent = vm::onEvent,
-            projectValues = state.projects,
-        )
+        TODO("Create month picker")
+//        MonthPickerDialog(
+//            onDismiss = { month: Int ->
+//                if (month >= 0) {
+//                    openSaveFilePicker(month)
+//                }
+//                showMonthPicker = false
+//            },
+//            onEvent = vm::onEvent,
+//            projectValues = state.projects,
+//        )
     }
 
     var isExpanded by remember { mutableStateOf(false) }
@@ -114,14 +117,19 @@ fun HeaderWidget(
     LaunchedEffect(isExpanded) {
         if (isExpanded) {
             // Small delay to let animation complete visually before navigating
-            kotlinx.coroutines.delay(100)
+            delay(100)
             navigator.toCalendar()
         }
     }
 
     Column(
         modifier = Modifier
-            .clip(if (isExpanded) RoundedCornerShape(0.dp) else RoundedCornerShape(bottomEnd = 30.dp, bottomStart = 30.dp))
+            .clip(
+                if (isExpanded) RoundedCornerShape(0.dp) else RoundedCornerShape(
+                    bottomEnd = 30.dp,
+                    bottomStart = 30.dp
+                )
+            )
             .background(colors.primary)
             .padding(top = App.statusBarHeight)
             .padding(10.dp)
@@ -135,33 +143,44 @@ fun HeaderWidget(
                     isExpanded = true
                 }
         ) {
-            Spacer(modifier = Modifier.padding(start = 2.dp))
-            Spacer(modifier = Modifier.width(5.dp))
-            Text(
-                state.today.weekDay,
-                style = texts.headlineSmall.copy(color = colors.onPrimary),
-            )
-            Icon(
-                Icons.Default.KeyboardArrowDown, contentDescription = null,
-                tint = colors.onPrimary,
+            Spacer(modifier = Modifier.width(7.dp))
+            IconButton(
+                onClick = { navigator.close() },
+                content = {
+                    Icon(
+                        Icons.AutoMirrored.Filled.KeyboardArrowLeft,
+                        contentDescription = null,
+                        tint = colors.onPrimary,
+                        modifier = Modifier.size(30.dp)
+                    )
+                },
             )
             Spacer(modifier = Modifier.weight(1f))
-            IconButton(onClick = { showMonthPicker = true }) {
-                Icon(
-                    exportIcon(),
-                    contentDescription = null,
-                    tint = colors.onPrimary,
-                    modifier = Modifier.size(30.dp)
-                )
-            }
-            IconButton(onClick = { vm.onEvent(ModifyWorkStateEvent(show = true)) }) {
-                Icon(
-                    Icons.Outlined.AddCircle,
-                    contentDescription = null,
-                    tint = colors.onPrimary,
-                    modifier = Modifier.size(30.dp)
-                )
-            }
+//            IconButton(
+//                onClick = { showMonthPicker = true },
+//                content = {
+//                    Icon(
+//                        exportIcon(),
+//                        contentDescription = null,
+//                        tint = colors.onPrimary,
+//                        modifier = Modifier.size(30.dp)
+//                    )
+//                },
+//            )
+//            IconButton(
+//                onClick = {
+//                    TODO("Fix events")
+////                vm.onEvent(ModifyWorkStateEvent(show = true))
+//                },
+//                content = {
+//                    Icon(
+//                        Icons.Outlined.AddCircle,
+//                        contentDescription = null,
+//                        tint = colors.onPrimary,
+//                        modifier = Modifier.size(30.dp)
+//                    )
+//                },
+//            )
         }
 
         MonthDaysList(

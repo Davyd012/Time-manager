@@ -1,4 +1,4 @@
-package org.examples.time_manager.features.root.presentation.home.components
+package org.examples.time_manager.features.components
 
 import android.annotation.SuppressLint
 import androidx.compose.foundation.background
@@ -16,17 +16,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
-import org.examples.time_manager.features.root.HomeViewModel
-import org.examples.time_manager.features.root.data.HomeState
-import org.examples.time_manager.features.root.data.RootScreenEvents.SelectDayEvent
-import org.examples.time_manager.features.root.presentation.utils.formatHoursFromSeconds
+import org.examples.time_manager.core.dates.models.DayModel
+import org.examples.time_manager.features.utils.formatHoursFromSeconds
 
 @SuppressLint("DefaultLocale")
 @Composable
 fun MonthDaysList(
     listState: LazyListState,
-    state: HomeState,
-    vm: HomeViewModel,
+    selectDay: (Int) -> Unit,
+    selectedDay: Int,
+    monthDays: List<DayModel>,
 ) {
     val style = MaterialTheme.typography
     val colors = MaterialTheme.colorScheme
@@ -41,11 +40,11 @@ fun MonthDaysList(
             .padding(5.dp),
     ) {
 //        item {
-//            Text(state.dayPerMonth.size.toString())
+//            Text(monthDays.size.toString())
 //        }
-        items(state.dayPerMonth.size) { index ->
-            val it = state.dayPerMonth.elementAt(index)
-            val currentDay = it.date.dayOfMonth == state.selectedDay
+        items(monthDays.size) { index ->
+            val it = monthDays.elementAt(index)
+            val currentDay = it.date.dayOfMonth == selectedDay
 
             val textColor =
                 if (currentDay) colors.onPrimaryContainer else colors.onPrimary
@@ -55,7 +54,7 @@ fun MonthDaysList(
                     .padding(horizontal = 3.dp)
                     .clip(RoundedCornerShape(10.dp))
                     .background(if (currentDay) colors.primaryContainer else colors.primary)
-                    .clickable { vm.onEvent(SelectDayEvent(index + 1)) }
+                    .clickable { selectDay(index) }
                     .padding(horizontal = 10.dp, vertical = 5.dp),
             ) {
                 Text(it.day.substring(0, 3), color = textColor)

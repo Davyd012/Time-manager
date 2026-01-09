@@ -1,4 +1,4 @@
-package org.examples.time_manager.features.calendar.presentation.components
+package org.examples.time_manager.features.month_view.presentation.new_work
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -10,31 +10,23 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.flow.Flow
 import org.examples.time_manager.core.database.project.Project
 
 @Composable
-fun ProjectsList(
-    projectsState: Flow<List<Project>>,
-    selectedProjects: List<Project>,
-    selectProject: (Project) -> Unit,
+fun ListOfProjects(
+    projects: List<Project>,
+    selectedProjects: List<Int>,
+    selectProject: (Int) -> Unit,
 ) {
     val colors = MaterialTheme.colorScheme
     val typography = MaterialTheme.typography
 
     val scrollState = rememberScrollState()
 
-    val projects = projectsState.collectAsState(initial = emptyList()).value
-
-    Row(
-        modifier = Modifier
-            .padding(15.dp)
-            .horizontalScroll(state = scrollState)
-    ) {
+    Row(modifier = Modifier.horizontalScroll(state = scrollState)) {
         projects.forEachIndexed { i, it ->
             val paddingModifier = Modifier.padding(
                 start = if (i == projects.size) 5.dp else 0.dp,
@@ -46,7 +38,7 @@ fun ProjectsList(
             Text(
                 text = it.name,
                 style = typography.titleMedium.copy(
-                    color = if (selectedProjects.contains(it))
+                    color = if (selectedProjects.contains(it.id))
                         colors.onPrimaryContainer
                     else colors.onSecondaryContainer
                 ),
@@ -54,8 +46,8 @@ fun ProjectsList(
                     .clip(
                         RoundedCornerShape(5.dp)
                     )
-                    .clickable { selectProject(it) }
-                    .background(if (selectedProjects.contains(it)) colors.primaryContainer else colors.secondaryContainer)
+                    .clickable { selectProject(it.id) }
+                    .background(if (selectedProjects.contains(it.id)) colors.primaryContainer else colors.secondaryContainer)
                     .padding(15.dp),
             )
         }

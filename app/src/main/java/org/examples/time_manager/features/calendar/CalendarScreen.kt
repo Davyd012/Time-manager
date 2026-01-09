@@ -19,41 +19,38 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import org.examples.time_manager.App
 import org.examples.time_manager.core.database.project.Project
+import org.examples.time_manager.core.dates.models.DayModel
 import org.examples.time_manager.features.calendar.data.CalendarScreenEvents
 import org.examples.time_manager.features.calendar.presentation.components.ProjectsList
 import org.examples.time_manager.features.calendar.utils.formatHoursFromSeconds
+import org.examples.time_manager.navigation.Navigator
+import org.examples.time_manager.ui.theme.visibilityIcon
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneOffset
+import java.util.Calendar
 
 @Composable
-fun CalendarScreen(vm: CalendarViewModel) {
+fun CalendarScreen(vm: CalendarViewModel, navigator: Navigator) {
     val state by vm.state.collectAsState()
+
     val colors = MaterialTheme.colorScheme
     val texts = MaterialTheme.typography
-
-    val firstDay = (state.dayPerMonth.firstOrNull()?.date?.dayOfWeek?.ordinal
-        ?: 0)
-    var month by remember {
-        mutableIntStateOf(
-            (state.dayPerMonth.firstOrNull()?.date?.month?.ordinal
-                ?: 0)
-        )
-    }
-    val days =
-        List(firstDay) { null } + (1..(state.dayPerMonth.size.takeIf { it > 0 } ?: 2)).toList()
-
 
     val months = remember {
         listOf(
@@ -62,20 +59,57 @@ fun CalendarScreen(vm: CalendarViewModel) {
         )
     }
 
-    val projects = state.projects.collectAsState(initial = emptyList()).value
+    val firstDay = state.dayPerMonth.firstOrNull()?.date
+    val firstDayOrd = firstDay?.dayOfWeek?.ordinal ?: 0
+    var month = firstDay?.month?.ordinal ?: 0
+
+    val days =
+        List(firstDayOrd) { null } + (1..(state.dayPerMonth.size.takeIf { it > 0 }
+            ?: 2)).toList()
 
     Column(
         modifier = Modifier
             .background(colors.primary)
+            .padding(top = App.statusBarHeight)
             .fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.SpaceEvenly
     ) {
+        Spacer(modifier = Modifier.height(10.dp))
+        Row(
+            horizontalArrangement = Arrangement.SpaceBetween,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 10.dp)
+        ) {
+            Text(
+                state.currentDate.year.toString() + " / " + months.elementAt(normalizeIndex(month)),
+                style = texts.headlineSmall.copy(
+                    color = colors.onPrimary,
+                    fontWeight = FontWeight.Bold
+                ),
+                modifier = Modifier
+                    .padding(5.dp)
+                    .clip(RoundedCornerShape(4.dp))
+            )
+            Icon(
+                Icons.Default.Close,
+                contentDescription = null,
+                tint = colors.onPrimary,
+                modifier = Modifier
+                    .padding(5.dp)
+                    .clickable {
+                        navigator.close()
+                    }
+            )
+        }
+        Spacer(modifier = Modifier.height(10.dp))
+
         Row(
             modifier = Modifier
                 .height(80.dp)
-                .fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceAround,
+                .fillMaxWidth()
+                .padding(horizontal = 10.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
@@ -89,13 +123,30 @@ fun CalendarScreen(vm: CalendarViewModel) {
                         vm.onEvent(CalendarScreenEvents.UpdateMonth(-1))
                     }
             )
-            Text(
-                months.elementAt(normalizeIndex(month)),
-                style = texts.headlineMedium.copy(
-                    color = colors.onPrimary,
-                    fontWeight = FontWeight.Bold
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .clip(RoundedCornerShape(4.dp))
+                    .clickable {
+                        val instance = Calendar.getInstance()
+                        val date = instance.apply {
+                            add(Calendar.MONTH, state.monthDifference)
+                        }.timeInMillis.let { Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC) }
+                        val stringDate = LocalDate.of(date.year, date.month, 1).toString()
+                        navigator.toMonthView(date = stringDate, day = 1)
+                    }
+                    .padding(10.dp)
+            ) {
+                Text(
+                    "Se måned",
+                    style = texts.headlineSmall.copy(
+                        color = colors.onPrimary,
+                    ),
                 )
-            )
+                Spacer(modifier = Modifier.width(5.dp))
+                Icon(visibilityIcon(), contentDescription = null, tint = colors.onPrimary)
+            }
+
             Icon(
                 Icons.AutoMirrored.Filled.KeyboardArrowRight,
                 contentDescription = null,
@@ -108,9 +159,10 @@ fun CalendarScreen(vm: CalendarViewModel) {
                     }
             )
         }
+        Spacer(modifier = Modifier.height(25.dp))
 
         ProjectsList(
-            projects = projects,
+            projectsState = state.projects,
             selectedProjects = state.selectedProjects,
             selectProject = { project: Project ->
                 vm.onEvent(
@@ -118,53 +170,24 @@ fun CalendarScreen(vm: CalendarViewModel) {
                 )
             },
         )
-
-        LazyVerticalGrid(
-            columns = GridCells.Fixed(7),
-            modifier = Modifier.padding(16.dp)
-        ) {
-            items(days.size) { value ->
-                if (days.elementAt(value) == null) return@items
-
-                if (state.dayPerMonth.isNotEmpty()) {
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier
-                            .padding(4.dp)
-//                            .aspectRatio(1f, matchHeightConstraintsFirst = true)
-                            .wrapContentHeight(unbounded = true)
-                            .background(colors.primaryContainer, shape = RoundedCornerShape(4.dp))
-                            .padding(10.dp)
-                    ) {
-                        val day = state.dayPerMonth.elementAt(value - firstDay)
-                        Column(
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
-                            Text(
-                                day.date.dayOfMonth.toString(),
-                                style = texts.titleMedium.copy(color = colors.onPrimaryContainer)
-                            )
-                            Box(
-                                modifier = Modifier
-                                    .width(30.dp)
-                                    .padding(5.dp)
-                                    .height(2.dp)
-                                    .background(colors.onPrimaryContainer)
-                            )
-                            Text(
-                                formatHoursFromSeconds(day.time),
-                                style = texts.titleSmall.copy(
-                                    color = colors.onPrimaryContainer,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            )
-                        }
-                    }
-                }
-            }
-        }
-
         Spacer(modifier = Modifier.height(25.dp))
+
+        DaysList(
+            days,
+            monthDays = state.dayPerMonth,
+            firstDayOrd = firstDayOrd,
+            selectDay = { index: Int ->
+                val instance = Calendar.getInstance()
+                val date = instance.apply {
+                    add(Calendar.MONTH, state.monthDifference)
+                }.timeInMillis.let { Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC) }
+                val stringDate = LocalDate.of(date.year, date.month, 1).toString()
+                navigator.toMonthView(date = stringDate, day = index)
+            },
+        )
+
+        Spacer(modifier = Modifier.weight(1f))
+
         Text(
             "Total for måned: ${formatHoursFromSeconds(state.dayPerMonth.sumOf { it.time })}",
             style = texts.titleMedium.copy(
@@ -172,6 +195,64 @@ fun CalendarScreen(vm: CalendarViewModel) {
                 fontWeight = FontWeight.Bold
             )
         )
+        Spacer(modifier = Modifier.height(20.dp))
+    }
+}
+
+@Composable
+private fun DaysList(
+    days: List<Int?>,
+    monthDays: List<DayModel>,
+    firstDayOrd: Int,
+    selectDay: (index: Int) -> Unit,
+) {
+    val colors = MaterialTheme.colorScheme
+    val texts = MaterialTheme.typography
+
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(7),
+        modifier = Modifier.padding(16.dp)
+    ) {
+        items(days.size) { value ->
+            if (days.elementAt(value) == null) return@items
+
+            if (monthDays.isNotEmpty()) {
+                val day = monthDays.elementAt(value - firstDayOrd)
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier
+//                            .padding(4.dp)
+//                            .aspectRatio(1f, matchHeightConstraintsFirst = true)
+                        .wrapContentHeight(unbounded = true)
+//                            .background(colors.primaryContainer, shape = RoundedCornerShape(4.dp))
+                        .padding(10.dp)
+                        .clickable { selectDay(day.date.dayOfMonth) }
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            day.date.dayOfMonth.toString(),
+                            style = texts.titleMedium.copy(color = colors.onPrimary)
+                        )
+//                            Box(
+//                                modifier = Modifier
+//                                    .width(30.dp)
+//                                    .padding(5.dp)
+//                                    .height(2.dp)
+//                                    .background(colors.onPrimaryContainer)
+//                            )
+                        Text(
+                            formatHoursFromSeconds(day.time),
+                            style = texts.titleSmall.copy(
+                                color = colors.onSecondaryContainer,
+                                fontWeight = FontWeight.Bold
+                            )
+                        )
+                    }
+                }
+            }
+        }
     }
 }
 

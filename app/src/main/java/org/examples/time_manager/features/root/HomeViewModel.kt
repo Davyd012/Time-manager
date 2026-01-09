@@ -310,8 +310,8 @@ class HomeViewModel(
                     worksDao.upsert(
                         Work(
                             description = event.notes,
-                            date = day.withHour(event.started.hour)
-                                .withMinute(event.started.minute),
+                            date = day.withHour(7)
+                                .withMinute(0),
                             project = event.project,
                             task = 0,
                             time = time,

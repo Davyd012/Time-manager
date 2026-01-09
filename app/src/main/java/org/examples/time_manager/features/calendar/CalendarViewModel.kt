@@ -57,22 +57,11 @@ class CalendarViewModel() : ViewModel() {
             _state.update {
                 it.copy(
                     dayPerMonth = days,
-                    workQueries = works,
-                    selectedDay = today.dayOfMonth,
-                    today = Today(
-                        weekDay = datesController.weekDays.elementAt(today.dayOfWeek.value - 1),
-                        day = today.dayOfMonth,
-                        month = today.month.name,
-                        year = today.year
-                    ),
                 )
             }
 
             val projects = projectDao.getAllProjects()
             _state.update { it.copy(projects = projects) }
-
-            runStopwatch()
-            Log.d("HomeViewModel", "Started a stopwatch from the init")
         }
     }
 
@@ -85,8 +74,17 @@ class CalendarViewModel() : ViewModel() {
     fun onEvent(event: CalendarScreenEvents) {
         when (event) {
             is CalendarScreenEvents.UpdateMonth -> viewModelScope.launch(Dispatchers.IO) {
+                val resultMonth = state.value.monthDifference + event.month
+                val instance = Calendar.getInstance()
+                val date = instance.apply {
+                    add(Calendar.MONTH, resultMonth)
+                }.timeInMillis.let { Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC) }
+
                 _state.update {
-                    it.copy(monthDifference = it.monthDifference + event.month)
+                    it.copy(
+                        monthDifference = resultMonth,
+                        currentDate = LocalDate.of(date.year, date.month, 1)
+                    )
                 }
                 updateProjectExecutions()
             }
@@ -120,13 +118,6 @@ class CalendarViewModel() : ViewModel() {
         )
         _state.update {
             it.copy(dayPerMonth = days)
-        }
-    }
-
-    private suspend fun runStopwatch() {
-        while (state.value.counting) {
-            delay(100L)
-            _timeCount.update { it + 0.1 }
         }
     }
 }

@@ -1,6 +1,8 @@
 package org.examples.time_manager.ui.theme
 
 import android.app.Activity
+import android.graphics.Color
+import android.os.Build
 import android.util.Log
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
@@ -9,7 +11,11 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.unit.dp
+import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import org.examples.time_manager.App
 
 @Composable
 fun TimeMangerTheme(
@@ -27,14 +33,28 @@ fun TimeMangerTheme(
         darkTheme -> DarkColorScheme
         else -> LightColorScheme
     }
-    Log.d("Theme", "Launching the new Activity")
 
-    val view = LocalView.current
-    if (!view.isInEditMode) {
+    App.hasCutOut = hasCutout()
+    val current = LocalView.current
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && App.statusBarHeight == 0.dp) {
+        val insets = current.rootWindowInsets?.let { insets ->
+            WindowInsetsCompat.toWindowInsetsCompat(insets)
+        }
+        if (insets?.displayCutout != null) {
+            val density = current.resources.displayMetrics.density
+            val statusBarHeightDp =
+                insets.getInsets(WindowInsetsCompat.Type.statusBars()).top.let { (it / density).dp }
+
+            App.statusBarHeight = statusBarHeightDp
+        }
+    }
+
+    if (!current.isInEditMode) {
         LaunchedEffect(true) {
-            val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.primary.toArgb()
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = darkTheme
+            val window = (current.context as Activity).window
+            window.statusBarColor = Color.TRANSPARENT
+            WindowCompat.getInsetsController(window, current).isAppearanceLightStatusBars =
+                darkTheme
         }
     }
 
@@ -43,4 +63,17 @@ fun TimeMangerTheme(
         typography = Typography,
         content = content
     )
+}
+
+@Composable
+fun hasCutout(): Boolean {
+    val view = LocalView.current
+    var hasCutout = false
+
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+        val windowInsets = ViewCompat.getRootWindowInsets(view)
+        hasCutout = windowInsets?.displayCutout != null
+    }
+
+    return hasCutout
 }
