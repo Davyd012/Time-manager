@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -36,12 +37,13 @@ fun CategorySegments(
     selectedProjects: List<Project>,
     onSelectProject: (Project) -> Unit,
     onClearSelection: () -> Unit,
-    colors: MonthViewColors,
     modifier: Modifier = Modifier,
 ) {
     if (projects.isEmpty()) {
         return
     }
+
+    val colors = MaterialTheme.colorScheme
 
     val selectedCount = selectedProjects.size
     val clearEnabled = selectedCount > 0
@@ -57,19 +59,17 @@ fun CategorySegments(
         ) {
             Text(
                 text = stringResource(R.string.selected_projects),
-                color = colors.mutedText,
+                color = colors.onSurface,
                 fontSize = 12.sp,
                 fontWeight = FontWeight.Medium,
             )
             SelectionCountBadge(
                 count = selectedCount,
-                colors = colors,
             )
             Spacer(modifier = Modifier.weight(1f))
             ClearSelectionButton(
                 enabled = clearEnabled,
                 onClick = onClearSelection,
-                colors = colors,
             )
         }
 
@@ -83,9 +83,9 @@ fun CategorySegments(
                 val isSelected = selectedProjects.contains(project)
                 val chipBorder =
                     if (isSelected) {
-                        colors.accent.copy(alpha = 0.7f)
+                        colors.onPrimary.copy(alpha = 0.9f)
                     } else {
-                        colors.border.copy(alpha = 0.9f)
+                        colors.onTertiary.copy(alpha = 0.7f)
                     }
 
                 Surface(
@@ -95,9 +95,9 @@ fun CategorySegments(
                     shape = RoundedCornerShape(18.dp),
                     color =
                         if (isSelected) {
-                            colors.cardBackground.copy(alpha = 0.95f)
+                            colors.primary
                         } else {
-                            colors.cardBackground
+                            colors.primary.copy(alpha = 0.75f)
                         },
                     border = BorderStroke(1.dp, chipBorder),
                     tonalElevation = 1.dp,
@@ -119,13 +119,13 @@ fun CategorySegments(
                                     Modifier
                                         .size(8.dp)
                                         .background(
-                                            if (isSelected) colors.accent else colors.border,
+                                            if (isSelected) colors.onPrimary else colors.onTertiary,
                                             CircleShape
                                         ),
                             )
                             Text(
                                 text = project.name,
-                                color = colors.text,
+                                color = colors.onPrimary,
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Medium,
                                 textAlign = TextAlign.Center,
@@ -133,7 +133,7 @@ fun CategorySegments(
                         }
                         if (isSelected) {
                             SelectedUnderline(
-                                color = colors.accent,
+                                color = colors.onTertiary,
                                 modifier = Modifier.align(Alignment.BottomCenter),
                             )
                         }
@@ -147,22 +147,23 @@ fun CategorySegments(
 @Composable
 private fun SelectionCountBadge(
     count: Int,
-    colors: MonthViewColors,
     modifier: Modifier = Modifier,
 ) {
+    val colors = MaterialTheme.colorScheme
+
     val borderColor =
         if (count > 0) {
-            colors.accent.copy(alpha = 0.6f)
+            colors.onPrimary.copy(alpha = 0.8f)
         } else {
-            colors.border.copy(alpha = 0.8f)
+            colors.onTertiary.copy(alpha = 0.6f)
         }
     val backgroundColor =
         if (count > 0) {
-            colors.accent.copy(alpha = 0.15f)
+            colors.primary
         } else {
-            colors.cardBackground
+            colors.onTertiary.copy(alpha = 0.15f)
         }
-    val textColor = if (count > 0) colors.accent else colors.mutedText
+    val textColor = if (count > 0) colors.onPrimary.copy(alpha = .8f) else colors.onTertiary
 
     Surface(
         modifier = modifier,
@@ -185,22 +186,22 @@ private fun SelectionCountBadge(
 private fun ClearSelectionButton(
     enabled: Boolean,
     onClick: () -> Unit,
-    colors: MonthViewColors,
     modifier: Modifier = Modifier,
 ) {
+    val colors = MaterialTheme.colorScheme
     val borderColor =
         if (enabled) {
-            colors.accent.copy(alpha = 0.7f)
+            colors.onPrimary.copy(alpha = 0.6f)
         } else {
-            colors.border.copy(alpha = 0.6f)
+            colors.onTertiary.copy(alpha = 0.7f)
         }
     val backgroundColor =
         if (enabled) {
-            colors.cardBackground
+            colors.primary.copy(alpha = 0.6f)
         } else {
-            colors.cardBackground.copy(alpha = 0.6f)
+            colors.primary
         }
-    val textColor = if (enabled) colors.accent else colors.mutedText
+    val textColor = if (enabled) colors.onPrimary.copy(alpha = .8f) else colors.onTertiary
 
     Surface(
         modifier = modifier,

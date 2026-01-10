@@ -112,9 +112,8 @@ fun HeaderWidget(
                 .clickable {
                     navigator.toCalendar()
                 }
+                .padding(start = 10.dp)
         ) {
-            Spacer(modifier = Modifier.padding(start = 2.dp))
-            Spacer(modifier = Modifier.width(5.dp))
             Text(
                 state.today.weekDay,
                 style = texts.headlineSmall.copy(color = colors.onPrimary),
@@ -146,7 +145,9 @@ fun HeaderWidget(
             listState,
             monthDays = state.dayPerMonth,
             selectedDay = state.selectedDay,
-            selectDay = { index: Int -> vm.onEvent(SelectDayEvent(index + 1)) }
+            selectDay = { index: Int -> vm.onEvent(SelectDayEvent(index + 1)) },
+            modifier = Modifier
+                .padding(vertical = 10.dp)
         )
     }
 }

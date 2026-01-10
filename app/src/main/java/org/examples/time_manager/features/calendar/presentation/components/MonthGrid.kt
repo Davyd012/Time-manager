@@ -2,6 +2,7 @@ package org.examples.time_manager.features.calendar.presentation.components
 
 import android.content.Context
 import android.content.Intent
+import android.util.Log
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -48,7 +49,7 @@ fun MonthGrid(
     onSelectDate: (LocalDate) -> Unit,
     modifier: Modifier = Modifier,
     cellHeight: Dp = 68.dp,
-    totalHours: Int,
+    totalHours: Double,
 ) {
     val colors = MaterialTheme.colorScheme
     val monthViewColors = MonthViewColors.defaults()
@@ -128,12 +129,10 @@ fun MonthGrid(
                 ) {
                     MonthlyTotalPill(
                         totalHours = totalHours,
-                        colors = monthViewColors,
                     )
                     ShareMonthButton(
                         monthYear = monthYear,
                         totalHours = totalHours,
-                        colors = monthViewColors,
                     )
                 }
                 HorizontalDivider(
@@ -151,10 +150,10 @@ fun MonthGrid(
 @Composable
 private fun ShareMonthButton(
     monthYear: YearMonth,
-    totalHours: Int,
-    colors: MonthViewColors,
+    totalHours: Double,
     modifier: Modifier = Modifier,
 ) {
+    val colors = MaterialTheme.colorScheme
     val context = LocalContext.current
     val shareText =
         remember(monthYear, totalHours) {
@@ -164,8 +163,8 @@ private fun ShareMonthButton(
     Surface(
         modifier = modifier,
         shape = RoundedCornerShape(999.dp),
-        color = colors.cardBackground,
-        border = BorderStroke(1.dp, colors.border.copy(alpha = 0.9f)),
+        color = colors.primary.copy(alpha = .7f),
+        border = BorderStroke(1.dp, colors.onPrimary.copy(alpha = 0.5f)),
         tonalElevation = 2.dp,
         shadowElevation = 4.dp,
     ) {
@@ -176,7 +175,7 @@ private fun ShareMonthButton(
             Icon(
                 imageVector = shareIcon(),
                 contentDescription = stringResource(R.string.share_month_cd),
-                tint = colors.accent,
+                tint = colors.onPrimary,
             )
         }
     }
@@ -194,7 +193,7 @@ private fun DayCell(
     val hours =
         remember(dayWork) {
             if (cell == null) {
-                0
+                0.0
             } else {
                 dayWork.sumOf { it.hours }
             }
@@ -226,13 +225,17 @@ private fun DayCell(
                     fontSize = 18.sp,
                     fontWeight = FontWeight.SemiBold,
                 )
+                val hoursCountText = hours.let{
+                    if (it % 1.0 != 0.0) kotlin.math.floor(it * 100) / 100
+                    else it.toInt()
+                }.toString()
                 Text(
-                    text = hours.toString(),
+                    text = hoursCountText,
                     color =
-                        if (hours == 0) {
-                            colors.onPrimary.copy(alpha = 0.45f)
-                        } else {
+                        if (hours == 0.0) {
                             colors.onPrimaryContainer
+                        } else {
+                            colors.onPrimary.copy(alpha = 0.55f)
                         },
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
@@ -265,18 +268,18 @@ private fun buildMonthGrid(monthYear: YearMonth): List<LocalDate?> {
     return cells
 }
 
-private fun buildMonthShareText(context: Context, monthYear: YearMonth, totalHours: Int): String {
+private fun buildMonthShareText(context: Context, monthYear: YearMonth, totalHours: Double): String {
     val locale = Locale("nb", "NO")
     val formatter = DateTimeFormatter.ofPattern("MMMM yyyy", locale)
     val monthLabel = monthYear.format(formatter).lowercase(locale)
-    val hoursLabel = if (totalHours == 1) context.getString(R.string.hour_singular) else context.getString(R.string.hour_plural)
+    val hoursLabel = if (totalHours == 1.0) context.getString(R.string.hour_singular) else context.getString(R.string.hour_plural)
 
     return when {
-        totalHours <= 0 ->
+        totalHours <= 0.0 ->
             context.getString(R.string.summary_no_hours, monthLabel)
-        totalHours < 20 ->
+        totalHours < 20.0 ->
             context.getString(R.string.summary_quiet_month, monthLabel, totalHours, hoursLabel)
-        totalHours >= 160 ->
+        totalHours >= 160.0 ->
             context.getString(R.string.summary_active_month, totalHours, hoursLabel, monthLabel)
         else ->
             context.getString(R.string.summary_normal_month, totalHours, hoursLabel, monthLabel)

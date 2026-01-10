@@ -1,6 +1,15 @@
 package org.examples.time_manager.features.root.presentation.home.components
 
 import android.annotation.SuppressLint
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -19,6 +28,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -44,37 +54,84 @@ fun ListOfWorks(
     val style = MaterialTheme.typography
     val colors = MaterialTheme.colorScheme
 
-    if (works.isEmpty()) {
-        val composition by rememberLottieComposition(
-            LottieCompositionSpec.Asset("animations/empty.json")
-        )
+    AnimatedContent(
+        targetState = works.isEmpty(),
+        label = "empty_to_list",
+        transitionSpec = {
+            val inFrom =
+                if (targetState) { h: Int -> h / 12 } else { h: Int -> -h / 12 }
 
-        val progress by animateLottieCompositionAsState(
-            composition,
-            iterations = LottieConstants.IterateForever,
-            restartOnPlay = false
-        )
-
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                LottieAnimation(
-                    composition,
-                    progress = { progress },
-                    modifier = Modifier.size(400.dp)
-                )
-                Text(
-                    text = stringResource(R.string.no_work_logs),
-                    style = style.titleMedium.copy(color = colors.onSurface)
-                )
-            }
+            (fadeIn(tween(180)) +
+                    slideInVertically(
+                        animationSpec = tween(220),
+                        initialOffsetY = inFrom
+                    ))
+                .togetherWith(ExitTransition.None)
+                .using(SizeTransform(clip = false))
         }
-        return
+    ) { empty ->
+        if (empty) {
+            EmptyWorksState()
+        } else {
+            WorksListState(
+                works = works,
+                projects = projects,
+                showWork = showWork,
+                formatTime = { it: Long -> "" },
+                formatHoursFromSeconds = { it: Long -> "" }
+            )
+        }
     }
+}
 
+@Composable
+private fun EmptyWorksState(
+) {
+    val colors = MaterialTheme.colorScheme
+    val style = MaterialTheme.typography
 
-    val sortedMap = works
-        .groupBy { it.date.hour }
-        .toSortedMap()
+    // Lottie (som du har)
+    val composition by rememberLottieComposition(
+        LottieCompositionSpec.Asset("animations/empty.json")
+    )
+    val progress by animateLottieCompositionAsState(
+        composition,
+        iterations = LottieConstants.IterateForever,
+        restartOnPlay = false
+    )
+
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            LottieAnimation(
+                composition = composition,
+                progress = { progress },
+                modifier = Modifier.size(400.dp)
+            )
+            Text(
+                text = stringResource(R.string.no_work_logs),
+                style = style.titleMedium.copy(color = colors.onSurface)
+            )
+        }
+    }
+}
+
+@Composable
+private fun WorksListState(
+    works: List<Work>,
+    projects: List<Project>,
+    showWork: (Int) -> Unit,
+    formatTime: (Long) -> String,
+    formatHoursFromSeconds: (Long) -> String
+) {
+    val colors = MaterialTheme.colorScheme
+    val style = MaterialTheme.typography
+
+    val sortedMap = remember(works) {
+        works.groupBy { it.date.hour }.toSortedMap()
+    }
 
     Column(
         modifier = Modifier
@@ -84,13 +141,14 @@ fun ListOfWorks(
             .background(colors.tertiaryContainer)
             .padding(10.dp)
     ) {
-        sortedMap.onEachIndexed { index, time ->
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
+        sortedMap.entries.forEachIndexed { index, entry ->
+            val hour = entry.key
+            val hourWorks = entry.value
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
                 Spacer(modifier = Modifier.width(5.dp))
                 Text(
-                    String.format("%02d", time.key),
+                    String.format("%02d", hour),
                     style = style.titleLarge.copy(
                         color = colors.onPrimaryContainer,
                         fontWeight = FontWeight.Bold
@@ -104,16 +162,15 @@ fun ListOfWorks(
                         .background(colors.onPrimaryContainer)
                 )
                 Spacer(modifier = Modifier.width(5.dp))
+
                 Column(modifier = Modifier.weight(1f)) {
-                    time.value.forEach { work ->
+                    hourWorks.forEach { work ->
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
                                 .padding(vertical = 5.dp)
                                 .clip(RoundedCornerShape(5.dp))
-                                .clickable {
-                                    showWork(works.indexOf(work))
-                                }
+                                .clickable { showWork(works.indexOf(work)) }
                                 .background(colors.onSecondaryContainer)
                                 .height(60.dp)
                         ) {
@@ -122,7 +179,6 @@ fun ListOfWorks(
                                     .width(10.dp)
                                     .fillMaxHeight()
                                     .background(colors.secondaryContainer)
-                                    .clip(RoundedCornerShape(5.dp))
                             )
                             Spacer(modifier = Modifier.width(10.dp))
                             Column {
@@ -131,10 +187,12 @@ fun ListOfWorks(
                                         ?: stringResource(R.string.no_project),
                                     style = style.titleMedium.copy(color = colors.secondaryContainer)
                                 )
-                                if (work.description.isNotEmpty()) Text(
-                                    work.description.toString(),
-                                    style = style.bodyMedium.copy(color = colors.secondaryContainer)
-                                )
+                                if (work.description.isNotEmpty()) {
+                                    Text(
+                                        work.description,
+                                        style = style.bodyMedium.copy(color = colors.secondaryContainer)
+                                    )
+                                }
                             }
                             Spacer(modifier = Modifier.weight(1f))
                             Text(
@@ -145,20 +203,17 @@ fun ListOfWorks(
                         }
                     }
                 }
+
                 Spacer(modifier = Modifier.width(5.dp))
             }
+
             if (index < sortedMap.size - 1) {
-                Box(
-                    modifier = Modifier
-                        .padding(5.dp)
-                        .fillMaxWidth()
-//                        .height(1.5.dp)
-//                        .background(colors.onTertiaryContainer),
-                )
+                Spacer(modifier = Modifier.height(6.dp))
             }
         }
     }
 }
+
 
 @SuppressLint("DefaultLocale")
 fun formatTime(seconds: Int): String {

@@ -7,7 +7,7 @@ import java.time.LocalDate
 @Immutable
 data class DayWork(
     val date: LocalDate,
-    val hours: Int,
+    val hours: Double,
 )
 
 @Immutable

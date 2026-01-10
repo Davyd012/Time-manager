@@ -33,7 +33,7 @@ fun CalendarScreen(
             state.dayPerMonth.map { day ->
                 DayWork(
                     date = day.date,
-                    hours = (day.time / 3600.0).roundToInt(),
+                    hours = (day.time / 3600.0),
                 )
             }
         }

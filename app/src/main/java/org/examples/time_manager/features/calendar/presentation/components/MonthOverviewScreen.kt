@@ -54,7 +54,7 @@ fun MonthOverviewScreen(
                 modifier
                     .fillMaxSize()
                     .padding(paddingValues)
-                    .padding(horizontal = 16.dp, vertical = 20.dp),
+                    .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             CalendarSelectorRow(
@@ -70,7 +70,6 @@ fun MonthOverviewScreen(
                 selectedProjects = selectedProjects,
                 onSelectProject = onSelectProject,
                 onClearSelection = onClearSelection,
-                colors = MonthViewColors.defaults(),
             )
 
             WeekdayRow(
@@ -94,8 +93,8 @@ fun MonthOverviewPreview() {
     val month = YearMonth.of(2026, 1)
     val days =
         listOf(
-            DayWork(month.atDay(1), 10),
-            DayWork(month.atDay(2), 8),
+            DayWork(month.atDay(1), 10.0),
+            DayWork(month.atDay(2), 8.0),
         )
     val projects =
         listOf(
