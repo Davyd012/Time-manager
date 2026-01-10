@@ -12,12 +12,12 @@ object NotificationModule {
     @OptIn(ExperimentalAnimationApi::class)
     fun provideNotificationBuilder(context: Context): NotificationCompat.Builder {
         return NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_ID)
-            .setContentTitle("Working")
+            .setContentTitle(context.getString(R.string.working_notification_title))
             .setContentText("00:00:00")
             .setSmallIcon(R.drawable.baseline_timer_24)
             .setOngoing(true)
-            .addAction(0, "Stop", ServiceHelper.stopPendingIntent(context))
-            .addAction(0, "Cancel", ServiceHelper.cancelPendingIntent(context))
+            .addAction(0, context.getString(R.string.stop), ServiceHelper.stopPendingIntent(context))
+            .addAction(0, context.getString(R.string.cancel), ServiceHelper.cancelPendingIntent(context))
             .setContentIntent(ServiceHelper.clickPendingIntent(context))
     }
 

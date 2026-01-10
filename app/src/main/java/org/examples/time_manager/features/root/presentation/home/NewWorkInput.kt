@@ -33,8 +33,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import org.examples.time_manager.R
 import org.examples.time_manager.core.database.project.Project
 import org.examples.time_manager.core.database.work.Work
 import org.examples.time_manager.core.service.util.pad
@@ -101,14 +103,14 @@ fun NewWorkInput(
 
     val dateContent = when {
         !updateRange -> millisToLocalDate.formatDate()
-        datesRange.isEmpty() -> "Velg datoer"
+        datesRange.isEmpty() -> stringResource(R.string.select_dates_btn)
         datesRange.size == 1 -> datesRange.first().formatDate()
         else -> "${datesRange.first().formatDate()} / ${datesRange.last().formatDate()}"
     }
 
     val dateHeaderText = when {
         !updateRange -> millisToLocalDate.formatLongDate()
-        datesRange.isEmpty() -> "Velg datoer"
+        datesRange.isEmpty() -> stringResource(R.string.select_dates_btn)
         datesRange.size == 1 -> datesRange.first().formatLongDate()
         else -> "${datesRange.first().formatDate()} - ${datesRange.last().formatDate()}"
     }
@@ -154,7 +156,7 @@ fun NewWorkInput(
                 .heightIn(min = 500.dp)
         ) {
             Text(
-                text = if (updateRange) "Periode" else "Dato",
+                text = if (updateRange) stringResource(R.string.period_label) else stringResource(R.string.date_label),
                 style = typography.labelLarge.copy(color = colors.onSurfaceVariant)
             )
             Text(
@@ -166,7 +168,7 @@ fun NewWorkInput(
             )
             Spacer(modifier = Modifier.height(12.dp))
             Text(
-                text = "Registrere timer",
+                text = stringResource(R.string.register_hours_title),
                 style = typography.headlineSmall.copy(
                     fontWeight = FontWeight.Bold,
                     color = colors.onSurface
@@ -174,7 +176,7 @@ fun NewWorkInput(
             )
             Spacer(modifier = Modifier.height(16.dp))
 
-            Text("Prosjekt", style = typography.titleSmall.copy(color = colors.onSurfaceVariant))
+            Text(stringResource(R.string.project_label), style = typography.titleSmall.copy(color = colors.onSurfaceVariant))
             Spacer(modifier = Modifier.height(6.dp))
             ListOfProjects(
                 projects,
@@ -183,13 +185,13 @@ fun NewWorkInput(
             )
             Spacer(modifier = Modifier.height(16.dp))
 
-            Text("Tid & detaljer", style = typography.titleSmall.copy(color = colors.onSurfaceVariant))
+            Text(stringResource(R.string.time_details_label), style = typography.titleSmall.copy(color = colors.onSurfaceVariant))
             Spacer(modifier = Modifier.height(6.dp))
             AnimatedVisibility(visible = !updateRange) {
                 Column {
                     OutlinedButton(
                         value = time,
-                        text = "Timer",
+                        text = stringResource(R.string.hours_btn),
                         icon = timerIcon(),
                         action = { timePickerDialog.show() },
                         isPrimary = true,
@@ -200,7 +202,7 @@ fun NewWorkInput(
 
             OutlinedButton(
                 value = dateContent,
-                text = if (updateRange) "Periode" else "Dag",
+                text = if (updateRange) stringResource(R.string.period_label) else stringResource(R.string.day_btn),
                 icon = dateRangeIcon(),
                 action = { showDatePicker = true },
             )
@@ -210,7 +212,7 @@ fun NewWorkInput(
                     Spacer(modifier = Modifier.height(8.dp))
                     OutlinedButton(
                         value = startedJob ?: "00:00",
-                        text = "Start arbeidet",
+                        text = stringResource(R.string.start_work_btn),
                         icon = timerIcon(),
                         action = { startTimePickerDialog.show() },
                     )
@@ -223,10 +225,10 @@ fun NewWorkInput(
                 value = notes,
                 onValueChange = { notes = it },
                 label = {
-                    Text("Kommentar", color = colors.onSurfaceVariant)
+                    Text(stringResource(R.string.comment_label), color = colors.onSurfaceVariant)
                 },
                 placeholder = {
-                    Text("Skriv en kommentar...", color = colors.onSurfaceVariant)
+                    Text(stringResource(R.string.comment_placeholder), color = colors.onSurfaceVariant)
                 },
                 minLines = if (notesFocused || notes.isNotBlank()) 4 else 2,
                 shape = RoundedCornerShape(12.dp),
@@ -248,7 +250,7 @@ fun NewWorkInput(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    text = "Periode registrering",
+                    text = stringResource(R.string.period_registration_label),
                     style = typography.titleSmall.copy(color = colors.onSurface)
                 )
                 Spacer(modifier = Modifier.weight(1f))

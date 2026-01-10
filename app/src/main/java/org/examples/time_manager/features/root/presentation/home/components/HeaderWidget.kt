@@ -29,6 +29,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringArrayResource
+import org.examples.time_manager.R
 import org.examples.time_manager.App
 import org.examples.time_manager.features.components.MonthDaysList
 import org.examples.time_manager.features.root.HomeViewModel
@@ -54,12 +56,7 @@ fun HeaderWidget(
 
     var showMonthPicker by remember { mutableStateOf(false) }
 
-    val months = remember {
-        listOf(
-            "Januar", "Februar", "Mars", "April", "Mai", "Juni",
-            "Juli", "August", "September", "Oktober", "November", "Desember"
-        )
-    }
+    val months = stringArrayResource(R.array.months_array).toList()
 
     val context = LocalContext.current
     val saveFileLauncher =

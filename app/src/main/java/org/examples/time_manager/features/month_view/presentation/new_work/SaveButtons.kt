@@ -17,8 +17,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import org.examples.time_manager.R
 import org.examples.time_manager.core.database.work.Work
 import org.examples.time_manager.features.root.HomeViewModel
 import org.examples.time_manager.features.root.data.RootScreenEvents.ModifyWorkEvent
@@ -65,7 +67,7 @@ fun SaveButtons(
             modifier = Modifier.fillMaxWidth()
         ) {
             Text(
-                "Redigere for en period",
+                stringResource(R.string.edit_period_btn),
                 modifier = Modifier.padding(10.dp),
                 style = typography.titleMedium.copy(color = colors.onPrimary)
             )
@@ -93,7 +95,7 @@ fun SaveButtons(
             modifier = Modifier.fillMaxWidth()
         ) {
             Text(
-                "Ferdig",
+                stringResource(R.string.done_btn),
                 modifier = Modifier.padding(10.dp),
                 style = typography.titleMedium.copy(color = colors.onPrimary)
             )
@@ -104,7 +106,7 @@ fun SaveButtons(
     Row(modifier = Modifier.padding(5.dp)) {
         Icon(
             deleteIcon(),
-            contentDescription = "Fjerne",
+            contentDescription = stringResource(R.string.delete_cd),
             tint = colors.onError,
             modifier = Modifier
                 .clip(RoundedCornerShape(15.dp))
@@ -120,7 +122,7 @@ fun SaveButtons(
         )
         Spacer(modifier = Modifier.width(10.dp))
         Text(
-            "Lagre endringer",
+            stringResource(R.string.save_changes_btn),
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(15.dp))

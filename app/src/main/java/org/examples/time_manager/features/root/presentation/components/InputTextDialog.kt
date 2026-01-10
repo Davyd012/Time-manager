@@ -25,6 +25,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -32,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import org.examples.time_manager.R
 import org.examples.time_manager.ui.theme.doneIcon
 
 @OptIn(ExperimentalComposeUiApi::class)
@@ -65,7 +67,7 @@ fun InputTextDialog(onDismissRequest: () -> Unit, saveText: (String) -> Unit, in
                             Icon(doneIcon(), contentDescription = null)
                         }
                         Text(
-                            text = "Input Tape text",
+                            text = stringResource(R.string.input_tape_text_title),
                             style = typography.titleLarge.copy(
                                 color = colors.onPrimaryContainer,
                                 fontWeight = FontWeight.Bold
@@ -95,7 +97,7 @@ fun InputTextDialog(onDismissRequest: () -> Unit, saveText: (String) -> Unit, in
                                 .padding(horizontal = 10.dp, vertical = 10.dp)
                         ) {
                             if (value.isEmpty()) Text(
-                                "Tape text", style = TextStyle(
+                                stringResource(R.string.tape_text_hint), style = TextStyle(
                                     color = colors.onPrimaryContainer.copy(alpha = 0.3f),
                                     fontSize = 17.sp
                                 )

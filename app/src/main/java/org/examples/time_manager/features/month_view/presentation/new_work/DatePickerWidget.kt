@@ -18,9 +18,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import org.examples.time_manager.R
 
 @Composable
 @OptIn(ExperimentalMaterial3Api::class)
@@ -44,7 +46,7 @@ fun DatePickerWidget(
                     onClick = onDismissDate,
                     colors = ButtonDefaults.buttonColors(containerColor = colors.secondaryContainer)
                 ) {
-                    Text("OK", color = colors.onSecondaryContainer)
+                    Text(stringResource(R.string.ok), color = colors.onSecondaryContainer)
                 }
             },
         ) {
@@ -70,7 +72,7 @@ fun DatePickerWidget(
                 onClick = onDismissDate,
                 colors = ButtonDefaults.buttonColors(containerColor = colors.secondaryContainer)
             ) {
-                Text("OK", color = colors.onSecondaryContainer)
+                Text(stringResource(R.string.ok), color = colors.onSecondaryContainer)
             }
         },
         dismissButton = {
@@ -78,7 +80,7 @@ fun DatePickerWidget(
                 onClick = onDismissDate,
                 colors = ButtonDefaults.buttonColors(containerColor = colors.secondaryContainer)
             ) {
-                Text("Cancel", color = colors.onSecondaryContainer)
+                Text(stringResource(R.string.cancel), color = colors.onSecondaryContainer)
             }
         }
     ) {
@@ -86,7 +88,7 @@ fun DatePickerWidget(
             state = state,
             title = {
                 Text(
-                    text = "Velg datointervall",
+                    text = stringResource(R.string.select_date_range_title),
                     style = MaterialTheme.typography.bodyLarge.copy(color = colors.onPrimary),
                     modifier = Modifier.padding(10.dp)
                 )

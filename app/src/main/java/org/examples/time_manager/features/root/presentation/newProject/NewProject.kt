@@ -23,9 +23,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import org.examples.time_manager.R
 import org.examples.time_manager.features.root.HomeViewModel
 import org.examples.time_manager.features.root.data.RootScreenEvents.NewProjectEvent
 import org.examples.time_manager.ui.theme.BorderColor
@@ -38,22 +40,22 @@ fun NewProject(vm: HomeViewModel, modifier: Modifier) {
     val colors = MaterialTheme.colorScheme
 
     Column(modifier = modifier.padding(20.dp)) {
-        Text("Ny projekt", style = typography.headlineSmall.copy(fontWeight = FontWeight.Bold))
+        Text(stringResource(R.string.new_project_title), style = typography.headlineSmall.copy(fontWeight = FontWeight.Bold))
         Spacer(modifier = Modifier.height(5.dp))
-        Text("Navn", style = typography.titleMedium)
+        Text(stringResource(R.string.name_label), style = typography.titleMedium)
         Spacer(modifier = Modifier.height(5.dp))
         InfoTextField(
-            name, "Bedriften Min AS", { name = it }, 1,
+            name, stringResource(R.string.name_hint), { name = it }, 1,
             modifier = Modifier
                 .fillMaxWidth(),
             background = colors.surface,
             false,
         )
         Spacer(modifier = Modifier.height(10.dp))
-        Text("Beskrivelse", style = typography.titleMedium)
+        Text(stringResource(R.string.description_label), style = typography.titleMedium)
         Spacer(modifier = Modifier.height(5.dp))
         InfoTextField(
-            description, "Veldig seriøst selskapet", { description = it }, 15,
+            description, stringResource(R.string.description_hint), { description = it }, 15,
             modifier = Modifier
                 .fillMaxWidth(),
             background = colors.surface,
@@ -70,7 +72,7 @@ fun NewProject(vm: HomeViewModel, modifier: Modifier) {
             colors = ButtonDefaults.buttonColors().copy(containerColor = colors.primaryContainer)
         ) {
             Text(
-                "Ny project",
+                stringResource(R.string.new_project_btn),
                 style = typography.titleLarge.copy(colors.onPrimaryContainer),
                 textAlign = TextAlign.Center,
                 modifier = Modifier

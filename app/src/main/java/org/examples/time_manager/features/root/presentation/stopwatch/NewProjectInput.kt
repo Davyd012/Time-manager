@@ -20,8 +20,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import org.examples.time_manager.R
 import org.examples.time_manager.core.database.project.Project
 import org.examples.time_manager.features.root.data.RootScreenEvents
 import org.examples.time_manager.features.root.data.RootScreenEvents.NewProjectEvent
@@ -52,22 +54,22 @@ fun NewProjectInput(
         scrimColor = Color.Black.copy(alpha = .5f),
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
-            Text("Ny projekt", style = texts.headlineSmall.copy(fontWeight = FontWeight.Bold))
+            Text(stringResource(R.string.new_project_title), style = texts.headlineSmall.copy(fontWeight = FontWeight.Bold))
             Spacer(modifier = Modifier.height(5.dp))
-            Text("Navn", style = texts.titleMedium)
+            Text(stringResource(R.string.name_label), style = texts.titleMedium)
             Spacer(modifier = Modifier.height(5.dp))
             InfoTextField(
-                name, "Bedriften Min AS", { name = it }, 1,
+                name, stringResource(R.string.name_hint), { name = it }, 1,
                 modifier = Modifier
                     .fillMaxWidth(),
                 background = colors.surface,
                 false,
             )
             Spacer(modifier = Modifier.height(10.dp))
-            Text("Beskrivelse", style = texts.titleMedium)
+            Text(stringResource(R.string.description_label), style = texts.titleMedium)
             Spacer(modifier = Modifier.height(5.dp))
             InfoTextField(
-                description, "Veldig seriøst selskapet", { description = it }, 7,
+                description, stringResource(R.string.description_hint), { description = it }, 7,
                 modifier = Modifier
                     .fillMaxWidth(),
                 background = colors.surface,
@@ -86,7 +88,7 @@ fun NewProjectInput(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    "Ny project".takeIf { project == null } ?: "Lagre",
+                    stringResource(R.string.new_project_btn).takeIf { project == null } ?: stringResource(R.string.save_btn),
                     modifier = Modifier.padding(10.dp),
                     style = texts.titleMedium.copy(color = colors.onPrimary)
                 )

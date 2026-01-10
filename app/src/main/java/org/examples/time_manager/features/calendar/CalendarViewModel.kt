@@ -98,6 +98,13 @@ class CalendarViewModel() : ViewModel() {
                 }
                 updateProjectExecutions()
             }
+
+            CalendarScreenEvents.ClearSelectedProjects -> viewModelScope.launch(Dispatchers.IO) {
+                _state.update {
+                    it.copy(selectedProjects = emptyList())
+                }
+                updateProjectExecutions()
+            }
         }
     }
 

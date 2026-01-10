@@ -50,6 +50,7 @@ fun CalendarScreen(
         onNextMonth = { vm.onEvent(CalendarScreenEvents.UpdateMonth(1)) },
         onViewMonth = { navigator.toMonthView(date = monthYear.atDay(1).toString(), day = 1) },
         onSelectProject = { project -> vm.onEvent(CalendarScreenEvents.UpdateSelectedProjects(project)) },
+        onClearSelection = { vm.onEvent(CalendarScreenEvents.ClearSelectedProjects) },
         onSelectDate = { date ->
             selectedDate = date
             navigator.toMonthView(date = monthYear.atDay(1).toString(), day = date.dayOfMonth)

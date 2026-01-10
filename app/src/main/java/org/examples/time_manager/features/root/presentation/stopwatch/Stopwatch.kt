@@ -28,10 +28,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.examples.time_manager.App
+import org.examples.time_manager.R
 import org.examples.time_manager.core.database.project.Project
 import org.examples.time_manager.features.root.HomeViewModel
 import org.examples.time_manager.features.root.data.RootScreenEvents.ModifyProjectEvent
@@ -151,7 +153,7 @@ fun Stopwatch(vm: HomeViewModel, modifier: Modifier) {
             )
 //            Spacer(modifier = Modifier.width(5.dp))
             Text(
-                text = "Ferdig",
+                text = stringResource(R.string.done_btn),
                 style = styles.titleMedium.copy(
                     colors.onSecondary,
                     fontWeight = FontWeight.W700,

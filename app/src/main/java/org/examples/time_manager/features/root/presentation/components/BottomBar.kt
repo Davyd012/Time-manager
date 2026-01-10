@@ -24,6 +24,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
+import org.examples.time_manager.R
 import org.examples.time_manager.navigation.PageNavigator
 import org.examples.time_manager.navigation.Route
 import org.examples.time_manager.ui.theme.homeIcon
@@ -43,13 +45,13 @@ fun BottomBar(
             direction = Route.HomeRoute.HomeTab,
             icon = homeIcon(filled = false),
             activeIcon = homeIcon(),
-            label = "Hjem"
+            label = stringResource(R.string.home_tab)
         ),
         BottomBarItem(
             direction = Route.HomeRoute.StopwatchTab,
             icon = watchIcon(filled = false),
             activeIcon = watchIcon(),
-            label = "Stoppeklokke"
+            label = stringResource(R.string.stopwatch_tab)
         )
     )
 

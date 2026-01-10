@@ -15,8 +15,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import java.time.LocalDate
 import java.time.YearMonth
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 import org.examples.time_manager.core.database.project.Project
 import org.examples.time_manager.ui.theme.TimeMangerTheme
 
@@ -32,6 +30,7 @@ fun MonthOverviewScreen(
     onNextMonth: () -> Unit,
     onViewMonth: () -> Unit,
     onSelectProject: (Project) -> Unit,
+    onClearSelection: () -> Unit,
     onSelectDate: (LocalDate) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -42,15 +41,11 @@ fun MonthOverviewScreen(
     val colors = MaterialTheme.colorScheme
 
     Scaffold(
-        containerColor = colors.surfaceContainer.copy(alpha = 0.95f),
+        containerColor = colors.surfaceDim,
         topBar = {
             MonthHeader(
-                title = formatMonthTitle(monthYear),
+                title = monthYear.toString(),
                 onClose = onClose,
-                onPrevMonth = onPrevMonth,
-                onNextMonth = onNextMonth,
-                onViewMonth = onViewMonth,
-                colors = MonthViewColors.defaults(),
             )
         },
     ) { paddingValues ->
@@ -62,10 +57,19 @@ fun MonthOverviewScreen(
                     .padding(horizontal = 16.dp, vertical = 20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
+            CalendarSelectorRow(
+                monthYear = monthYear,
+                onClose = onClose,
+                onPrevMonth = onPrevMonth,
+                onNextMonth = onNextMonth,
+                onViewMonth = onViewMonth,
+            )
+
             CategorySegments(
                 projects = projects,
                 selectedProjects = selectedProjects,
                 onSelectProject = onSelectProject,
+                onClearSelection = onClearSelection,
                 colors = MonthViewColors.defaults(),
             )
 
@@ -81,13 +85,6 @@ fun MonthOverviewScreen(
                 totalHours = totalHours,
             )
         }
-    }
-}
-
-private fun formatMonthTitle(monthYear: YearMonth): String {
-    val formatter = DateTimeFormatter.ofPattern("MMMM yyyy", Locale("nb", "NO"))
-    return monthYear.format(formatter).replaceFirstChar {
-        if (it.isLowerCase()) it.titlecase(Locale("nb", "NO")) else it.toString()
     }
 }
 
@@ -121,6 +118,7 @@ fun MonthOverviewPreview() {
             onNextMonth = {},
             onViewMonth = {},
             onSelectProject = {},
+            onClearSelection = {},
             onSelectDate = {},
         )
     }

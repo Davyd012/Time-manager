@@ -33,8 +33,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import org.examples.time_manager.R
 import org.examples.time_manager.core.database.project.Project
 import org.examples.time_manager.core.database.work.Work
 import org.examples.time_manager.core.service.util.pad
@@ -136,7 +138,7 @@ fun NewWorkInput(
         ) {
             Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                 Text(
-                    "Registrere timer",
+                    stringResource(R.string.register_hours_title),
                     style = typography.headlineMedium.copy(
                         fontWeight = FontWeight.Bold,
                         color = colors.onSurface
@@ -145,7 +147,7 @@ fun NewWorkInput(
             }
             Spacer(modifier = Modifier.height(5.dp))
 
-            Text("Prosjekt", style = typography.titleMedium.copy(color = colors.onSurface))
+            Text(stringResource(R.string.project_label), style = typography.titleMedium.copy(color = colors.onSurface))
             Spacer(modifier = Modifier.height(5.dp))
             ListOfProjects(
                 projects,
@@ -154,11 +156,11 @@ fun NewWorkInput(
             )
             Spacer(modifier = Modifier.height(10.dp))
 
-            Text("Tid & dato", style = typography.titleMedium.copy(color = colors.onSurface))
+            Text(stringResource(R.string.time_date_label), style = typography.titleMedium.copy(color = colors.onSurface))
             Spacer(modifier = Modifier.height(5.dp))
             OutlinedButton(
                 value = time,
-                text = "Timer",
+                text = stringResource(R.string.hours_btn),
                 icon = timerIcon(),
                 action = { timePickerDialog.show() },
             )
@@ -166,12 +168,12 @@ fun NewWorkInput(
             Spacer(modifier = Modifier.height(5.dp))
             val dateContent = when {
                 updateRange.not() -> millisToLocalDate.formatDate()
-                datesRange.isEmpty() || datesRange.size == 1 -> "Velg datoer"
+                datesRange.isEmpty() || datesRange.size == 1 -> stringResource(R.string.select_dates_btn)
                 else -> "${datesRange.first().formatDate()} / ${datesRange.last().formatDate()}"
             }
             OutlinedButton(
                 value = dateContent,
-                text = "Dag",
+                text = stringResource(R.string.day_btn),
                 icon = dateRangeIcon(),
                 action = { showDatePicker = true },
             )
@@ -179,7 +181,7 @@ fun NewWorkInput(
             Spacer(modifier = Modifier.height(5.dp))
             OutlinedButton(
                 value = startedJob ?: "00:00",
-                text = "Start arbeidet",
+                text = stringResource(R.string.start_work_btn),
                 icon = timerIcon(),
                 action = { startTimePickerDialog.show() },
             )
@@ -190,7 +192,7 @@ fun NewWorkInput(
                 value = notes,
                 onValueChange = { notes = it },
                 label = {
-                    Text("Kommentar", color = colors.onSurface)
+                    Text(stringResource(R.string.comment_label), color = colors.onSurface)
                 },
                 minLines = 3,
                 shape = RoundedCornerShape(8.dp),
@@ -217,7 +219,7 @@ fun NewWorkInput(
                     )
                 }
                 Text(
-                    text = "Periode registrering",
+                    text = stringResource(R.string.period_registration_label),
                     modifier = Modifier
                         .padding(10.dp)
                         .padding(start = 15.dp),

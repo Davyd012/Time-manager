@@ -31,6 +31,8 @@ import com.airbnb.lottie.compose.LottieCompositionSpec
 import com.airbnb.lottie.compose.LottieConstants
 import com.airbnb.lottie.compose.animateLottieCompositionAsState
 import com.airbnb.lottie.compose.rememberLottieComposition
+import androidx.compose.ui.res.stringResource
+import org.examples.time_manager.R
 import org.examples.time_manager.core.database.project.Project
 import org.examples.time_manager.core.database.work.Work
 
@@ -104,7 +106,7 @@ fun ListOfWorks(
                             Column {
                                 Text(
                                     projects.firstOrNull { p -> p.id == work.project }?.name
-                                        ?: "No project",
+                                        ?: stringResource(R.string.no_project),
                                     style = style.titleMedium.copy(color = colors.secondaryContainer)
                                 )
                                 if (work.description.isNotEmpty()) Text(
@@ -160,7 +162,7 @@ fun NoJobsView(
                 modifier = Modifier.size(400.dp)
             )
             Text(
-                text = "Ingen arbeidsregnskap",
+                text = stringResource(R.string.no_work_logs),
                 style = style.titleMedium.copy(color = colors.onSurface)
             )
         }

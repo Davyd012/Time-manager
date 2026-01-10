@@ -7,9 +7,12 @@ import java.time.LocalDate
 import java.time.ZoneOffset
 import java.time.temporal.TemporalAdjusters
 
+import org.examples.time_manager.App
+import org.examples.time_manager.R
+
 class DatesController(private val worksDao: WorkDao) {
-    val weekDays =
-        listOf("Mandag", "Tirsdag", "Onsdag", "Torsdag", "Fredag", "Lørdag", "Søndag")
+    val weekDays: List<String>
+        get() = App.context.resources.getStringArray(R.array.week_days_array).toList()
 
     fun getDatesForCurrentMonth(projects: List<Project>? = null): List<DayModel> {
         val today = LocalDate.now()

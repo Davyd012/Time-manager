@@ -17,7 +17,9 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import org.examples.time_manager.R
 import org.examples.time_manager.core.database.work.Work
 import org.examples.time_manager.features.root.HomeViewModel
 import org.examples.time_manager.features.root.data.RootScreenEvents.ModifyWorkEvent
@@ -76,7 +78,7 @@ fun SaveButtons(
             Icon(doneIcon(), contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                "Registrer periode",
+                stringResource(R.string.register_period_btn),
                 style = typography.titleMedium
             )
         }
@@ -106,7 +108,7 @@ fun SaveButtons(
             Icon(doneIcon(), contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
             Text(
-                "Ferdig",
+                stringResource(R.string.done_btn),
                 style = typography.titleMedium
             )
         }
@@ -132,7 +134,7 @@ fun SaveButtons(
             modifier = Modifier.size(56.dp),
             contentPadding = PaddingValues(0.dp),
         ) {
-            Icon(deleteIcon(), contentDescription = "Fjerne")
+            Icon(deleteIcon(), contentDescription = stringResource(R.string.remove_cd))
         }
         Button(
             onClick = {
@@ -157,7 +159,7 @@ fun SaveButtons(
         ) {
             Icon(doneIcon(), contentDescription = null)
             Spacer(modifier = Modifier.width(8.dp))
-            Text("Lagre endringer", style = typography.titleMedium)
+            Text(stringResource(R.string.save_changes_btn), style = typography.titleMedium)
         }
     }
 }

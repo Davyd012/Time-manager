@@ -8,10 +8,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import org.examples.time_manager.R
 
 @Composable
 fun MonthlyTotalPill(
@@ -19,11 +21,13 @@ fun MonthlyTotalPill(
     colors: MonthViewColors,
     modifier: Modifier = Modifier,
 ) {
+    val prefix = stringResource(R.string.total_month_prefix)
+    val suffix = stringResource(R.string.hours_suffix)
     val label =
         buildAnnotatedString {
-            append("Total for måned: ")
+            append(prefix)
             pushStyle(SpanStyle(color = colors.accent, fontWeight = FontWeight.SemiBold))
-            append("$totalHours h")
+            append("$totalHours$suffix")
             pop()
         }
 

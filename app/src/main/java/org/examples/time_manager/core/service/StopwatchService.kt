@@ -161,7 +161,7 @@ class StopwatchService : Service() {
             0,
             NotificationCompat.Action(
                 0,
-                "Stop",
+                getString(org.examples.time_manager.R.string.stop),
                 ServiceHelper.stopPendingIntent(this)
             )
         )
@@ -176,7 +176,7 @@ class StopwatchService : Service() {
             0,
             NotificationCompat.Action(
                 0,
-                "Resume",
+                getString(org.examples.time_manager.R.string.resume),
                 ServiceHelper.resumePendingIntent(this)
             )
         )

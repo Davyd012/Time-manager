@@ -26,11 +26,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringArrayResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.flow.Flow
+import org.examples.time_manager.R
 import org.examples.time_manager.core.database.project.Project
 import org.examples.time_manager.features.root.data.RootScreenEvents
 import org.examples.time_manager.features.root.presentation.home.new_work.ListOfProjects
@@ -45,12 +48,7 @@ fun MonthPickerDialog(
 ) {
     val currentMonth = LocalDate.now().month.ordinal
 
-    val months = remember {
-        listOf(
-            "Januar", "Februar", "Mars", "April", "Mai", "Juni",
-            "Juli", "August", "September", "Oktober", "November", "Desember"
-        )
-    }
+    val months = stringArrayResource(R.array.months_array).toList()
 
     val state = rememberLazyListState(1200 + currentMonth - 2)
 
@@ -75,7 +73,7 @@ fun MonthPickerDialog(
 
     AlertDialog(
         onDismissRequest = { onDismiss(-1) },
-        title = { Text("Select Month") },
+        title = { Text(stringResource(R.string.select_month_title)) },
         text = {
             Column {
                 ListOfProjects(
@@ -130,7 +128,7 @@ fun MonthPickerDialog(
         confirmButton = {
             TextButton(onClick = {
                 onDismiss(lastSelectedIndex % 12)
-            }) { Text("OK") }
+            }) { Text(stringResource(R.string.ok)) }
         }
     )
 }
