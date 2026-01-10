@@ -1,9 +1,7 @@
 package org.examples.time_manager.features.root.presentation.home
 
-import android.util.Log
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -11,15 +9,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.DateRangePickerState
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberDateRangePickerState
@@ -34,6 +32,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.examples.time_manager.core.database.project.Project
@@ -50,6 +49,8 @@ import org.examples.time_manager.ui.theme.dateRangeIcon
 import org.examples.time_manager.ui.theme.timerIcon
 import java.time.LocalDateTime
 import java.time.ZoneOffset
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -62,6 +63,7 @@ fun NewWorkInput(
 ) {
     val colors = MaterialTheme.colorScheme
     val typography = MaterialTheme.typography
+    val sheetShape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
 
     var selectedProject by remember {
         mutableIntStateOf(
@@ -97,6 +99,20 @@ fun NewWorkInput(
         dateState = dateState,
     )
 
+    val dateContent = when {
+        !updateRange -> millisToLocalDate.formatDate()
+        datesRange.isEmpty() -> "Velg datoer"
+        datesRange.size == 1 -> datesRange.first().formatDate()
+        else -> "${datesRange.first().formatDate()} / ${datesRange.last().formatDate()}"
+    }
+
+    val dateHeaderText = when {
+        !updateRange -> millisToLocalDate.formatLongDate()
+        datesRange.isEmpty() -> "Velg datoer"
+        datesRange.size == 1 -> datesRange.first().formatLongDate()
+        else -> "${datesRange.first().formatDate()} - ${datesRange.last().formatDate()}"
+    }
+
     val formattedTime = work?.let {
         val hours = (it.time / 3600).pad()
         val minutes = ((it.time % 3600) / 60).pad()
@@ -105,6 +121,7 @@ fun NewWorkInput(
 
     var time by remember { mutableStateOf(formattedTime) }
     var notes by remember { mutableStateOf(work?.description ?: "") }
+    var notesFocused by remember { mutableStateOf(false) }
     val timePickerDialog = getTimePicker(updateTime = { it: String -> time = it })
 
     val formattedStartTime = work?.let {
@@ -122,112 +139,132 @@ fun NewWorkInput(
             onDismiss()
         },
         sheetState = rememberModalBottomSheetState(),
-        containerColor = colors.surface,
+        containerColor = colors.surfaceContainerHigh,
         contentColor = colors.onSurface,
-        shape = RoundedCornerShape(30.dp),
+        shape = sheetShape,
         dragHandle = null,
         scrimColor = Color.Black.copy(alpha = .5f),
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(topStart = 10.dp, topEnd = 10.dp))
-                .background(colors.surface)
-                .padding(10.dp)
+                .clip(sheetShape)
+                .background(colors.surfaceContainerHigh)
+                .padding(horizontal = 20.dp, vertical = 16.dp)
                 .heightIn(min = 500.dp)
         ) {
-            Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                Text(
-                    "Registrere timer",
-                    style = typography.headlineMedium.copy(
-                        fontWeight = FontWeight.Bold,
-                        color = colors.onSurface
-                    )
+            Text(
+                text = if (updateRange) "Periode" else "Dato",
+                style = typography.labelLarge.copy(color = colors.onSurfaceVariant)
+            )
+            Text(
+                text = dateHeaderText,
+                style = typography.titleMedium.copy(
+                    fontWeight = FontWeight.SemiBold,
+                    color = colors.onSurface
                 )
-            }
-            Spacer(modifier = Modifier.height(5.dp))
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+            Text(
+                text = "Registrere timer",
+                style = typography.headlineSmall.copy(
+                    fontWeight = FontWeight.Bold,
+                    color = colors.onSurface
+                )
+            )
+            Spacer(modifier = Modifier.height(16.dp))
 
-            Text("Prosjekt", style = typography.titleMedium.copy(color = colors.onSurface))
-            Spacer(modifier = Modifier.height(5.dp))
+            Text("Prosjekt", style = typography.titleSmall.copy(color = colors.onSurfaceVariant))
+            Spacer(modifier = Modifier.height(6.dp))
             ListOfProjects(
                 projects,
                 listOf(selectedProject),
                 selectProject = { it: Int -> selectedProject = it },
             )
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            Text("Tid & dato", style = typography.titleMedium.copy(color = colors.onSurface))
-            Spacer(modifier = Modifier.height(5.dp))
-            OutlinedButton(
-                value = time,
-                text = "Timer",
-                icon = timerIcon(),
-                action = { timePickerDialog.show() },
-            )
-
-            Spacer(modifier = Modifier.height(5.dp))
-            val dateContent = when {
-                updateRange.not() -> millisToLocalDate.formatDate()
-                datesRange.isEmpty() || datesRange.size == 1 -> "Velg datoer"
-                else -> "${datesRange.first().formatDate()} / ${datesRange.last().formatDate()}"
+            Text("Tid & detaljer", style = typography.titleSmall.copy(color = colors.onSurfaceVariant))
+            Spacer(modifier = Modifier.height(6.dp))
+            AnimatedVisibility(visible = !updateRange) {
+                Column {
+                    OutlinedButton(
+                        value = time,
+                        text = "Timer",
+                        icon = timerIcon(),
+                        action = { timePickerDialog.show() },
+                        isPrimary = true,
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
             }
+
             OutlinedButton(
                 value = dateContent,
-                text = "Dag",
+                text = if (updateRange) "Periode" else "Dag",
                 icon = dateRangeIcon(),
                 action = { showDatePicker = true },
             )
 
-            Spacer(modifier = Modifier.height(5.dp))
-            OutlinedButton(
-                value = startedJob ?: "00:00",
-                text = "Start arbeidet",
-                icon = timerIcon(),
-                action = { startTimePickerDialog.show() },
-            )
+            AnimatedVisibility(visible = !updateRange) {
+                Column {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    OutlinedButton(
+                        value = startedJob ?: "00:00",
+                        text = "Start arbeidet",
+                        icon = timerIcon(),
+                        action = { startTimePickerDialog.show() },
+                    )
+                }
+            }
 
-            Spacer(modifier = Modifier.height(5.dp))
+            Spacer(modifier = Modifier.height(10.dp))
 
             OutlinedTextField(
                 value = notes,
                 onValueChange = { notes = it },
                 label = {
-                    Text("Kommentar", color = colors.onSurface)
+                    Text("Kommentar", color = colors.onSurfaceVariant)
                 },
-                minLines = 3,
-                shape = RoundedCornerShape(8.dp),
-                modifier = Modifier.fillMaxWidth()
+                placeholder = {
+                    Text("Skriv en kommentar...", color = colors.onSurfaceVariant)
+                },
+                minLines = if (notesFocused || notes.isNotBlank()) 4 else 2,
+                shape = RoundedCornerShape(12.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = colors.outlineVariant,
+                    unfocusedBorderColor = colors.outlineVariant,
+                    focusedContainerColor = colors.surfaceContainerLow,
+                    unfocusedContainerColor = colors.surfaceContainerLow,
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .onFocusChanged { notesFocused = it.isFocused }
             )
 
-            Spacer(modifier = Modifier.height(5.dp))
+            Spacer(modifier = Modifier.height(12.dp))
 
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { updateRange = !updateRange }
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Box {
-                    Checkbox(
-                        checked = updateRange,
-                        onCheckedChange = { updateRange = !updateRange },
-                        enabled = true,
-                        colors = CheckboxDefaults.colors(colors.onPrimaryContainer),
-                        modifier = Modifier
-                            .padding(start = 20.dp)
-                            .size(3.dp),
-                    )
-                }
                 Text(
                     text = "Periode registrering",
-                    modifier = Modifier
-                        .padding(10.dp)
-                        .padding(start = 15.dp),
                     style = typography.titleSmall.copy(color = colors.onSurface)
+                )
+                Spacer(modifier = Modifier.weight(1f))
+                Switch(
+                    checked = updateRange,
+                    onCheckedChange = { updateRange = it },
+                    colors = SwitchDefaults.colors(
+                        checkedThumbColor = colors.onPrimary,
+                        checkedTrackColor = colors.primary,
+                        uncheckedThumbColor = colors.onSurfaceVariant,
+                        uncheckedTrackColor = colors.surfaceVariant,
+                    )
                 )
             }
 
-            Spacer(modifier = Modifier.height(50.dp))
+            Spacer(modifier = Modifier.height(20.dp))
             SaveButtons(
                 work = work,
                 onDismiss = onDismiss,
@@ -266,4 +303,9 @@ private fun extractDates(
 fun LocalDateTime.formatDate(): String {
     val dateUtils = DateUtils()
     return dateUtils.formatLocalDateTime(this)
+}
+
+private fun LocalDateTime.formatLongDate(): String {
+    val formatter = DateTimeFormatter.ofPattern("EEEE, dd MMMM", Locale.getDefault())
+    return format(formatter)
 }

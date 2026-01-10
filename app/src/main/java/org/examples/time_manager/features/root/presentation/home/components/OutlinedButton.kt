@@ -7,6 +7,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -21,18 +22,30 @@ fun OutlinedButton(
     text: String,
     icon: ImageVector,
     action: () -> Unit,
+    modifier: Modifier = Modifier,
+    isPrimary: Boolean = false,
 ) {
     val colors = MaterialTheme.colorScheme
+    val typography = MaterialTheme.typography
+    val valueStyle = if (isPrimary) typography.headlineSmall else typography.bodyLarge
 
     OutlinedTextField(
         value = value,
         onValueChange = { },
         label = {
-            Text(text, color = colors.onSurface)
+            Text(text, color = colors.onSurfaceVariant)
         },
-        leadingIcon = { Icon(icon, contentDescription = null, tint = colors.onSurface) },
-        shape = RoundedCornerShape(8.dp),
+        textStyle = valueStyle.copy(color = colors.onSurface),
+        leadingIcon = { Icon(icon, contentDescription = null, tint = colors.onSurfaceVariant) },
+        shape = RoundedCornerShape(12.dp),
         readOnly = true,
+        singleLine = true,
+        colors = OutlinedTextFieldDefaults.colors(
+            focusedBorderColor = colors.outlineVariant,
+            unfocusedBorderColor = colors.outlineVariant,
+            focusedContainerColor = colors.surfaceContainerLow,
+            unfocusedContainerColor = colors.surfaceContainerLow,
+        ),
         interactionSource = remember { MutableInteractionSource() }
             .also { interactionSource ->
                 LaunchedEffect(interactionSource) {
@@ -43,6 +56,6 @@ fun OutlinedButton(
                     }
                 }
             },
-        modifier = Modifier.fillMaxWidth()
+        modifier = modifier.fillMaxWidth()
     )
 }
