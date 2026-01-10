@@ -20,15 +20,15 @@ internal fun SelectedUnderline(
     Box(
         modifier =
             modifier
-                .padding(bottom = 2.dp)
                 .width(36.dp)
                 .height(2.dp)
                 .background(
-                    brush =
-                        Brush.horizontalGradient(
-                            listOf(color.copy(alpha = 0.2f), color, color.copy(alpha = 0.2f)),
-                        ),
-                    shape = RoundedCornerShape(999.dp),
+                    color.copy(alpha = 0.2f)
+//                    brush =
+//                        Brush.horizontalGradient(
+//                            listOf(color.copy(alpha = 0.2f), color, color.copy(alpha = 0.2f)),
+//                        ),
+//                    shape = RoundedCornerShape(999.dp),
                 ),
     )
 }

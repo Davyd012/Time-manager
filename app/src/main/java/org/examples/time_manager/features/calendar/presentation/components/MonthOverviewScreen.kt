@@ -1,16 +1,15 @@
 package org.examples.time_manager.features.calendar.presentation.components
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -19,6 +18,7 @@ import java.time.YearMonth
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 import org.examples.time_manager.core.database.project.Project
+import org.examples.time_manager.ui.theme.TimeMangerTheme
 
 @Composable
 fun MonthOverviewScreen(
@@ -34,13 +34,15 @@ fun MonthOverviewScreen(
     onSelectProject: (Project) -> Unit,
     onSelectDate: (LocalDate) -> Unit,
     modifier: Modifier = Modifier,
-    colors: MonthViewColors = MonthViewColors.defaults(),
 ) {
     val totalHours by remember(days) {
         derivedStateOf { days.sumOf { it.hours } }
     }
 
+    val colors = MaterialTheme.colorScheme
+
     Scaffold(
+        containerColor = colors.surfaceContainer.copy(alpha = 0.95f),
         topBar = {
             MonthHeader(
                 title = formatMonthTitle(monthYear),
@@ -48,15 +50,14 @@ fun MonthOverviewScreen(
                 onPrevMonth = onPrevMonth,
                 onNextMonth = onNextMonth,
                 onViewMonth = onViewMonth,
-                colors = colors,
+                colors = MonthViewColors.defaults(),
             )
-        }
+        },
     ) { paddingValues ->
         Column(
             modifier =
                 modifier
                     .fillMaxSize()
-                    .background(colors.background)
                     .padding(paddingValues)
                     .padding(horizontal = 16.dp, vertical = 20.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -65,11 +66,11 @@ fun MonthOverviewScreen(
                 projects = projects,
                 selectedProjects = selectedProjects,
                 onSelectProject = onSelectProject,
-                colors = colors,
+                colors = MonthViewColors.defaults(),
             )
 
             WeekdayRow(
-                colors = colors,
+                colors = MonthViewColors.defaults(),
             )
 
             MonthGrid(
@@ -77,13 +78,7 @@ fun MonthOverviewScreen(
                 days = days,
                 selectedDate = selectedDate,
                 onSelectDate = onSelectDate,
-                colors = colors,
-            )
-
-            MonthlyTotalPill(
                 totalHours = totalHours,
-                colors = colors,
-                modifier = Modifier.align(Alignment.CenterHorizontally),
             )
         }
     }
@@ -112,17 +107,21 @@ fun MonthOverviewPreview() {
             Project(id = 3, name = "Service"),
         )
 
-    MonthOverviewScreen(
-        monthYear = month,
-        days = days,
-        projects = projects,
-        selectedProjects = projects.take(1),
-        selectedDate = month.atDay(2),
-        onClose = {},
-        onPrevMonth = {},
-        onNextMonth = {},
-        onViewMonth = {},
-        onSelectProject = {},
-        onSelectDate = {},
-    )
+    TimeMangerTheme(
+        darkTheme = true,
+    ) {
+        MonthOverviewScreen(
+            monthYear = month,
+            days = days,
+            projects = projects,
+            selectedProjects = projects.take(1),
+            selectedDate = month.atDay(2),
+            onClose = {},
+            onPrevMonth = {},
+            onNextMonth = {},
+            onViewMonth = {},
+            onSelectProject = {},
+            onSelectDate = {},
+        )
+    }
 }

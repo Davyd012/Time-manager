@@ -5,15 +5,16 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.grid.GridCells
-import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Divider
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -22,9 +23,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -39,10 +37,11 @@ fun MonthGrid(
     days: List<DayWork>,
     selectedDate: LocalDate?,
     onSelectDate: (LocalDate) -> Unit,
-    colors: MonthViewColors,
     modifier: Modifier = Modifier,
     cellHeight: Dp = 68.dp,
+    totalHours: Int,
 ) {
+    val colors = MaterialTheme.colorScheme
     val dayMap by remember(days) {
         derivedStateOf {
             days.groupBy { it.date }.mapValues { entry -> entry.value }
@@ -56,75 +55,77 @@ fun MonthGrid(
     }
 
     val rows = gridCells.size / 7
-    val totalHeight = cellHeight * rows
-    val density = LocalDensity.current
-    val horizontalLineColor = colors.border.copy(alpha = 0.12f)
-    val verticalLineColor = colors.border.copy(alpha = 0.08f)
-    val outerLineColor = colors.border.copy(alpha = 0.12f)
 
+    val itemRows = gridCells.chunked(7)
     Surface(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(22.dp),
-        color = colors.cardBackground,
+        shape = RoundedCornerShape(15.dp),
+        color = colors.surfaceContainer,
         tonalElevation = 2.dp,
-        border = BorderStroke(1.dp, colors.border),
+        border = BorderStroke(1.dp, colors.onPrimary.copy(alpha = 0.15f)),
     ) {
-        Box(
+        Column(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .height(totalHeight)
-                    .drawBehind {
-                        val columns = 7
-                        val cellWidth = size.width / columns
-                        val cellHeightPx = size.height / rows
-                        val horizontalStroke = Stroke(width = with(density) { 0.8.dp.toPx() })
-                        val verticalStroke = Stroke(width = with(density) { 0.5.dp.toPx() })
-
-                        for (column in 1 until columns) {
-                            val x = cellWidth * column
-                            drawLine(
-                                color = verticalLineColor,
-                                start = Offset(x, 0f),
-                                end = Offset(x, size.height),
-                                strokeWidth = verticalStroke.width,
-                            )
-                        }
-
-                        for (row in 1 until rows) {
-                            val y = cellHeightPx * row
-                            drawLine(
-                                color = horizontalLineColor,
-                                start = Offset(0f, y),
-                                end = Offset(size.width, y),
-                                strokeWidth = horizontalStroke.width,
-                            )
-                        }
-
-                        drawRect(
-                            color = outerLineColor,
-                            style = Stroke(width = with(density) { 1.dp.toPx() }),
+                    .padding(4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            itemRows.forEachIndexed { index, row ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    row.forEach { cell ->
+                        DayCell(
+                            cell = cell,
+                            dayWork = cell?.let { dayMap[it].orEmpty() } ?: emptyList(),
+                            selectedDate = selectedDate,
+                            onSelectDate = onSelectDate,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(cellHeight),
                         )
                     }
-                    .padding(4.dp),
-        ) {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(7),
-                modifier = Modifier.fillMaxSize(),
-                userScrollEnabled = false,
-                contentPadding = PaddingValues(0.dp),
-            ) {
-                items(gridCells) { cell ->
-                    DayCell(
-                        cell = cell,
-                        dayWork = cell?.let { dayMap[it].orEmpty() } ?: emptyList(),
-                        selectedDate = selectedDate,
-                        onSelectDate = onSelectDate,
-                        colors = colors,
-                        modifier = Modifier.height(cellHeight),
+
+                    repeat(7 - row.size) {
+                        Spacer(
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(cellHeight)
+                        )
+                    }
+                }
+
+                if (index < itemRows.lastIndex) {
+                    HorizontalDivider(
+                        modifier = Modifier
+                            .padding(horizontal = 5.dp)
+                            .fillMaxWidth(), thickness = 1.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
                     )
                 }
             }
+            Spacer(modifier = Modifier.height(20.dp))
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                HorizontalDivider(
+                    modifier = Modifier
+                        .padding(horizontal = 5.dp)
+                        .weight(1f), thickness = 1.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                )
+                MonthlyTotalPill(
+                    totalHours = totalHours,
+                    colors = MonthViewColors.defaults(),
+                )
+                HorizontalDivider(
+                    modifier = Modifier
+                        .padding(horizontal = 5.dp)
+                        .weight(1f), thickness = 1.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(10.dp))
         }
     }
 }
@@ -135,9 +136,9 @@ private fun DayCell(
     dayWork: List<DayWork>,
     selectedDate: LocalDate?,
     onSelectDate: (LocalDate) -> Unit,
-    colors: MonthViewColors,
     modifier: Modifier = Modifier,
 ) {
+    val colors = MaterialTheme.colorScheme
     val hours =
         remember(dayWork) {
             if (cell == null) {
@@ -169,7 +170,7 @@ private fun DayCell(
             ) {
                 Text(
                     text = cell.dayOfMonth.toString(),
-                    color = colors.text,
+                    color = colors.onPrimary,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.SemiBold,
                 )
@@ -177,9 +178,9 @@ private fun DayCell(
                     text = hours.toString(),
                     color =
                         if (hours == 0) {
-                            colors.text.copy(alpha = 0.45f)
+                            colors.onPrimary.copy(alpha = 0.45f)
                         } else {
-                            colors.accent.copy(alpha = 0.9f)
+                            colors.onPrimaryContainer
                         },
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
@@ -187,7 +188,7 @@ private fun DayCell(
             }
             if (isSelected) {
                 SelectedUnderline(
-                    color = colors.accent,
+                    color = colors.onPrimary,
                     modifier = Modifier.align(Alignment.BottomCenter),
                 )
             }
