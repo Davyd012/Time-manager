@@ -18,7 +18,7 @@
     <string name="selected_projects">Valgte prosjekter</string>
     <string name="reset">Nullstill</string>
     <string name="share_month_cd">Del manedsoversikt</string>
-    <string name="total_month_prefix">Total for måned: %2$.2fh</string>
+    <string name="total_month_prefix">Total for måned: %1$.2fh</string>
     <string name="hours_suffix"> h</string>
     <string name="share_chooser_title">Del</string>
 
