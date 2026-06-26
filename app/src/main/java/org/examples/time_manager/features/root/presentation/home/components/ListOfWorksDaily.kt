@@ -24,6 +24,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -43,11 +46,13 @@ import androidx.compose.ui.res.stringResource
 import org.examples.time_manager.R
 import org.examples.time_manager.core.database.project.Project
 import org.examples.time_manager.core.database.work.Work
+import org.examples.time_manager.ui.theme.addIcon
 
 @SuppressLint("DefaultLocale")
 @Composable
 fun ListOfWorks(
     showWork: (Int) -> Unit,
+    addWork: () -> Unit,
     works: List<Work>,
     projects: List<Project>,
 ) {
@@ -71,7 +76,7 @@ fun ListOfWorks(
         }
     ) { empty ->
         if (empty) {
-            EmptyWorksState()
+            EmptyWorksState(addWork = addWork)
         } else {
             WorksListState(
                 works = works,
@@ -86,6 +91,7 @@ fun ListOfWorks(
 
 @Composable
 private fun EmptyWorksState(
+    addWork: () -> Unit,
 ) {
     val colors = MaterialTheme.colorScheme
     val style = MaterialTheme.typography
@@ -101,19 +107,49 @@ private fun EmptyWorksState(
     )
 
     Box(
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = 24.dp),
         contentAlignment = Alignment.Center
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             LottieAnimation(
                 composition = composition,
                 progress = { progress },
-                modifier = Modifier.size(400.dp)
+                modifier = Modifier.size(280.dp)
             )
+            Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = stringResource(R.string.no_work_logs),
-                style = style.titleMedium.copy(color = colors.onSurface)
+                style = style.headlineSmall.copy(
+                    color = colors.onSurface,
+                    fontWeight = FontWeight.Bold
+                )
             )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = stringResource(R.string.no_work_logs_description),
+                style = style.bodyLarge.copy(color = colors.onSurfaceVariant)
+            )
+            Spacer(modifier = Modifier.height(28.dp))
+            Button(
+                onClick = addWork,
+                shape = RoundedCornerShape(24.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = colors.secondary,
+                    contentColor = colors.onSecondary,
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(64.dp)
+            ) {
+                Icon(addIcon(), contentDescription = null)
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = stringResource(R.string.add_hours_btn),
+                    style = style.titleMedium.copy(fontWeight = FontWeight.Bold)
+                )
+            }
         }
     }
 }

@@ -2,7 +2,6 @@ package org.examples.time_manager.features.calendar.presentation.components
 
 import android.content.Context
 import android.content.Intent
-import android.util.Log
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -19,7 +18,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -50,9 +48,8 @@ fun MonthGrid(
     modifier: Modifier = Modifier,
     cellHeight: Dp = 68.dp,
     totalHours: Double,
+    monthColors: MonthViewColors = MonthViewColors.defaults(),
 ) {
-    val colors = MaterialTheme.colorScheme
-    val monthViewColors = MonthViewColors.defaults()
     val dayMap by remember(days) {
         derivedStateOf {
             days.groupBy { it.date }.mapValues { entry -> entry.value }
@@ -68,10 +65,10 @@ fun MonthGrid(
     val itemRows = gridCells.chunked(7)
     Surface(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(15.dp),
-        color = colors.surfaceContainer,
+        shape = RoundedCornerShape(22.dp),
+        color = monthColors.cardBackground,
         tonalElevation = 2.dp,
-        border = BorderStroke(1.dp, colors.onPrimary.copy(alpha = 0.15f)),
+        border = BorderStroke(1.dp, monthColors.border),
     ) {
         Column(
             modifier =
@@ -90,6 +87,7 @@ fun MonthGrid(
                             dayWork = cell?.let { dayMap[it].orEmpty() } ?: emptyList(),
                             selectedDate = selectedDate,
                             onSelectDate = onSelectDate,
+                            monthColors = monthColors,
                             modifier = Modifier
                                 .weight(1f)
                                 .height(cellHeight),
@@ -109,7 +107,7 @@ fun MonthGrid(
                     HorizontalDivider(
                         modifier = Modifier
                             .padding(horizontal = 5.dp)
-                            .fillMaxWidth(), thickness = 1.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                            .fillMaxWidth(), thickness = 1.dp, color = monthColors.divider
                     )
                 }
             }
@@ -121,7 +119,7 @@ fun MonthGrid(
                 HorizontalDivider(
                     modifier = Modifier
                         .padding(horizontal = 5.dp)
-                        .weight(1f), thickness = 1.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                        .weight(1f), thickness = 1.dp, color = monthColors.divider
                 )
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -129,16 +127,18 @@ fun MonthGrid(
                 ) {
                     MonthlyTotalPill(
                         totalHours = totalHours,
+                        monthColors = monthColors,
                     )
                     ShareMonthButton(
                         monthYear = monthYear,
                         totalHours = totalHours,
+                        monthColors = monthColors,
                     )
                 }
                 HorizontalDivider(
                     modifier = Modifier
                         .padding(horizontal = 5.dp)
-                        .weight(1f), thickness = 1.dp, color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f)
+                        .weight(1f), thickness = 1.dp, color = monthColors.divider
                 )
             }
 
@@ -152,8 +152,8 @@ private fun ShareMonthButton(
     monthYear: YearMonth,
     totalHours: Double,
     modifier: Modifier = Modifier,
+    monthColors: MonthViewColors = MonthViewColors.defaults(),
 ) {
-    val colors = MaterialTheme.colorScheme
     val context = LocalContext.current
     val shareText =
         remember(monthYear, totalHours) {
@@ -163,8 +163,8 @@ private fun ShareMonthButton(
     Surface(
         modifier = modifier,
         shape = RoundedCornerShape(999.dp),
-        color = colors.primary.copy(alpha = .7f),
-        border = BorderStroke(1.dp, colors.onPrimary.copy(alpha = 0.5f)),
+        color = monthColors.chipBackground.copy(alpha = 0.75f),
+        border = BorderStroke(1.dp, monthColors.border),
         tonalElevation = 2.dp,
         shadowElevation = 4.dp,
     ) {
@@ -175,7 +175,7 @@ private fun ShareMonthButton(
             Icon(
                 imageVector = shareIcon(),
                 contentDescription = stringResource(R.string.share_month_cd),
-                tint = colors.onPrimary,
+                tint = monthColors.text,
             )
         }
     }
@@ -188,8 +188,8 @@ private fun DayCell(
     selectedDate: LocalDate?,
     onSelectDate: (LocalDate) -> Unit,
     modifier: Modifier = Modifier,
+    monthColors: MonthViewColors = MonthViewColors.defaults(),
 ) {
-    val colors = MaterialTheme.colorScheme
     val hours =
         remember(dayWork) {
             if (cell == null) {
@@ -221,7 +221,7 @@ private fun DayCell(
             ) {
                 Text(
                     text = cell.dayOfMonth.toString(),
-                    color = colors.onPrimary,
+                    color = monthColors.text,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.SemiBold,
                 )
@@ -233,9 +233,9 @@ private fun DayCell(
                     text = hoursCountText,
                     color =
                         if (hours == 0.0) {
-                            colors.onPrimaryContainer
+                            monthColors.accentMuted
                         } else {
-                            colors.onPrimary.copy(alpha = 0.55f)
+                            monthColors.accent
                         },
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Medium,
@@ -243,7 +243,7 @@ private fun DayCell(
             }
             if (isSelected) {
                 SelectedUnderline(
-                    color = colors.onPrimary,
+                    color = monthColors.accent,
                     modifier = Modifier.align(Alignment.BottomCenter),
                 )
             }

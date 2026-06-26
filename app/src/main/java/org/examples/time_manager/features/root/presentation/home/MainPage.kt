@@ -59,6 +59,7 @@ fun MainPage(vm: HomeViewModel, modifier: Modifier, navigator: Navigator) {
         Spacer(modifier = Modifier.height(5.dp))
         ListOfWorks(
             showWork = { i: Int -> vm.onEvent(ModifyWorkStateEvent(selected = i, show = true)) },
+            addWork = { vm.onEvent(ModifyWorkStateEvent(show = true)) },
             works = works,
             projects = projects
         )

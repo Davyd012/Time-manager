@@ -46,8 +46,10 @@ import org.examples.time_manager.features.root.presentation.home.components.getT
 import org.examples.time_manager.features.root.presentation.home.new_work.DatePickerWidget
 import org.examples.time_manager.features.root.presentation.home.new_work.ListOfProjects
 import org.examples.time_manager.features.root.presentation.utils.DateUtils
+import org.examples.time_manager.features.month_view.presentation.new_work.SaveButtons
 import org.examples.time_manager.ui.theme.dateRangeIcon
 import org.examples.time_manager.ui.theme.timerIcon
+import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 
@@ -58,6 +60,7 @@ fun NewWorkInput(
     vm: MonthViewModel,
     projects: List<Project>,
     day: Int,
+    selectedDate: LocalDate?,
     work: Work?
 ) {
     val colors = MaterialTheme.colorScheme
@@ -69,7 +72,8 @@ fun NewWorkInput(
         )
     }
 
-    val currentDate = LocalDateTime.now().withDayOfMonth(day).withHour(0).withMinute(0)
+    val currentDate = (selectedDate ?: LocalDateTime.now().withDayOfMonth(day).toLocalDate())
+        .atStartOfDay()
     val dateUtils = DateUtils()
     val dateState = rememberDatePickerState(
         initialSelectedDateMillis = work?.date?.toEpochSecond(ZoneOffset.UTC)?.times(1000)
@@ -228,18 +232,18 @@ fun NewWorkInput(
             }
 
             Spacer(modifier = Modifier.height(50.dp))
-//            SaveButtons(
-//                work = work,
-//                onDismiss = onDismiss,
-//                vm = vm,
-//                selectedProject = selectedProject,
-//                time = time,
-//                millisToLocalDate = millisToLocalDate,
-//                startedJob = startedJob,
-//                notes = notes,
-//                dates = datesRange,
-//                updateRange = updateRange,
-//            )
+            SaveButtons(
+                work = work,
+                onDismiss = onDismiss,
+                vm = vm,
+                selectedProject = selectedProject,
+                time = time,
+                millisToLocalDate = millisToLocalDate,
+                startedJob = startedJob,
+                notes = notes,
+                dates = datesRange,
+                updateRange = updateRange,
+            )
         }
     }
 }

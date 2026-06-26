@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import org.examples.time_manager.App
@@ -103,7 +104,11 @@ class MonthViewModel(
                     worksDao.delete(event.work)
                 } else worksDao.upsert(event.work)
 
-                val days = datesController.getDatesForCurrentMonth()
+                val days = datesController.getDatesForAMonth(
+                    firstDayOfMonth = month.withDayOfMonth(1),
+                    lastDayOfMonth = month.with(TemporalAdjusters.lastDayOfMonth()),
+                    projects = exportProjects.value
+                )
                 _state.update {
                     it.copy(dayPerMonth = days)
                 }
@@ -132,7 +137,34 @@ class MonthViewModel(
 
             is RootScreenEvents.UpdateTimerEvent -> TODO()
 
-            is RootScreenEvents.WriteWorkEvent -> TODO()
+            is RootScreenEvents.WriteWorkEvent -> viewModelScope.launch(Dispatchers.IO) {
+                val count = state.value.projects.first()
+                if (count.isEmpty() || event.hours == 0) {
+                    _snackbarMessage.value = !snackbarMessage.value
+                    return@launch
+                }
+
+                val selectedMonth = month.month
+                val selectedYear = month.year
+                if (event.date.month == selectedMonth && event.date.year == selectedYear) {
+                    val newMonthDays = datesController.updateHoursForDay(
+                        state.value.dayPerMonth,
+                        event.date.dayOfMonth - 1,
+                        event.hours
+                    )
+                    _state.update { it.copy(dayPerMonth = newMonthDays) }
+                }
+
+                worksDao.upsert(
+                    Work(
+                        description = event.notes,
+                        date = event.date,
+                        project = event.project,
+                        task = 0,
+                        time = event.hours,
+                    )
+                )
+            }
 
             is RootScreenEvents.CreateExcelDocumentEvent -> viewModelScope.launch(Dispatchers.IO) {
                 Log.d("RootViewModel", "Launching a creating document activity")
@@ -164,7 +196,30 @@ class MonthViewModel(
                     else exportProjects.value.plus(event.project)
             }
 
-            is RootScreenEvents.WriteRangeWorkEvent -> TODO()
+            is RootScreenEvents.WriteRangeWorkEvent -> viewModelScope.launch(Dispatchers.IO) {
+                var newInfoForSelectedMonth = state.value.dayPerMonth
+                for (day in event.dates) {
+                    if (listOf(5, 6).contains(day.dayOfWeek.ordinal)) continue
+                    val time = if (day.dayOfWeek.ordinal == 4) (5.5 * 3600).toInt() else 8 * 3600
+                    if (day.year == month.year && day.month == month.month) {
+                        newInfoForSelectedMonth = datesController.updateHoursForDay(
+                            newInfoForSelectedMonth,
+                            day.dayOfMonth - 1,
+                            time
+                        )
+                    }
+                    worksDao.upsert(
+                        Work(
+                            description = event.notes,
+                            date = day.withHour(7).withMinute(0),
+                            project = event.project,
+                            task = 0,
+                            time = time,
+                        )
+                    )
+                }
+                _state.update { it.copy(dayPerMonth = newInfoForSelectedMonth) }
+            }
 
             is RootScreenEvents.ModifyProjectEvent -> TODO()
 

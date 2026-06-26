@@ -1,16 +1,17 @@
 package org.examples.time_manager.features.calendar.presentation.components
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import java.time.LocalDate
@@ -38,14 +39,14 @@ fun MonthOverviewScreen(
         derivedStateOf { days.sumOf { it.hours } }
     }
 
-    val colors = MaterialTheme.colorScheme
+    val monthColors = MonthViewColors.defaults()
 
     Scaffold(
-        containerColor = colors.surfaceDim,
+        containerColor = monthColors.background,
         topBar = {
             MonthHeader(
-                title = monthYear.toString(),
                 onClose = onClose,
+                colors = monthColors,
             )
         },
     ) { paddingValues ->
@@ -53,6 +54,15 @@ fun MonthOverviewScreen(
             modifier =
                 modifier
                     .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(
+                                monthColors.background,
+                                monthColors.backgroundGlow,
+                                monthColors.background,
+                            ),
+                        ),
+                    )
                     .padding(paddingValues)
                     .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -63,6 +73,7 @@ fun MonthOverviewScreen(
                 onPrevMonth = onPrevMonth,
                 onNextMonth = onNextMonth,
                 onViewMonth = onViewMonth,
+                monthColors = monthColors,
             )
 
             CategorySegments(
@@ -70,10 +81,11 @@ fun MonthOverviewScreen(
                 selectedProjects = selectedProjects,
                 onSelectProject = onSelectProject,
                 onClearSelection = onClearSelection,
+                monthColors = monthColors,
             )
 
             WeekdayRow(
-                colors = MonthViewColors.defaults(),
+                colors = monthColors,
             )
 
             MonthGrid(
@@ -82,6 +94,7 @@ fun MonthOverviewScreen(
                 selectedDate = selectedDate,
                 onSelectDate = onSelectDate,
                 totalHours = totalHours,
+                monthColors = monthColors,
             )
         }
     }

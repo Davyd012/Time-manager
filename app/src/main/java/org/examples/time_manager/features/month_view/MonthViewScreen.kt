@@ -19,6 +19,7 @@ import kotlinx.coroutines.launch
 import org.examples.time_manager.features.month_view.presentation.components.ListOfWorks
 import org.examples.time_manager.features.month_view.presentation.components.HeaderWidget
 import org.examples.time_manager.features.month_view.presentation.NewWorkInput
+import org.examples.time_manager.features.root.data.RootScreenEvents.ModifyWorkStateEvent
 import org.examples.time_manager.navigation.Navigator
 
 @Composable
@@ -44,12 +45,12 @@ fun MonthViewScreen(vm: MonthViewModel, modifier: Modifier, navigator: Navigator
         val index = state.selectedWork.selectedWork
         NewWorkInput(
             onDismiss = {
-                TODO("Fix events")
-//                vm.onEvent(ModifyWorkStateEvent(show = false))
+                vm.onEvent(ModifyWorkStateEvent(show = false))
             },
             vm = vm,
             projects = projects,
             day = state.selectedDay,
+            selectedDate = state.dayPerMonth.getOrNull(state.selectedDay - 1)?.date,
             work = works.takeIf { index >= 0 }?.elementAt(index)
         )
     }
@@ -63,8 +64,9 @@ fun MonthViewScreen(vm: MonthViewModel, modifier: Modifier, navigator: Navigator
         Spacer(modifier = Modifier.height(5.dp))
         ListOfWorks(
             showWork = { i: Int ->
-//                vm.onEvent(ModifyWorkStateEvent(selected = i, show = true))
+                vm.onEvent(ModifyWorkStateEvent(selected = i, show = true))
             },
+            addWork = { vm.onEvent(ModifyWorkStateEvent(show = true)) },
             works = works,
             projects = projects
         )

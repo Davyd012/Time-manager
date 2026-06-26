@@ -22,7 +22,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import org.examples.time_manager.R
 import org.examples.time_manager.core.database.work.Work
-import org.examples.time_manager.features.root.HomeViewModel
+import org.examples.time_manager.features.month_view.MonthViewModel
 import org.examples.time_manager.features.root.data.RootScreenEvents.ModifyWorkEvent
 import org.examples.time_manager.features.root.data.RootScreenEvents.WriteWorkEvent
 import org.examples.time_manager.features.root.data.RootScreenEvents.WriteRangeWorkEvent
@@ -37,7 +37,7 @@ import java.time.LocalDateTime
 fun SaveButtons(
     work: Work?,
     onDismiss: () -> Unit,
-    vm: HomeViewModel,
+    vm: MonthViewModel,
     selectedProject: Int,
     time: String,
     millisToLocalDate: LocalDateTime,

@@ -93,6 +93,8 @@ Ny måned, nye muligheter.</string>
     <string name="home_tab">Hjem</string>
     <string name="stopwatch_tab">Stoppeklokke</string>
     <string name="no_work_logs">Ingen arbeidsregnskap</string>
+    <string name="no_work_logs_description">Du har ingen registrerte timer for denne dagen.</string>
+    <string name="add_hours_btn">Legg til timer</string>
     <string name="no_project">No project</string>
     <string name="create_project_first_msg">Skap et projekt først</string>
     <string name="click_me_action">Click me</string>

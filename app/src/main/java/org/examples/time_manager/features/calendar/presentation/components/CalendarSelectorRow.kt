@@ -1,5 +1,6 @@
 package org.examples.time_manager.features.calendar.presentation.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -10,7 +11,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
@@ -38,12 +38,10 @@ fun CalendarSelectorRow(
     onPrevMonth: () -> Unit,
     onNextMonth: () -> Unit,
     onViewMonth: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    monthColors: MonthViewColors = MonthViewColors.defaults(),
 ) {
-    val colors = MaterialTheme.colorScheme
-    val texts = MaterialTheme.typography
-
-    val shape = RoundedCornerShape(18.dp)
+    val shape = RoundedCornerShape(28.dp)
     val currentTitle = formatMonthTitle(monthYear, "MMMM yyyy")
     val prevTitle = formatMonthTitle(monthYear.minusMonths(1), "MMM yyyy")
     val nextTitle = formatMonthTitle(monthYear.plusMonths(1), "MMM yyyy")
@@ -51,7 +49,8 @@ fun CalendarSelectorRow(
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = shape,
-        color = colors.surfaceContainer,
+        color = monthColors.cardBackground,
+        border = BorderStroke(1.dp, monthColors.border),
         tonalElevation = 2.dp,
         shadowElevation = 4.dp,
     ) {
@@ -70,8 +69,7 @@ fun CalendarSelectorRow(
             ) {
                 Text(
                     text = prevTitle,
-                    style = texts.bodyMedium,
-                    color = colors.onSurfaceVariant,
+                    color = monthColors.mutedText,
                     fontWeight = FontWeight.Medium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -95,7 +93,7 @@ fun CalendarSelectorRow(
                     Icon(
                         imageVector = arrowLeftIcon(),
                         contentDescription = stringResource(R.string.previous_month_cd),
-                        tint = colors.onSurface.copy(alpha = 0.85f),
+                        tint = monthColors.text,
                     )
                 }
 
@@ -103,8 +101,7 @@ fun CalendarSelectorRow(
 
                 Text(
                     text = currentTitle,
-                    color = colors.onSurface,
-                    style = texts.bodyLarge,
+                    color = monthColors.accent,
                     fontWeight = FontWeight.SemiBold,
                     textAlign = TextAlign.Center,
                     maxLines = 1,
@@ -124,7 +121,7 @@ fun CalendarSelectorRow(
                     Icon(
                         imageVector = arrowRightIcon(),
                         contentDescription = stringResource(R.string.next_month_cd),
-                        tint = colors.onSurface.copy(alpha = 0.85f),
+                        tint = monthColors.text,
                     )
                 }
             }
@@ -138,8 +135,7 @@ fun CalendarSelectorRow(
             ) {
                 Text(
                     text = nextTitle,
-                    style = texts.bodyMedium,
-                    color = colors.onSurfaceVariant,
+                    color = monthColors.mutedText,
                     fontWeight = FontWeight.Medium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
