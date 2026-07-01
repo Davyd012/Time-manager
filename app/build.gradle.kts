@@ -17,7 +17,7 @@ kotlin {
 }
 
 object Version {
-    const val versionCode = 2
+    const val versionCode = 3
     const val versionName = "1.0.$versionCode"
 }
 

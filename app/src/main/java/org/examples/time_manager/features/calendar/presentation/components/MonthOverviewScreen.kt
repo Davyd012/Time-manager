@@ -1,6 +1,7 @@
 package org.examples.time_manager.features.calendar.presentation.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -9,9 +10,13 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import java.time.LocalDate
@@ -40,8 +45,27 @@ fun MonthOverviewScreen(
     }
 
     val monthColors = MonthViewColors.defaults()
+    val density = LocalDensity.current
+    val closeThresholdPx = remember(density) { with(density) { 56.dp.toPx() } }
+    var dragTotal by remember { mutableFloatStateOf(0f) }
 
     Scaffold(
+        modifier = Modifier.pointerInput(closeThresholdPx) {
+            detectVerticalDragGestures(
+                onDragStart = { dragTotal = 0f },
+                onVerticalDrag = { change, dragAmount ->
+                    change.consume()
+                    dragTotal += dragAmount
+                },
+                onDragEnd = {
+                    if (dragTotal < -closeThresholdPx) {
+                        onClose()
+                    }
+                    dragTotal = 0f
+                },
+                onDragCancel = { dragTotal = 0f },
+            )
+        },
         containerColor = monthColors.background,
         topBar = {
             MonthHeader(
