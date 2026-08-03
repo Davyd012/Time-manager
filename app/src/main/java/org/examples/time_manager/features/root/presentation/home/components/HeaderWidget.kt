@@ -5,10 +5,8 @@ import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.AnimationSpec
-import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.snap
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.AnchoredDraggableDefaults
@@ -23,6 +21,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -30,9 +29,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -49,11 +46,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.SubcomposeLayout
-import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -63,12 +58,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.customActions
-import androidx.compose.ui.semantics.invisibleToUser
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.roundToInt
@@ -81,20 +74,17 @@ import org.examples.time_manager.features.calendar.presentation.components.Categ
 import org.examples.time_manager.features.calendar.presentation.components.DayWork
 import org.examples.time_manager.features.calendar.presentation.components.MonthGrid
 import org.examples.time_manager.features.calendar.presentation.components.MonthViewColors
-import org.examples.time_manager.features.calendar.presentation.components.WeekdayRow
 import org.examples.time_manager.features.root.HomeViewModel
 import org.examples.time_manager.features.root.data.HomeState
 import org.examples.time_manager.features.root.data.RootScreenEvents.CreateExcelDocumentEvent
-import org.examples.time_manager.features.root.data.RootScreenEvents.ModifyWorkStateEvent
 import org.examples.time_manager.features.root.data.RootScreenEvents.SelectDayEvent
 import org.examples.time_manager.features.root.presentation.home.CalendarExpansion
 import org.examples.time_manager.features.root.presentation.home.MonthPickerDialog
 import org.examples.time_manager.features.utils.formatHoursFromSeconds
 import org.examples.time_manager.navigation.Navigator
 import org.examples.time_manager.ui.theme.addIcon
-import org.examples.time_manager.ui.theme.arrowDownIcon
 import org.examples.time_manager.ui.theme.arrowLeftIcon
-import org.examples.time_manager.ui.theme.closeIcon
+import org.examples.time_manager.ui.theme.dateRangeIcon
 import org.examples.time_manager.ui.theme.exportIcon
 import java.time.format.TextStyle
 
@@ -107,8 +97,9 @@ fun HeaderWidget(
     availableHeightPx: Int,
     selectedCalendarDate: LocalDate?,
     onCalendarDateSelected: (LocalDate) -> Unit,
-    onToggleCalendar: () -> Unit,
     onAddWork: () -> Unit,
+    onToggleCalendar: () -> Unit,
+    onCloseCalendar: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var showMonthPicker by remember { mutableStateOf(false) }
@@ -165,9 +156,10 @@ fun HeaderWidget(
             snap()
         }
     }
+    val gestureThresholdPx = with(LocalDensity.current) { 56.dp.toPx() }
     val flingBehavior = AnchoredDraggableDefaults.flingBehavior(
         state = expansionState,
-        positionalThreshold = { distance -> distance * 0.5f },
+        positionalThreshold = { distance -> minOf(distance * 0.5f, gestureThresholdPx) },
         animationSpec = settleSpec,
     )
 
@@ -175,7 +167,6 @@ fun HeaderWidget(
         state.calendarDays.map { DayWork(it.date, it.time / 3600.0) }
     }
     val monthColors = rememberHomeMonthColors()
-    val density = LocalDensity.current
 
     SubcomposeLayout(
         modifier = modifier
@@ -191,9 +182,8 @@ fun HeaderWidget(
             HomeHeaderSurface(
                 state = state,
                 progress = 0f,
-                expandedHeight = 0.dp,
-                expansionState = expansionState,
                 onToggleCalendar = onToggleCalendar,
+                onCloseCalendar = onCloseCalendar,
                 onExport = { showMonthPicker = true },
                 onAddWork = onAddWork,
                 monthColors = monthColors,
@@ -221,7 +211,15 @@ fun HeaderWidget(
             },
         )
 
-        val currentOffset = expansionState.offset.takeUnless { it.isNaN() } ?: 0f
+        val currentOffset = expansionState.offset.takeUnless { it.isNaN() }
+            ?: if (
+                expansionState.currentValue == CalendarExpansion.Expanded ||
+                expansionState.targetValue == CalendarExpansion.Expanded
+            ) {
+                expansionDistance.toFloat()
+            } else {
+                0f
+            }
         val headerHeight = (collapsedHeight + currentOffset)
             .coerceIn(collapsedHeight.toFloat(), maxHeight.toFloat())
             .roundToInt()
@@ -233,9 +231,8 @@ fun HeaderWidget(
             HomeHeaderSurface(
                 state = state,
                 progress = actualProgress,
-                expandedHeight = with(density) { expansionDistance.toDp() },
-                expansionState = expansionState,
                 onToggleCalendar = onToggleCalendar,
+                onCloseCalendar = onCloseCalendar,
                 onExport = { showMonthPicker = true },
                 onAddWork = onAddWork,
                 monthColors = monthColors,
@@ -299,9 +296,8 @@ fun HeaderWidget(
 private fun HomeHeaderSurface(
     state: HomeState,
     progress: Float,
-    expandedHeight: Dp,
-    expansionState: AnchoredDraggableState<CalendarExpansion>,
     onToggleCalendar: () -> Unit,
+    onCloseCalendar: () -> Unit,
     onExport: () -> Unit,
     onAddWork: () -> Unit,
     monthColors: MonthViewColors,
@@ -328,12 +324,15 @@ private fun HomeHeaderSurface(
         state.dayPerMonth.firstOrNull { it.date.dayOfMonth == state.selectedDay }?.date
             ?: LocalDate.now()
     }
+    val showCalendarHeader = showCalendar && progress >= 0.5f
 
     Column(
         modifier = modifier
             .fillMaxWidth()
+            .then(if (showCalendar) Modifier.fillMaxSize() else Modifier)
             .clip(RoundedCornerShape(bottomStart = 30.dp, bottomEnd = 30.dp))
             .background(colors.primary)
+            .then(dragModifier)
             .semantics {
                 stateDescription = if (progress > 0.5f) expandedLabel else collapsedLabel
                 customActions = listOf(CustomAccessibilityAction(actionLabel) {
@@ -342,23 +341,24 @@ private fun HomeHeaderSurface(
                 })
             },
     ) {
-        HeaderBase(
-            state = state,
-            selectedDate = selectedDate,
-            progress = progress,
-            onToggleCalendar = onToggleCalendar,
-            onExport = onExport,
-            onAddWork = onAddWork,
-            onSelectDay = onSelectDay,
-            expansionState = expansionState,
-            modifier = dragModifier,
-        )
+        if (showCalendarHeader) {
+            CalendarHeaderBase(onCloseCalendar = onCloseCalendar)
+        } else {
+            HomeHeaderBase(
+                state = state,
+                selectedDate = selectedDate,
+                progress = progress,
+                onToggleCalendar = onToggleCalendar,
+                onExport = onExport,
+                onAddWork = onAddWork,
+                onSelectDay = onSelectDay,
+            )
+        }
 
         if (showCalendar) {
             CalendarBody(
                 state = state,
                 progress = progress,
-                expandedHeight = expandedHeight,
                 monthColors = monthColors,
                 dayWorks = dayWorks,
                 selectedDate = selectedCalendarDate,
@@ -368,13 +368,14 @@ private fun HomeHeaderSurface(
                 onViewMonth = onViewMonth,
                 onSelectProject = onSelectProject,
                 onClearProjects = onClearProjects,
+                modifier = Modifier.weight(1f),
             )
         }
     }
 }
 
 @Composable
-private fun HeaderBase(
+private fun HomeHeaderBase(
     state: HomeState,
     selectedDate: LocalDate,
     progress: Float,
@@ -382,35 +383,10 @@ private fun HeaderBase(
     onExport: () -> Unit,
     onAddWork: () -> Unit,
     onSelectDay: (Int) -> Unit,
-    expansionState: AnchoredDraggableState<CalendarExpansion>,
-    modifier: Modifier = Modifier,
 ) {
     val colors = MaterialTheme.colorScheme
     val configuration = LocalConfiguration.current
     val locale = configuration.locales[0]
-
-    val clampedProgress = progress.coerceIn(0f, 1f)
-
-    /*
-     * Kalender-topplinjen kommer inn sent i overgangen.
-     * Ukesstripen forsvinner tidligere, slik at overgangen
-     * ikke blir visuelt overfylt.
-     */
-    val calendarBarProgress = FastOutSlowInEasing.transform(
-        clampedProgress.segment(start = 0.68f, end = 0.92f)
-    )
-
-    val weekVisibility = 1f - FastOutSlowInEasing.transform(
-        clampedProgress.segment(start = 0.28f, end = 0.70f)
-    )
-
-    val handleVisibility = 1f - FastOutSlowInEasing.transform(
-        clampedProgress.segment(start = 0.58f, end = 0.88f)
-    )
-
-    val expanded =
-        expansionState.targetValue == CalendarExpansion.Expanded ||
-                clampedProgress >= 0.5f
 
     val selectedDayLabel = remember(selectedDate, locale) {
         selectedDate.dayOfWeek
@@ -425,7 +401,7 @@ private fun HeaderBase(
     }
 
     Surface(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxWidth()
             .testTag("home-header-drag-surface"),
         color = colors.surface,
@@ -441,92 +417,62 @@ private fun HeaderBase(
                     bottom = 6.dp,
                 ),
         ) {
-            /*
-             * Begge topplinjene ligger på samme sted.
-             * De crossfades etter drag-progresjonen.
-             */
-            Box(
+            HomeHeaderBar(
+                dayLabel = selectedDayLabel,
+                onToggleCalendar = onToggleCalendar,
+                onExport = onExport,
+                onAddWork = onAddWork,
+                enabled = true,
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(64.dp),
-            ) {
-                HomeHeaderBar(
-                    dayLabel = selectedDayLabel,
-                    onToggleCalendar = onToggleCalendar,
-                    onExport = onExport,
-                    onAddWork = onAddWork,
-                    enabled = calendarBarProgress < 0.5f,
-                    modifier = Modifier
-                        .matchParentSize()
-                        .graphicsLayer {
-                            alpha = 1f - calendarBarProgress
-                            translationY =
-                                -6.dp.toPx() * calendarBarProgress
-                        },
-                )
+            )
 
-                CalendarHeaderBar(
-                    onBack = onToggleCalendar,
-                    onTrailingAction = onExport,
-                    enabled = calendarBarProgress >= 0.5f,
-                    modifier = Modifier
-                        .matchParentSize()
-                        .graphicsLayer {
-                            alpha = calendarBarProgress
-                            translationY =
-                                6.dp.toPx() * (1f - calendarBarProgress)
-                        },
-                )
-            }
+            WeekHeader(
+                selectedDate = selectedDate,
+                monthDays = state.dayPerMonth,
+                selectedDay = state.selectedDay,
+                selectDay = onSelectDay,
+                modifier = Modifier.padding(
+                    start = 14.dp,
+                    end = 14.dp,
+                    top = 2.dp,
+                ),
+            )
 
-            /*
-             * Ikke bruk bare alpha her. Da vil WeekHeader fortsatt
-             * oppta plass etter at den har blitt usynlig.
-             */
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .collapseVertically(weekVisibility)
-                    .clipToBounds()
-                    .graphicsLayer {
-                        alpha = weekVisibility
-                        translationY =
-                            -8.dp.toPx() * (1f - weekVisibility)
-                    },
-            ) {
-                WeekHeader(
-                    selectedDate = selectedDate,
-                    monthDays = state.dayPerMonth,
-                    selectedDay = state.selectedDay,
-                    selectDay = onSelectDay,
-                    modifier = Modifier.padding(
-                        start = 14.dp,
-                        end = 14.dp,
-                        top = 2.dp,
-                    ),
-                )
-            }
-
-            Box(
+            PullHandle(
+                progress = progress.coerceIn(0f, 1f),
+                expanded = false,
+                onClick = onToggleCalendar,
                 modifier = Modifier
                     .align(Alignment.CenterHorizontally)
-                    .collapseVertically(handleVisibility)
-                    .clipToBounds()
-                    .graphicsLayer {
-                        alpha = handleVisibility
-                    },
-            ) {
-                PullHandle(
-                    progress = clampedProgress,
-                    expanded = expanded,
-                    onClick = onToggleCalendar,
-                    modifier = Modifier.padding(
-                        top = 10.dp,
-                        bottom = 4.dp,
-                    ),
-                )
-            }
+                    .padding(top = 10.dp, bottom = 4.dp),
+            )
         }
+    }
+}
+
+@Composable
+private fun CalendarHeaderBase(
+    onCloseCalendar: () -> Unit,
+) {
+    val colors = MaterialTheme.colorScheme
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = colors.surface,
+        contentColor = colors.onSurface,
+        tonalElevation = 0.dp,
+        shadowElevation = 0.dp,
+    ) {
+        CalendarHeaderBar(
+            onBack = onCloseCalendar,
+            enabled = true,
+            modifier = Modifier
+                .statusBarsPadding()
+                .padding(top = 4.dp, bottom = 6.dp)
+                .fillMaxWidth()
+                .height(64.dp),
+        )
     }
 }
 
@@ -622,30 +568,24 @@ private fun HomeHeaderBar(
 @Composable
 private fun CalendarHeaderBar(
     onBack: () -> Unit,
-    onTrailingAction: () -> Unit,
     enabled: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val colors = MaterialTheme.colorScheme
     val typography = MaterialTheme.typography
 
-    Box(
+    Row(
         modifier = modifier
-            .padding(horizontal = 10.dp)
-            .then(
-                if (enabled) {
-                    Modifier
-                } else {
-                    Modifier.clearAndSetSemantics {}
-                }
-            ),
+            .padding(horizontal = 10.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
     ) {
         IconButton(
             onClick = onBack,
             enabled = enabled,
             modifier = Modifier
-                .align(Alignment.CenterStart)
-                .size(48.dp),
+                .size(48.dp)
+                .testTag("calendar-header-back"),
         ) {
             Icon(
                 imageVector = arrowLeftIcon(),
@@ -664,61 +604,17 @@ private fun CalendarHeaderBar(
                 fontWeight = FontWeight.SemiBold,
             ),
             maxLines = 1,
-            modifier = Modifier.align(Alignment.Center),
         )
 
-        IconButton(
-            onClick = onTrailingAction,
-            enabled = enabled,
-            modifier = Modifier
-                .align(Alignment.CenterEnd)
-                .size(48.dp),
+        Box(
+            contentAlignment = Alignment.Center,
+            modifier = Modifier.size(48.dp),
         ) {
             Icon(
-                imageVector = exportIcon(),
-                contentDescription = stringResource(R.string.export_action),
+                imageVector = dateRangeIcon(),
+                contentDescription = stringResource(R.string.calendar_title),
                 tint = colors.onSurface,
                 modifier = Modifier.size(24.dp),
-            )
-        }
-    }
-}
-
-/**
- * Returnerer 0–1 for en bestemt del av den totale progresjonen.
- */
-private fun Float.segment(
-    start: Float,
-    end: Float,
-): Float {
-    if (end <= start) return 0f
-
-    return ((this - start) / (end - start))
-        .coerceIn(0f, 1f)
-}
-
-/**
- * Komprimerer faktisk layout-høyde, ikke bare synligheten.
- *
- * Innholdet forsvinner oppover mens høyden reduseres.
- */
-private fun Modifier.collapseVertically(
-    visibleFraction: Float,
-): Modifier {
-    val fraction = visibleFraction.coerceIn(0f, 1f)
-
-    return layout { measurable, constraints ->
-        val placeable = measurable.measure(constraints)
-        val visibleHeight =
-            (placeable.height * fraction).roundToInt()
-
-        layout(
-            width = placeable.width,
-            height = visibleHeight,
-        ) {
-            placeable.placeRelative(
-                x = 0,
-                y = visibleHeight - placeable.height,
             )
         }
     }
@@ -728,7 +624,6 @@ private fun Modifier.collapseVertically(
 private fun CalendarBody(
     state: HomeState,
     progress: Float,
-    expandedHeight: Dp,
     monthColors: MonthViewColors,
     dayWorks: List<DayWork>,
     selectedDate: LocalDate?,
@@ -738,12 +633,12 @@ private fun CalendarBody(
     onViewMonth: () -> Unit,
     onSelectProject: (Project) -> Unit,
     onClearProjects: () -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val bodyAlpha = ((progress - 0.15f) / 0.4f).coerceIn(0f, 1f)
     val totalHours = remember(dayWorks) { dayWorks.sumOf { it.hours } }
     Column(
-        modifier = Modifier
-            .verticalScroll(rememberScrollState())
+        modifier = modifier
             .background(monthColors.background)
             .graphicsLayer {
                 alpha = bodyAlpha
@@ -768,10 +663,14 @@ private fun CalendarBody(
             monthColors = monthColors,
         )
 
-        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+        BoxWithConstraints(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+        ) {
             val gridOffset = (state.calendarMonth.atDay(1).dayOfWeek.value - 1)
             val weekCount = (gridOffset + state.calendarMonth.lengthOfMonth() + 6) / 7
-            val cellHeight = ((maxHeight - 250.dp) / weekCount.coerceAtLeast(4))
+            val cellHeight = ((maxHeight - 140.dp) / weekCount.coerceAtLeast(4))
                 .coerceIn(48.dp, 68.dp)
             MonthGrid(
                 monthYear = state.calendarMonth,

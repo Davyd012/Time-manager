@@ -39,6 +39,7 @@ fun MonthOverviewScreen(
     onClearSelection: () -> Unit,
     onSelectDate: (LocalDate) -> Unit,
     modifier: Modifier = Modifier,
+    bottomBar: @Composable () -> Unit = {},
 ) {
     val totalHours by remember(days) {
         derivedStateOf { days.sumOf { it.hours } }
@@ -50,22 +51,6 @@ fun MonthOverviewScreen(
     var dragTotal by remember { mutableFloatStateOf(0f) }
 
     Scaffold(
-        modifier = Modifier.pointerInput(closeThresholdPx) {
-            detectVerticalDragGestures(
-                onDragStart = { dragTotal = 0f },
-                onVerticalDrag = { change, dragAmount ->
-                    change.consume()
-                    dragTotal += dragAmount
-                },
-                onDragEnd = {
-                    if (dragTotal < -closeThresholdPx) {
-                        onClose()
-                    }
-                    dragTotal = 0f
-                },
-                onDragCancel = { dragTotal = 0f },
-            )
-        },
         containerColor = monthColors.background,
         topBar = {
             MonthHeader(
@@ -73,11 +58,28 @@ fun MonthOverviewScreen(
                 colors = monthColors,
             )
         },
+        bottomBar = bottomBar,
     ) { paddingValues ->
         Column(
             modifier =
                 modifier
                     .fillMaxSize()
+                    .pointerInput(closeThresholdPx) {
+                        detectVerticalDragGestures(
+                            onDragStart = { dragTotal = 0f },
+                            onVerticalDrag = { change, dragAmount ->
+                                change.consume()
+                                dragTotal += dragAmount
+                            },
+                            onDragEnd = {
+                                if (dragTotal < -closeThresholdPx) {
+                                    onClose()
+                                }
+                                dragTotal = 0f
+                            },
+                            onDragCancel = { dragTotal = 0f },
+                        )
+                    }
                     .background(
                         Brush.verticalGradient(
                             colors = listOf(

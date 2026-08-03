@@ -1,9 +1,6 @@
 package org.examples.time_manager.features.root.presentation.home
 
 import androidx.activity.compose.BackHandler
-import android.provider.Settings
-import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.snap
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.AnchoredDraggableState
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -13,17 +10,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.gestures.animateTo
-import kotlinx.coroutines.launch
 import org.examples.time_manager.features.root.HomeViewModel
 import org.examples.time_manager.features.root.data.RootScreenEvents.ModifyWorkStateEvent
 import org.examples.time_manager.features.root.presentation.home.components.HeaderWidget
@@ -37,25 +29,17 @@ enum class CalendarExpansion {
 }
 
 @Composable
-fun MainPage(vm: HomeViewModel, modifier: Modifier, navigator: Navigator) {
+fun MainPage(
+    vm: HomeViewModel,
+    modifier: Modifier,
+    navigator: Navigator,
+    expansionState: AnchoredDraggableState<CalendarExpansion>,
+    onSetCalendarExpansion: (CalendarExpansion) -> Unit,
+) {
     val state by vm.state.collectAsState()
     val works by state.workQueries.collectAsState(initial = emptyList())
     val projects by state.projects.collectAsState(initial = emptyList())
     val density = LocalDensity.current
-    val context = LocalContext.current
-    val animationsEnabled = remember(context) {
-        Settings.Global.getFloat(
-            context.contentResolver,
-            Settings.Global.ANIMATOR_DURATION_SCALE,
-            1f,
-        ) > 0f
-    }
-    val coroutineScope = rememberCoroutineScope()
-    val expansionState = rememberSaveable(
-        saver = AnchoredDraggableState.Saver<CalendarExpansion>(),
-    ) {
-        AnchoredDraggableState(CalendarExpansion.Collapsed)
-    }
     var selectedCalendarDateText by rememberSaveable { mutableStateOf<String?>(null) }
 
     val progress = run {
@@ -68,28 +52,19 @@ fun MainPage(vm: HomeViewModel, modifier: Modifier, navigator: Navigator) {
         }
     }
 
-    fun settle(to: CalendarExpansion) {
-        coroutineScope.launch {
-            expansionState.animateTo(
-                targetValue = to,
-                animationSpec = if (animationsEnabled) {
-                    spring(dampingRatio = 0.82f, stiffness = 420f)
-                } else {
-                    snap()
-                },
-            )
-        }
-    }
-
     fun toggleCalendar() {
-        settle(
-            if (progress < 0.5f) CalendarExpansion.Expanded
-            else CalendarExpansion.Collapsed,
-        )
+        val target = when {
+            expansionState.targetValue == CalendarExpansion.Expanded ->
+                CalendarExpansion.Collapsed
+            expansionState.currentValue == CalendarExpansion.Expanded ->
+                CalendarExpansion.Collapsed
+            else -> CalendarExpansion.Expanded
+        }
+        onSetCalendarExpansion(target)
     }
 
     BackHandler(enabled = progress > 0.001f) {
-        settle(CalendarExpansion.Collapsed)
+        onSetCalendarExpansion(CalendarExpansion.Collapsed)
     }
 
     if (state.selectedWork.showModal) {
@@ -119,13 +94,15 @@ fun MainPage(vm: HomeViewModel, modifier: Modifier, navigator: Navigator) {
                 selectedCalendarDate = selectedCalendarDateText?.let(LocalDate::parse),
                 onCalendarDateSelected = { selectedCalendarDateText = it.toString() },
                 onToggleCalendar = ::toggleCalendar,
+                onCloseCalendar = {
+                    onSetCalendarExpansion(CalendarExpansion.Collapsed)
+                },
                 onAddWork = { vm.onEvent(ModifyWorkStateEvent(show = true)) },
             )
 
             ListOfWorks(
                 modifier = Modifier
-                    .weight(1f)
-                    .padding(top = 10.dp),
+                    .weight(1f),
                 calendarProgress = progress,
                 showWork = { i -> vm.onEvent(ModifyWorkStateEvent(selected = i, show = true)) },
                 addWork = { vm.onEvent(ModifyWorkStateEvent(show = true)) },

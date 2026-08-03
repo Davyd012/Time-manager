@@ -15,6 +15,7 @@ import org.examples.time_manager.features.calendar.presentation.components.DayWo
 import org.examples.time_manager.features.calendar.presentation.components.MonthOverviewScreen
 import org.examples.time_manager.core.database.project.Project
 import org.examples.time_manager.navigation.Navigator
+import org.examples.time_manager.features.root.presentation.components.CalendarBottomBar
 import java.time.YearMonth
 import kotlin.math.roundToInt
 
@@ -45,7 +46,9 @@ fun CalendarScreen(
         projects = projects,
         selectedProjects = state.selectedProjects,
         selectedDate = selectedDate,
-        onClose = { navigator.close() },
+        onClose = {
+            navigator.toHome()
+        },
         onPrevMonth = { vm.onEvent(CalendarScreenEvents.UpdateMonth(-1)) },
         onNextMonth = { vm.onEvent(CalendarScreenEvents.UpdateMonth(1)) },
         onViewMonth = { navigator.toMonthView(date = monthYear.atDay(1).toString(), day = 1) },
@@ -54,6 +57,11 @@ fun CalendarScreen(
         onSelectDate = { date ->
             selectedDate = date
             navigator.toMonthView(date = monthYear.atDay(1).toString(), day = date.dayOfMonth)
+        },
+        bottomBar = {
+            CalendarBottomBar(onHomeClick = {
+                navigator.toHome()
+            })
         },
         modifier = modifier.padding(top = App.statusBarHeight),
     )

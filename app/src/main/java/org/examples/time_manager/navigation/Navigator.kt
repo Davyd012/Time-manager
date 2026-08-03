@@ -10,6 +10,12 @@ class Navigator(
         navigateTo(Route.Calendar)
     }
 
+    fun toHome() {
+        while (backStack.size > 1) {
+            backStack.removeLast()
+        }
+    }
+
     fun toMonthView(date: String, day: Int = 1) {
         navigateTo(Route.MonthView(date = date, day = day))
     }

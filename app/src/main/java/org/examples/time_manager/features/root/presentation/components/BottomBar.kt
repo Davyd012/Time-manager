@@ -38,6 +38,7 @@ import org.examples.time_manager.ui.theme.watchIcon
 fun BottomBar(
     navigator: PageNavigator,
     currentRoute: Route,
+    onHomeClick: () -> Unit,
 ) {
     val colors = MaterialTheme.colorScheme
 
@@ -88,6 +89,9 @@ fun BottomBar(
                     selected = isCurrent(item.direction),
                     onClick = {
                         navigator.changePage(item.direction)
+                        if (item.direction == Route.HomeRoute.HomeTab) {
+                            onHomeClick()
+                        }
                     },
                     modifier = Modifier.weight(1f),
                 )
@@ -95,6 +99,44 @@ fun BottomBar(
         }
     }
 
+}
+
+@Composable
+fun CalendarBottomBar(
+    onHomeClick: () -> Unit,
+) {
+    val colors = MaterialTheme.colorScheme
+    val item = BottomBarItem(
+        direction = Route.HomeRoute.HomeTab,
+        icon = homeIcon(filled = false),
+        activeIcon = homeIcon(),
+        label = stringResource(R.string.home_tab),
+    )
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = colors.primary,
+        tonalElevation = 0.dp,
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .heightIn(min = 72.dp)
+                .padding(horizontal = 8.dp, vertical = 6.dp),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            BottomBarItemView(
+                item = item,
+                selected = false,
+                onClick = {
+                    onHomeClick()
+                },
+                modifier = Modifier.width(160.dp),
+            )
+        }
+    }
 }
 
 @Composable

@@ -40,7 +40,7 @@ fun HomeNavGraph(
     HomeScreen(
         vm = vm,
         pageBackStack = homeBackStack,
-        content = { contentPadding ->
+        content = { contentPadding, expansionState, onSetCalendarExpansion ->
             NavDisplay(
                 backStack = homeBackStack,
                 entryDecorators = homeEntryDecorators,
@@ -48,12 +48,14 @@ fun HomeNavGraph(
                     entryProvider {
                         entry<Route.HomeRoute.HomeTab> {
                             MainPage(
-                                vm,
+                                vm = vm,
                                 modifier =
                                     modifier.padding(
                                         bottom = contentPadding.calculateBottomPadding()
                                     ),
                                 navigator = navigator,
+                                expansionState = expansionState,
+                                onSetCalendarExpansion = onSetCalendarExpansion,
                             )
                         }
                         entry<Route.HomeRoute.StopwatchTab> {
