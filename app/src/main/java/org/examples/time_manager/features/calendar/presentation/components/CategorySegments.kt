@@ -17,6 +17,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -29,6 +31,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.examples.time_manager.R
 import org.examples.time_manager.core.database.project.Project
+import org.examples.time_manager.ui.theme.arrowLeftIcon
+import org.examples.time_manager.ui.theme.workIcon
 
 @Composable
 fun CategorySegments(
@@ -42,6 +46,8 @@ fun CategorySegments(
     if (projects.isEmpty()) {
         return
     }
+    val colors = MaterialTheme.colorScheme
+    val texts = MaterialTheme.typography
 
     val selectedCount = selectedProjects.size
     val clearEnabled = selectedCount > 0
@@ -50,27 +56,29 @@ fun CategorySegments(
         modifier = modifier.fillMaxWidth(),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Text(
-                text = stringResource(R.string.selected_projects),
-                color = monthColors.text,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Medium,
-            )
-            SelectionCountBadge(
-                count = selectedCount,
-                monthColors = monthColors,
-            )
-            Spacer(modifier = Modifier.weight(1f))
-            ClearSelectionButton(
-                enabled = clearEnabled,
-                onClick = onClearSelection,
-                monthColors = monthColors,
-            )
+        if (selectedCount > 0) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Text(
+                    text = stringResource(R.string.selected_projects),
+                    style = texts.labelLarge.copy(
+                        color = colors.onSurface,
+                        fontWeight = FontWeight.Medium,
+                    )
+                )
+                SelectionCountBadge(
+                    count = selectedCount,
+                    monthColors = monthColors,
+                )
+                Spacer(modifier = Modifier.weight(1f))
+                ClearSelectionButton(
+                    enabled = clearEnabled,
+                    onClick = onClearSelection,
+                )
+            }
         }
 
         LazyRow(
@@ -92,7 +100,7 @@ fun CategorySegments(
                     modifier =
                         Modifier
                             .height(48.dp),
-                    shape = RoundedCornerShape(18.dp),
+                    shape = RoundedCornerShape(25.dp),
                     color =
                         if (isSelected) {
                             monthColors.chipBackground
@@ -114,20 +122,17 @@ fun CategorySegments(
                             verticalAlignment = Alignment.CenterVertically,
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                         ) {
-                            Box(
-                                modifier =
-                                    Modifier
-                                        .size(8.dp)
-                                        .background(
-                                            if (isSelected) monthColors.accent else monthColors.accentMuted,
-                                            CircleShape
-                                        ),
+                            Icon(
+                                imageVector = workIcon(),
+                                tint = colors.secondary,
+                                contentDescription = ""
                             )
                             Text(
                                 text = project.name,
-                                color = monthColors.text,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Medium,
+                                style = texts.labelLarge.copy(
+                                    color = colors.onSurface,
+                                    fontWeight = FontWeight.Medium,
+                                ),
                                 textAlign = TextAlign.Center,
                             )
                         }
@@ -186,27 +191,15 @@ private fun ClearSelectionButton(
     enabled: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
-    monthColors: MonthViewColors = MonthViewColors.defaults(),
 ) {
-    val borderColor =
-        if (enabled) {
-            monthColors.accent.copy(alpha = 0.55f)
-        } else {
-            monthColors.accentMuted.copy(alpha = 0.45f)
-        }
-    val backgroundColor =
-        if (enabled) {
-            monthColors.chipBackground.copy(alpha = 0.7f)
-        } else {
-            monthColors.chipBackground.copy(alpha = 0.55f)
-        }
-    val textColor = if (enabled) monthColors.accent else monthColors.accentMuted
+    val colors = MaterialTheme.colorScheme
+    val texts = MaterialTheme.typography
+
+    val textColor = if (enabled) colors.secondary else colors.secondary.copy(alpha = .5f)
 
     Surface(
         modifier = modifier,
         shape = RoundedCornerShape(12.dp),
-        color = backgroundColor,
-        border = BorderStroke(1.dp, borderColor),
         tonalElevation = 1.dp,
     ) {
         Box(
@@ -218,9 +211,10 @@ private fun ClearSelectionButton(
         ) {
             Text(
                 text = stringResource(R.string.reset),
-                color = textColor,
-                fontSize = 12.sp,
-                fontWeight = FontWeight.SemiBold,
+                style = texts.labelLarge.copy(
+                    color = textColor,
+                    fontWeight = FontWeight.SemiBold,
+                )
             )
         }
     }

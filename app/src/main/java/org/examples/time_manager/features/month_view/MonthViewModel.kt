@@ -224,6 +224,10 @@ class MonthViewModel(
             is RootScreenEvents.ModifyProjectEvent -> TODO()
 
             is RootScreenEvents.SelectProjectEvent -> TODO()
+
+            is RootScreenEvents.ChangeCalendarMonthEvent,
+            is RootScreenEvents.ToggleCalendarProjectEvent,
+            RootScreenEvents.ClearCalendarProjectsEvent -> Unit
         }
     }
 }

@@ -109,7 +109,6 @@ fun MonthOverviewScreen(
             )
 
             WeekdayRow(
-                colors = monthColors,
             )
 
             MonthGrid(

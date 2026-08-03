@@ -1,6 +1,7 @@
 package org.examples.time_manager.features.calendar.presentation.components
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.ripple
@@ -18,6 +20,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -46,11 +49,12 @@ fun CalendarSelectorRow(
     val prevTitle = formatMonthTitle(monthYear.minusMonths(1), "MMM yyyy")
     val nextTitle = formatMonthTitle(monthYear.plusMonths(1), "MMM yyyy")
 
+    val colors = MaterialTheme.colorScheme
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = shape,
-        color = monthColors.cardBackground,
-        border = BorderStroke(1.dp, monthColors.border),
+//        color = monthColors.cardBackground,
+//        border = BorderStroke(1.dp, monthColors.border),
         tonalElevation = 2.dp,
         shadowElevation = 4.dp,
     ) {
@@ -69,7 +73,7 @@ fun CalendarSelectorRow(
             ) {
                 Text(
                     text = prevTitle,
-                    color = monthColors.mutedText,
+                    color = colors.onSurface.copy(alpha = .5f),
                     fontWeight = FontWeight.Medium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -81,7 +85,8 @@ fun CalendarSelectorRow(
 
             /* Center controls */
             Row(
-                modifier = Modifier.weight(2.5f),
+                modifier = Modifier
+                    .weight(2.5f),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.Center,
             ) {
@@ -93,7 +98,7 @@ fun CalendarSelectorRow(
                     Icon(
                         imageVector = arrowLeftIcon(),
                         contentDescription = stringResource(R.string.previous_month_cd),
-                        tint = monthColors.text,
+                        tint = colors.onSurface,
                     )
                 }
 
@@ -101,13 +106,15 @@ fun CalendarSelectorRow(
 
                 Text(
                     text = currentTitle,
-                    color = monthColors.accent,
-                    fontWeight = FontWeight.SemiBold,
+                    color = colors.primary,
+                    fontWeight = FontWeight.W700,
                     textAlign = TextAlign.Center,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier
-                        .padding(horizontal = 8.dp, vertical = 6.dp)
+                        .clip(RoundedCornerShape(25.dp))
+                        .background(colors.primaryContainer)
+                        .padding(horizontal = 12.dp, vertical = 10.dp)
                         .clickable(
                             interactionSource = interactionSource,
                             indication = ripple(bounded = false),
@@ -121,7 +128,7 @@ fun CalendarSelectorRow(
                     Icon(
                         imageVector = arrowRightIcon(),
                         contentDescription = stringResource(R.string.next_month_cd),
-                        tint = monthColors.text,
+                        tint = colors.onSurface,
                     )
                 }
             }
@@ -135,7 +142,7 @@ fun CalendarSelectorRow(
             ) {
                 Text(
                     text = nextTitle,
-                    color = monthColors.mutedText,
+                    color = colors.onSurface.copy(alpha = .5f),
                     fontWeight = FontWeight.Medium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,

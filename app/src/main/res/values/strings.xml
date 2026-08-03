@@ -98,6 +98,11 @@ Ny måned, nye muligheter.</string>
     <string name="no_project">No project</string>
     <string name="create_project_first_msg">Skap et projekt først</string>
     <string name="click_me_action">Click me</string>
+    <string name="calendar_closed_state">Kalender lukket</string>
+    <string name="calendar_open_state">Kalender utvidet</string>
+    <string name="open_calendar_action">Åpne kalender</string>
+    <string name="close_calendar_action">Lukk kalender</string>
+    <string name="export_action">Eksporter timer</string>
 
     <!-- Dialog -->
     <string name="input_tape_text_title">Input Tape text</string>

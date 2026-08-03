@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -29,14 +30,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import org.examples.time_manager.R
 import org.examples.time_manager.ui.theme.shareIcon
+import java.math.RoundingMode
+import java.text.NumberFormat
+import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.DateTimeFormatter
+import java.time.format.TextStyle
 import java.util.Locale
 
 @Composable
@@ -50,6 +56,8 @@ fun MonthGrid(
     totalHours: Double,
     monthColors: MonthViewColors = MonthViewColors.defaults(),
 ) {
+    val colors = MaterialTheme.colorScheme
+
     val dayMap by remember(days) {
         derivedStateOf {
             days.groupBy { it.date }.mapValues { entry -> entry.value }
@@ -66,7 +74,7 @@ fun MonthGrid(
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(22.dp),
-        color = monthColors.cardBackground,
+        color = MaterialTheme.colorScheme.primary,
         tonalElevation = 2.dp,
         border = BorderStroke(1.dp, monthColors.border),
     ) {
@@ -77,6 +85,13 @@ fun MonthGrid(
                     .padding(4.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
+            WeekdayRow()
+            HorizontalDivider(
+                modifier = Modifier
+                    .padding(horizontal = 5.dp)
+                    .fillMaxWidth(), thickness = 1.dp, color = monthColors.divider
+            )
+
             itemRows.forEachIndexed { index, row ->
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -170,7 +185,7 @@ private fun ShareMonthButton(
     ) {
         IconButton(
             onClick = { shareMonthSummary(context, shareText) },
-            modifier = Modifier.size(40.dp),
+            modifier = Modifier.size(48.dp),
         ) {
             Icon(
                 imageVector = shareIcon(),
@@ -190,6 +205,8 @@ private fun DayCell(
     modifier: Modifier = Modifier,
     monthColors: MonthViewColors = MonthViewColors.defaults(),
 ) {
+    val colors = MaterialTheme.colorScheme
+    val texts = MaterialTheme.typography
     val hours =
         remember(dayWork) {
             if (cell == null) {
@@ -225,20 +242,32 @@ private fun DayCell(
                     fontSize = 18.sp,
                     fontWeight = FontWeight.SemiBold,
                 )
-                val hoursCountText = hours.let{
-                    if (it % 1.0 != 0.0) kotlin.math.floor(it * 100) / 100
-                    else it.toInt()
-                }.toString()
+                val hoursCountText = remember(hours) {
+                    val formatter = NumberFormat.getNumberInstance(Locale.getDefault()).apply {
+                        minimumFractionDigits = 0
+                        maximumFractionDigits = 2
+                        roundingMode = RoundingMode.HALF_UP
+                    }
+
+                    val formattedHours = formatter.format(hours)
+
+                    if (hours == 0.0) {
+                        formattedHours
+                    } else {
+                        "${formattedHours}t"
+                    }
+                }
                 Text(
                     text = hoursCountText,
-                    color =
-                        if (hours == 0.0) {
-                            monthColors.accentMuted
-                        } else {
-                            monthColors.accent
-                        },
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Medium,
+                    style = texts.labelMedium.copy(
+                        color =
+                            if (hours == 0.0) {
+                                colors.secondary.copy(alpha = .4f)
+                            } else {
+                                colors.secondary
+                            },
+                        fontWeight = FontWeight.Medium,
+                    ),
                 )
             }
             if (isSelected) {
@@ -268,19 +297,27 @@ private fun buildMonthGrid(monthYear: YearMonth): List<LocalDate?> {
     return cells
 }
 
-private fun buildMonthShareText(context: Context, monthYear: YearMonth, totalHours: Double): String {
+private fun buildMonthShareText(
+    context: Context,
+    monthYear: YearMonth,
+    totalHours: Double
+): String {
     val locale = Locale("nb", "NO")
     val formatter = DateTimeFormatter.ofPattern("MMMM yyyy", locale)
     val monthLabel = monthYear.format(formatter).lowercase(locale)
-    val hoursLabel = if (totalHours == 1.0) context.getString(R.string.hour_singular) else context.getString(R.string.hour_plural)
+    val hoursLabel =
+        if (totalHours == 1.0) context.getString(R.string.hour_singular) else context.getString(R.string.hour_plural)
 
     return when {
         totalHours <= 0.0 ->
             context.getString(R.string.summary_no_hours, monthLabel)
+
         totalHours < 20.0 ->
             context.getString(R.string.summary_quiet_month, monthLabel, totalHours, hoursLabel)
+
         totalHours >= 160.0 ->
             context.getString(R.string.summary_active_month, totalHours, hoursLabel, monthLabel)
+
         else ->
             context.getString(R.string.summary_normal_month, totalHours, hoursLabel, monthLabel)
     }

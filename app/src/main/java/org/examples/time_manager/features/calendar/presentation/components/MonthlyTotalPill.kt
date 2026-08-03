@@ -44,7 +44,7 @@ fun MonthlyTotalPill(
         Text(
             text = label,
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
-            color = monthColors.text,
+//            color = monthColors.text,
             fontSize = 13.sp,
             fontWeight = FontWeight.Medium,
         )

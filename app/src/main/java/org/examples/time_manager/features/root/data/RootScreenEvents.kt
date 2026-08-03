@@ -5,6 +5,7 @@ import android.net.Uri
 import org.examples.time_manager.core.database.project.Project
 import org.examples.time_manager.core.database.work.Work
 import java.time.LocalDateTime
+import java.time.YearMonth
 
 sealed interface RootScreenEvents {
     data class NewProjectEvent(val name: String, val description: String, val project: Project?) :
@@ -42,6 +43,10 @@ sealed interface RootScreenEvents {
 
     data class ModifyProjectEvent(val project: Project, val delete: Boolean = false) :
         RootScreenEvents
+
+    data class ChangeCalendarMonthEvent(val month: YearMonth) : RootScreenEvents
+    data class ToggleCalendarProjectEvent(val project: Project) : RootScreenEvents
+    data object ClearCalendarProjectsEvent : RootScreenEvents
 }
 
 sealed interface TimerStates {

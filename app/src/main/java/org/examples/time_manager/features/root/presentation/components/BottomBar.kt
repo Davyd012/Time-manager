@@ -11,6 +11,9 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -56,16 +59,28 @@ fun BottomBar(
     )
 
     Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(72.dp),
+        modifier = Modifier.fillMaxWidth(),
         color = colors.primary,
-        tonalElevation = 0.dp
+        tonalElevation = 0.dp,
     ) {
         Row(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxWidth()
+
+                // Holder innholdet over gesture-hintet/systemnavigasjonen.
+                // Surface-bakgrunnen dekker fortsatt området bak systembaren.
+                .navigationBarsPadding()
+
+                // Minimum, ikke fast høyde.
+                .heightIn(min = 72.dp)
+
+                // Luft rundt selve navigasjonsinnholdet.
+                .padding(
+                    horizontal = 8.dp,
+                    vertical = 6.dp,
+                ),
             horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             items.forEach { item ->
                 BottomBarItemView(
@@ -74,11 +89,12 @@ fun BottomBar(
                     onClick = {
                         navigator.changePage(item.direction)
                     },
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f),
                 )
             }
         }
     }
+
 }
 
 @Composable
@@ -97,7 +113,7 @@ fun BottomBarItemView(
 
     Column(
         modifier = modifier
-            .fillMaxHeight()
+            .heightIn(min = 56.dp)
             .clickable(
                 onClick = onClick,
                 indication = null,

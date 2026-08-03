@@ -95,3 +95,8 @@ fun doneIcon(): ImageVector {
 fun shareIcon(): ImageVector {
     return ImageVector.vectorResource(id = R.drawable.baseline_share_24)
 }
+
+@Composable
+fun workIcon(): ImageVector {
+    return ImageVector.vectorResource(id = R.drawable.baseline_work_outline_24)
+}

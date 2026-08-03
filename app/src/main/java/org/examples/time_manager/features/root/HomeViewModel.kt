@@ -35,6 +35,7 @@ import org.examples.time_manager.core.dates.models.Today
 import org.examples.time_manager.features.root.domain.ExcelController
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.time.YearMonth
 import java.time.temporal.TemporalAdjusters
 
 
@@ -70,11 +71,14 @@ class HomeViewModel(
 
             val today = LocalDate.now()
             val days = datesController.getDatesForCurrentMonth()
+            val calendarMonth = YearMonth.from(today)
             val works = getWorksForCertainDate(today)
 
             _state.update {
                 it.copy(
                     dayPerMonth = days,
+                    calendarMonth = calendarMonth,
+                    calendarDays = days,
                     workQueries = works,
                     selectedDay = today.dayOfMonth,
                     today = Today(
@@ -113,7 +117,10 @@ class HomeViewModel(
 
                 val days = datesController.getDatesForCurrentMonth()
                 _state.update {
-                    it.copy(dayPerMonth = days)
+                    it.copy(
+                        dayPerMonth = days,
+                        calendarDays = getCalendarDays(it.calendarMonth, it.calendarSelectedProjects),
+                    )
                 }
             }
 
@@ -202,7 +209,11 @@ class HomeViewModel(
                         time
                     )
                     _state.update {
-                        it.copy(dayPerMonth = newMonthDays, counting = false)
+                        it.copy(
+                            dayPerMonth = newMonthDays,
+                            calendarDays = getCalendarDays(it.calendarMonth, it.calendarSelectedProjects),
+                            counting = false,
+                        )
                     }
                     val date = LocalDateTime.now().minusSeconds(time.toLong())
 
@@ -239,7 +250,10 @@ class HomeViewModel(
                         event.hours
                     )
                     _state.update {
-                        it.copy(dayPerMonth = newMonthDays)
+                        it.copy(
+                            dayPerMonth = newMonthDays,
+                            calendarDays = getCalendarDays(it.calendarMonth, it.calendarSelectedProjects),
+                        )
                     }
                 }
                 Log.d("HomeViewModel", "Saving result ${event.date}")
@@ -321,7 +335,10 @@ class HomeViewModel(
 
                 Log.d("RootViewModel", "Done inserting new work events")
                 _state.update {
-                    it.copy(dayPerMonth = newInfoForCurrentMonth)
+                    it.copy(
+                        dayPerMonth = newInfoForCurrentMonth,
+                        calendarDays = getCalendarDays(it.calendarMonth, it.calendarSelectedProjects),
+                    )
                 }
                 Log.d("RootViewModel", "Done updating the state")
             }
@@ -333,7 +350,49 @@ class HomeViewModel(
                 }
 
             }
+
+            is RootScreenEvents.ChangeCalendarMonthEvent -> viewModelScope.launch(Dispatchers.IO) {
+                val days = getCalendarDays(event.month, state.value.calendarSelectedProjects)
+                _state.update {
+                    it.copy(
+                        calendarMonth = event.month,
+                        calendarDays = days,
+                    )
+                }
+            }
+
+            is RootScreenEvents.ToggleCalendarProjectEvent -> viewModelScope.launch(Dispatchers.IO) {
+                val selectedProjects = state.value.calendarSelectedProjects.let { selected ->
+                    if (event.project in selected) selected.filterNot { it.id == event.project.id }
+                    else selected + event.project
+                }
+                val days = getCalendarDays(state.value.calendarMonth, selectedProjects)
+                _state.update {
+                    it.copy(
+                        calendarSelectedProjects = selectedProjects,
+                        calendarDays = days,
+                    )
+                }
+            }
+
+            RootScreenEvents.ClearCalendarProjectsEvent -> viewModelScope.launch(Dispatchers.IO) {
+                val days = getCalendarDays(state.value.calendarMonth, emptyList())
+                _state.update {
+                    it.copy(
+                        calendarSelectedProjects = emptyList(),
+                        calendarDays = days,
+                    )
+                }
+            }
         }
+    }
+
+    private fun getCalendarDays(month: YearMonth, projects: List<Project>): List<org.examples.time_manager.core.dates.models.DayModel> {
+        return datesController.getDatesForAMonth(
+            firstDayOfMonth = month.atDay(1),
+            lastDayOfMonth = month.atEndOfMonth(),
+            projects = projects.takeIf { it.isNotEmpty() },
+        )
     }
 
     private suspend fun runStopwatch() {

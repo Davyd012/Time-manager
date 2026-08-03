@@ -24,6 +24,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -35,6 +37,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.hideFromAccessibility
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.airbnb.lottie.compose.LottieAnimation
@@ -51,15 +59,40 @@ import org.examples.time_manager.ui.theme.addIcon
 @SuppressLint("DefaultLocale")
 @Composable
 fun ListOfWorks(
+    modifier: Modifier = Modifier,
     showWork: (Int) -> Unit,
     addWork: () -> Unit,
     works: List<Work>,
     projects: List<Project>,
+    calendarProgress: Float = 0f,
 ) {
     val style = MaterialTheme.typography
     val colors = MaterialTheme.colorScheme
 
     AnimatedContent(
+        modifier = modifier
+            .fillMaxSize()
+            .clipToBounds()
+            .graphicsLayer {
+                alpha = 1f - (calendarProgress / 0.25f).coerceIn(0f, 1f)
+                translationY = calendarProgress * 18.dp.toPx()
+            }
+            .then(
+                if (calendarProgress > 0.8f) {
+                    Modifier
+                        .clearAndSetSemantics { hideFromAccessibility() }
+                        .pointerInput(Unit) {
+                            awaitPointerEventScope {
+                                while (true) {
+                                    awaitPointerEvent().changes.forEach { it.consume() }
+                                }
+                            }
+                        }
+                } else {
+                    Modifier
+                }
+            )
+            .testTag("home-work-content"),
         targetState = works.isEmpty(),
         label = "empty_to_list",
         transitionSpec = {
@@ -171,10 +204,10 @@ private fun WorksListState(
 
     Column(
         modifier = Modifier
-            .padding(top = 6.dp)
+            .fillMaxSize()
             .clip(RoundedCornerShape(topEnd = 30.dp, topStart = 30.dp))
-            .fillMaxHeight()
             .background(colors.tertiaryContainer)
+            .verticalScroll(rememberScrollState())
             .padding(10.dp)
     ) {
         sortedMap.entries.forEachIndexed { index, entry ->
