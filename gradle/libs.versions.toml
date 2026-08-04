@@ -1,21 +1,21 @@
 [versions]
-agp = "8.13.2"
-kotlin = "2.3.0"
-core-ktx = "1.17.0"
+agp = "9.1.1"
+kotlin = "2.4.10"
+core-ktx = "1.19.0"
 junit = "4.13.2"
 androidx-test-ext-junit = "1.3.0"
 espresso-core = "3.7.0"
-kotlinx-serialization-json = "1.9.0"
-lifecycle-runtime-ktx = "2.10.0"
-lifecycle-runtime-compose = "2.10.0"
-activity-compose = "1.12.2"
-compose-bom = "2025.12.01"
+kotlinx-serialization-json = "1.11.0"
+lifecycle-runtime-ktx = "2.11.0"
+lifecycle-runtime-compose = "2.11.0"
+activity-compose = "1.13.0"
+compose-bom = "2026.06.01"
 lottie-compose = "6.7.1"
-org-jetbrains-kotlin-jvm = "2.3.0"
+org-jetbrains-kotlin-jvm = "2.4.10"
 poi = "5.5.1"
 room = "2.8.4"
-ksp = "2.3.0"
-sqlite = "2.6.2"
+ksp = "2.3.9"
+sqlite = "2.7.0"
 
 # For native Android
 navigation3 = "1.1.4"
@@ -51,7 +51,6 @@ androidx-navigation3-ui = { module = "androidx.navigation3:navigation3-ui", vers
 
 [plugins]
 androidApplication = { id = "com.android.application", version.ref = "agp" }
-kotlinAndroid = { id = "org.jetbrains.kotlin.android", version.ref = "kotlin" }
 org-jetbrains-kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "org-jetbrains-kotlin-jvm" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 room = { id = "androidx.room", version.ref = "room" }

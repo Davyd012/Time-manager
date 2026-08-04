@@ -3,7 +3,6 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 @Suppress("DSL_SCOPE_VIOLATION") // TODO: Remove once KTIJ-19369 is fixed
 plugins {
     alias(libs.plugins.androidApplication)
-    alias(libs.plugins.kotlinAndroid)
     alias(libs.plugins.ksp)
     alias(libs.plugins.room)
     alias(libs.plugins.compose.compiler)
@@ -23,7 +22,7 @@ object Version {
 
 android {
     namespace = "org.examples.time_manager"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "org.examples.time_manager"

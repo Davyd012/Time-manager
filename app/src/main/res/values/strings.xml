@@ -26,6 +26,13 @@ Ny måned, nye muligheter.</string>
     <string name="hour_singular">time</string>
     <string name="hour_plural">timer</string>
     <string name="select_month_title">Velg måned</string>
+    <string name="export_to_excel_title">Eksporter til Excel</string>
+    <string name="export_to_excel_subtitle">Velg prosjekter og måned</string>
+    <string name="projects_label">Prosjekter</string>
+    <string name="month_label">Måned</string>
+    <string name="previous_year_cd">Forrige år</string>
+    <string name="next_year_cd">Neste år</string>
+    <string name="export_btn">Eksporter</string>
     <string-array name="months_array">
         <item>Januar</item><item>Februar</item><item>Mars</item><item>April</item>
         <item>Mai</item><item>Juni</item><item>Juli</item><item>August</item>

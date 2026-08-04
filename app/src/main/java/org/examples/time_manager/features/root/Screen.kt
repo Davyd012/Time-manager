@@ -15,6 +15,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.Modifier
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
 import org.examples.time_manager.features.root.presentation.home.CalendarExpansion
@@ -40,7 +43,7 @@ fun HomeScreen(
             1f,
         ) > 0f
     }
-    val snackbarHostState = remember { androidx.compose.material3.SnackbarHostState() }
+    val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(message) {
         message?.let { snackbarHostState.showSnackbar(it) }
@@ -59,13 +62,13 @@ fun HomeScreen(
         }
     }
 
-    androidx.compose.material3.Scaffold(
-        snackbarHost = { androidx.compose.material3.SnackbarHost(snackbarHostState) },
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { paddingValues ->
         MainPage(
             vm = vm,
             state = state,
-            modifier = androidx.compose.ui.Modifier.padding(paddingValues),
+            modifier = Modifier,
             navigator = navigator,
             expansionState = expansionState,
             onSetCalendarExpansion = ::setCalendarExpansion,

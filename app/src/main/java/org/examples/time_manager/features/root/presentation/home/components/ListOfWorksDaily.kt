@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CornerSize
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -204,7 +205,12 @@ private fun WorksListState(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .clip(MaterialTheme.shapes.large)
+            .clip(
+                MaterialTheme.shapes.large.copy(
+                    bottomStart = CornerSize(0.dp),
+                    bottomEnd = CornerSize(0.dp)
+                )
+            )
             .background(colors.tertiaryContainer)
             .verticalScroll(rememberScrollState())
             .padding(10.dp)

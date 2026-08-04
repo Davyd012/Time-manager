@@ -50,107 +50,99 @@ fun CalendarSelectorRow(
     val nextTitle = formatMonthTitle(monthYear.plusMonths(1), "MMM yyyy")
 
     val colors = MaterialTheme.colorScheme
-    Surface(
-        modifier = modifier.fillMaxWidth(),
-        shape = shape,
-//        color = monthColors.cardBackground,
-//        border = BorderStroke(1.dp, monthColors.border),
-        tonalElevation = 2.dp,
-        shadowElevation = 4.dp,
+
+    Row(
+        modifier = Modifier
+            .padding(horizontal = 12.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
+
+        /* Previous month text */
+        Surface(
+            onClick = onPrevMonth,
+            color = MaterialTheme.colorScheme.surface.copy(alpha = 0f),
+            shape = shape,
+            modifier = Modifier.weight(1f),
+        ) {
+            Text(
+                text = prevTitle,
+                color = colors.onSurface.copy(alpha = .5f),
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.Start,
+                modifier = Modifier
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
+            )
+        }
+
+        /* Center controls */
         Row(
             modifier = Modifier
-                .padding(horizontal = 12.dp, vertical = 8.dp),
+                .weight(2.5f),
             verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Center,
         ) {
 
-            /* Previous month text */
-            Surface(
+            IconButton(
                 onClick = onPrevMonth,
-                color = MaterialTheme.colorScheme.surface.copy(alpha = 0f),
-                shape = shape,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.size(36.dp),
             ) {
-                Text(
-                    text = prevTitle,
-                    color = colors.onSurface.copy(alpha = .5f),
-                    fontWeight = FontWeight.Medium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    textAlign = TextAlign.Start,
-                    modifier = Modifier
-                        .padding(horizontal = 8.dp, vertical = 6.dp),
+                Icon(
+                    imageVector = arrowLeftIcon(),
+                    contentDescription = stringResource(R.string.previous_month_cd),
+                    tint = colors.onSurface,
                 )
             }
 
-            /* Center controls */
-            Row(
+            val interactionSource = remember { MutableInteractionSource() }
+
+            Text(
+                text = currentTitle,
+                color = colors.primary,
+                fontWeight = FontWeight.W700,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
                 modifier = Modifier
-                    .weight(2.5f),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center,
-            ) {
+                    .clip(MaterialTheme.shapes.medium)
+                    .background(colors.primaryContainer)
+                    .padding(horizontal = 12.dp, vertical = 10.dp)
+                    .clickable(
+                        interactionSource = interactionSource,
+                        indication = ripple(bounded = false),
+                    ) { onViewMonth() },
+            )
 
-                IconButton(
-                    onClick = onPrevMonth,
-                    modifier = Modifier.size(36.dp),
-                ) {
-                    Icon(
-                        imageVector = arrowLeftIcon(),
-                        contentDescription = stringResource(R.string.previous_month_cd),
-                        tint = colors.onSurface,
-                    )
-                }
-
-                val interactionSource = remember { MutableInteractionSource() }
-
-                Text(
-                    text = currentTitle,
-                    color = colors.primary,
-                    fontWeight = FontWeight.W700,
-                    textAlign = TextAlign.Center,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier
-                        .clip(MaterialTheme.shapes.medium)
-                        .background(colors.primaryContainer)
-                        .padding(horizontal = 12.dp, vertical = 10.dp)
-                        .clickable(
-                            interactionSource = interactionSource,
-                            indication = ripple(bounded = false),
-                        ) { onViewMonth() },
-                )
-
-                IconButton(
-                    onClick = onNextMonth,
-                    modifier = Modifier.size(36.dp),
-                ) {
-                    Icon(
-                        imageVector = arrowRightIcon(),
-                        contentDescription = stringResource(R.string.next_month_cd),
-                        tint = colors.onSurface,
-                    )
-                }
-            }
-
-            /* Next month text */
-            Surface(
+            IconButton(
                 onClick = onNextMonth,
-                color = MaterialTheme.colorScheme.surface.copy(alpha = 0f),
-                shape = shape,
-                modifier = Modifier.weight(1f),
+                modifier = Modifier.size(36.dp),
             ) {
-                Text(
-                    text = nextTitle,
-                    color = colors.onSurface.copy(alpha = .5f),
-                    fontWeight = FontWeight.Medium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    textAlign = TextAlign.End,
-                    modifier = Modifier
-                        .padding(horizontal = 8.dp, vertical = 6.dp),
+                Icon(
+                    imageVector = arrowRightIcon(),
+                    contentDescription = stringResource(R.string.next_month_cd),
+                    tint = colors.onSurface,
                 )
             }
+        }
+
+        /* Next month text */
+        Surface(
+            onClick = onNextMonth,
+            color = MaterialTheme.colorScheme.surface.copy(alpha = 0f),
+            shape = shape,
+            modifier = Modifier.weight(1f),
+        ) {
+            Text(
+                text = nextTitle,
+                color = colors.onSurface.copy(alpha = .5f),
+                fontWeight = FontWeight.Medium,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                textAlign = TextAlign.End,
+                modifier = Modifier
+                    .padding(horizontal = 8.dp, vertical = 6.dp),
+            )
         }
     }
 }

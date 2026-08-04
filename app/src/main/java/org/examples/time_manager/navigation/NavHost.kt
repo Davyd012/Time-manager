@@ -20,6 +20,8 @@ import org.examples.time_manager.features.month_view.MonthViewScreen
 import org.examples.time_manager.features.root.HomeViewModel
 import org.examples.time_manager.features.root.HomeScreen
 import org.examples.time_manager.features.root.StopwatchViewModel
+import org.examples.time_manager.features.root.presentation.components.BottomBar
+import org.examples.time_manager.features.root.presentation.components.BottomBarItem
 import org.examples.time_manager.features.root.presentation.stopwatch.Stopwatch
 import org.examples.time_manager.ui.theme.homeIcon
 import org.examples.time_manager.ui.theme.watchIcon
@@ -77,26 +79,35 @@ fun AppNavHost(
 
     Scaffold(
         bottomBar = {
-            NavigationBar {
-                NavigationBarItem(
-                    selected = navigationState.selectedTopLevelRoute == AppRoute.Home,
-                    onClick = { PageNavigator(navigator).select(AppRoute.Home) },
-                    icon = { Icon(homeIcon(), contentDescription = stringResource(R.string.home_tab)) },
-                    label = { Text(stringResource(R.string.home_tab)) },
+            val items = listOf(
+                BottomBarItem(
+                    direction = AppRoute.Home,
+                    icon = homeIcon(filled = false),
+                    activeIcon = homeIcon(),
+                    label = stringResource(R.string.home_tab)
+                ),
+                BottomBarItem(
+                    direction = AppRoute.Stopwatch,
+                    icon = watchIcon(filled = false),
+                    activeIcon = watchIcon(),
+                    label = stringResource(R.string.stopwatch_tab)
                 )
-                NavigationBarItem(
-                    selected = navigationState.selectedTopLevelRoute == AppRoute.Stopwatch,
-                    onClick = { PageNavigator(navigator).select(AppRoute.Stopwatch) },
-                    icon = { Icon(watchIcon(), contentDescription = stringResource(R.string.stopwatch_tab)) },
-                    label = { Text(stringResource(R.string.stopwatch_tab)) },
-                )
-            }
+            )
+
+            BottomBar(
+                items = items,
+                isCurrent = { route -> navigationState.selectedTopLevelRoute == route },
+                onSelect = { route: TopLevelRoute ->
+                    PageNavigator(navigator).select(route)
+                },
+                modifier = Modifier
+            )
         },
     ) { paddingValues ->
         NavDisplay(
             entries = entries,
             onBack = { if (!navigator.goBack()) onExit() },
-            modifier = Modifier.padding(paddingValues),
+            modifier = Modifier,
         )
     }
 }

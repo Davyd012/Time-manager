@@ -642,7 +642,7 @@ private fun CalendarBody(
                 alpha = bodyAlpha
                 translationY = (1f - progress) * 24.dp.toPx()
             }
-            .padding(horizontal = 12.dp, vertical = 12.dp),
+            .padding(horizontal = 12.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         CalendarSelectorRow(

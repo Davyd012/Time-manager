@@ -1,40 +1,48 @@
 package org.examples.time_manager.features.root.presentation.home
 
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.AlertDialog
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedIconButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInParent
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import org.examples.time_manager.R
 import org.examples.time_manager.core.database.project.Project
 import org.examples.time_manager.features.root.data.HomeIntent
 import org.examples.time_manager.features.root.data.HomeIntent.ModifyExportProjects
-import org.examples.time_manager.features.root.presentation.home.new_work.ListOfProjects
+import org.examples.time_manager.ui.theme.arrowLeftIcon
+import org.examples.time_manager.ui.theme.arrowRightIcon
+import org.examples.time_manager.ui.theme.doneIcon
+import org.examples.time_manager.ui.theme.exportIcon
+import org.examples.time_manager.ui.theme.spacing
 import java.time.LocalDate
 import kotlin.reflect.KFunction1
 
@@ -42,91 +50,253 @@ import kotlin.reflect.KFunction1
 fun MonthPickerDialog(
     onDismiss: (Int) -> Unit,
     onIntent: KFunction1<HomeIntent, Unit>,
-    projectValues: List<Project>
+    projectValues: List<Project>,
 ) {
-    val currentMonth = LocalDate.now().month.ordinal
+    val colors = MaterialTheme.colorScheme
+    val typography = MaterialTheme.typography
+    val spacing = MaterialTheme.spacing
+    val months = stringArrayResource(R.array.months_array).toList()
+    val initialDate = remember { LocalDate.now() }
 
-    val months = stringArrayResource(org.examples.time_manager.R.array.months_array).toList()
-
-    val state = rememberLazyListState(1200 + currentMonth - 2)
-
-    var displayIndices by remember { mutableStateOf((0..7).toList()) }
-    val projects = projectValues
-
-    LaunchedEffect(state) {
-        snapshotFlow { state.firstVisibleItemIndex }
-            .collect { visible ->
-//                Log.d("LaunchedEffectViewModel", "Visible first item:$visible")
-//                Log.d("LaunchedEffectViewModel", "Size: " + (-4..4).toList().size)
-                displayIndices = (-4..4).map { (visible + 2 + it).mod(12) }
-            }
-    }
-
-    var lastSelectedIndex by remember { mutableIntStateOf(0) }
-    val numberOfDisplayedItems = 9
-    val itemHeight = 35.dp
-    val itemHalfHeight = LocalDensity.current.run { itemHeight.toPx() / 2f }
-
+    var selectedMonth by remember { mutableIntStateOf(initialDate.monthValue - 1) }
+    var selectedYear by remember { mutableIntStateOf(initialDate.year) }
     var exportProjects by remember { mutableStateOf(emptyList<Project>()) }
 
-    AlertDialog(
+    Dialog(
         onDismissRequest = { onDismiss(-1) },
-        title = { Text(stringResource(org.examples.time_manager.R.string.select_month_title)) },
-        text = {
-            Column {
-                ListOfProjects(
-                    projects,
-                    exportProjects.map { it.id },
-                    selectProject = { projectId: Int ->
-                        val selected = exportProjects.firstOrNull { it.id == projectId }
-                        exportProjects =
-                            if (selected != null) exportProjects.filter { it.id != projectId }
-                            else exportProjects.plus(projects.first { it.id == projectId })
-                        onIntent(ModifyExportProjects(projects.first { it.id == projectId }))
+        properties = DialogProperties(usePlatformDefaultWidth = false),
+    ) {
+        Surface(
+            modifier = Modifier
+                .widthIn(max = 720.dp)
+                .padding(horizontal = spacing.medium),
+            shape = MaterialTheme.shapes.large,
+            color = colors.surface,
+            tonalElevation = spacing.small,
+        ) {
+            Column(
+                modifier = Modifier.padding(spacing.large),
+                verticalArrangement = Arrangement.spacedBy(spacing.medium),
+            ) {
+                ExportHeader(
+                    title = stringResource(R.string.export_to_excel_title),
+                    subtitle = stringResource(R.string.export_to_excel_subtitle),
+                )
+
+                Text(
+                    text = stringResource(R.string.projects_label),
+                    style = typography.titleMedium,
+                )
+                ProjectSelectionRow(
+                    projects = projectValues,
+                    selectedProjects = exportProjects.map { it.id },
+                    onProjectSelected = { projectId ->
+                        val project = projectValues.first { it.id == projectId }
+                        exportProjects = if (project in exportProjects) {
+                            exportProjects.filterNot { it.id == projectId }
+                        } else {
+                            exportProjects + project
+                        }
+                        onIntent(ModifyExportProjects(project))
                     },
                 )
-                LazyColumn(
-                    modifier = Modifier
-                        .height(250.dp)
-                        .width(300.dp),
-                    state = state,
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
+
+                Text(
+                    text = stringResource(R.string.month_label),
+                    style = typography.titleMedium,
+                )
+                YearSelector(
+                    year = selectedYear,
+                    onPreviousYear = { selectedYear-- },
+                    onNextYear = { selectedYear++ },
+                )
+                MonthGrid(
+                    months = months,
+                    selectedMonth = selectedMonth,
+                    onMonthSelected = { selectedMonth = it },
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(spacing.small),
                 ) {
-                    items(count = Int.MAX_VALUE) { i ->
-                        val item = months[i % months.size]
-                        Text(
-                            text = item,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    onDismiss(lastSelectedIndex % 12)
-                                }
-                                .padding(itemHeight / 2f)
-                                .onGloballyPositioned { coordinates ->
-                                    val y = coordinates.positionInParent().y - itemHalfHeight
-                                    val parentHalfHeight = (itemHalfHeight * numberOfDisplayedItems)
-                                    val isSelected =
-                                        (y > parentHalfHeight - itemHalfHeight && y < parentHalfHeight + itemHalfHeight)
-                                    val index = i - 1
-                                    if (isSelected && lastSelectedIndex != index) {
-                                        //                                        onItemSelected(index % itemsState.size, item)
-                                        lastSelectedIndex = index
-                                    }
-                                },
-                            textAlign = TextAlign.Center,
-                            fontSize = if (lastSelectedIndex == i) 20.sp else 16.sp,
-                            fontWeight = if (lastSelectedIndex == i) FontWeight.Bold else FontWeight.Normal
-                        )
+                    OutlinedButton(
+                        onClick = { onDismiss(-1) },
+                        modifier = Modifier.weight(1f),
+                    ) {
+                        Text(stringResource(R.string.cancel))
+                    }
+                    Button(
+                        onClick = { onDismiss(selectedMonth) },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = colors.primaryContainer,
+                            contentColor = colors.onPrimaryContainer,
+                        ),
+                    ) {
+                        Text(stringResource(R.string.export_btn))
                     }
                 }
             }
-
-        },
-        confirmButton = {
-            TextButton(onClick = {
-                onDismiss(lastSelectedIndex % 12)
-            }) { Text(stringResource(org.examples.time_manager.R.string.ok)) }
         }
-    )
+    }
+}
+
+@Composable
+private fun ExportHeader(
+    title: String,
+    subtitle: String,
+) {
+    val colors = MaterialTheme.colorScheme
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
+    ) {
+        Icon(
+            imageVector = exportIcon(),
+            tint = colors.secondary,
+            contentDescription = stringResource(R.string.export_action),
+            modifier = Modifier.size(35.dp)
+        )
+        Column {
+            Text(title, style = MaterialTheme.typography.headlineSmall)
+            Text(
+                text = subtitle,
+                style = MaterialTheme.typography.bodyLarge,
+                color = colors.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+private fun ProjectSelectionRow(
+    projects: List<Project>,
+    selectedProjects: List<Int>,
+    onProjectSelected: (Int) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .horizontalScroll(rememberScrollState()),
+        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
+    ) {
+        projects.forEach { project ->
+            val selected = project.id in selectedProjects
+            FilterChip(
+                selected = selected,
+                onClick = { onProjectSelected(project.id) },
+                label = {
+                    Text(
+                        text = project.name,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                },
+                leadingIcon = if (selected) {
+                    {
+                        Icon(
+                            imageVector = doneIcon(),
+                            contentDescription = null,
+                        )
+                    }
+                } else {
+                    null
+                },
+                colors = FilterChipDefaults.filterChipColors(
+                    containerColor = MaterialTheme.colorScheme.surface,
+                    labelColor = MaterialTheme.colorScheme.onSurface,
+                    iconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                    selectedContainerColor = MaterialTheme.colorScheme.primaryContainer,
+                    selectedLabelColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                    selectedLeadingIconColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                ),
+            )
+        }
+    }
+}
+
+@Composable
+private fun YearSelector(
+    year: Int,
+    onPreviousYear: () -> Unit,
+    onNextYear: () -> Unit,
+) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween,
+    ) {
+        OutlinedIconButton(onClick = onPreviousYear) {
+            Icon(
+                imageVector = arrowLeftIcon(),
+                contentDescription = stringResource(R.string.previous_year_cd),
+            )
+        }
+        Text(year.toString(), style = MaterialTheme.typography.headlineSmall)
+        OutlinedIconButton(onClick = onNextYear) {
+            Icon(
+                imageVector = arrowRightIcon(),
+                contentDescription = stringResource(R.string.next_year_cd),
+            )
+        }
+    }
+}
+
+@Composable
+private fun MonthGrid(
+    months: List<String>,
+    selectedMonth: Int,
+    onMonthSelected: (Int) -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small)) {
+        months.chunked(3).forEachIndexed { rowIndex, rowMonths ->
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
+            ) {
+                rowMonths.forEachIndexed { columnIndex, month ->
+                    val monthIndex = rowIndex * 3 + columnIndex
+                    MonthButton(
+                        month = month,
+                        selected = monthIndex == selectedMonth,
+                        onClick = { onMonthSelected(monthIndex) },
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MonthButton(
+    month: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val colors = MaterialTheme.colorScheme
+
+    if (selected) {
+        Button(
+            onClick = onClick,
+            modifier = modifier,
+            shape = RoundedCornerShape(10.dp),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = colors.primaryContainer,
+                contentColor = colors.onPrimaryContainer,
+            ),
+        ) {
+            Text(month)
+        }
+    } else {
+        OutlinedButton(
+            onClick = onClick,
+            shape = RoundedCornerShape(10.dp),
+            modifier = modifier,
+        ) {
+            Text(month)
+        }
+    }
 }

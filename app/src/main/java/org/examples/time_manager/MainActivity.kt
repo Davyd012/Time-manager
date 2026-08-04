@@ -1,8 +1,10 @@
 package org.examples.time_manager
 
 import android.Manifest
+import android.content.res.Configuration
 import android.os.Build
 import android.os.Bundle
+import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -32,12 +34,22 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun configureEdgeToEdge() {
-        WindowCompat.setDecorFitsSystemWindows(window, false)
-        val darkTheme = (resources.configuration.uiMode and android.content.res.Configuration.UI_MODE_NIGHT_MASK) ==
-            android.content.res.Configuration.UI_MODE_NIGHT_YES
+        WindowCompat.enableEdgeToEdge(window)
+
+        val isDarkTheme =
+            resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK ==
+                    Configuration.UI_MODE_NIGHT_YES
+
         WindowCompat.getInsetsController(window, window.decorView).apply {
-            isAppearanceLightStatusBars = !darkTheme
-            isAppearanceLightNavigationBars = !darkTheme
+            isAppearanceLightStatusBars = !isDarkTheme
+            isAppearanceLightNavigationBars = !isDarkTheme
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            window.attributes = window.attributes.apply {
+                layoutInDisplayCutoutMode =
+                    WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+            }
         }
     }
 }
