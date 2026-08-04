@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.mutableStateOf
@@ -17,7 +16,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import org.examples.time_manager.features.root.HomeViewModel
-import org.examples.time_manager.features.root.data.RootScreenEvents.ModifyWorkStateEvent
+import org.examples.time_manager.features.root.data.HomeUiState
+import org.examples.time_manager.features.root.data.HomeIntent.ModifyWorkState
 import org.examples.time_manager.features.root.presentation.home.components.HeaderWidget
 import org.examples.time_manager.features.root.presentation.home.components.ListOfWorks
 import org.examples.time_manager.navigation.Navigator
@@ -31,14 +31,14 @@ enum class CalendarExpansion {
 @Composable
 fun MainPage(
     vm: HomeViewModel,
+    state: HomeUiState,
     modifier: Modifier,
     navigator: Navigator,
     expansionState: AnchoredDraggableState<CalendarExpansion>,
     onSetCalendarExpansion: (CalendarExpansion) -> Unit,
 ) {
-    val state by vm.state.collectAsState()
-    val works by state.workQueries.collectAsState(initial = emptyList())
-    val projects by state.projects.collectAsState(initial = emptyList())
+    val works = state.workQueries
+    val projects = state.projects
     val density = LocalDensity.current
     var selectedCalendarDateText by rememberSaveable { mutableStateOf<String?>(null) }
 
@@ -70,7 +70,7 @@ fun MainPage(
     if (state.selectedWork.showModal) {
         val index = state.selectedWork.selectedWork
         NewWorkInput(
-            onDismiss = { vm.onEvent(ModifyWorkStateEvent(show = false)) },
+            onDismiss = { vm.onIntent(ModifyWorkState(show = false)) },
             vm = vm,
             projects = projects,
             day = state.selectedDay,
@@ -97,15 +97,15 @@ fun MainPage(
                 onCloseCalendar = {
                     onSetCalendarExpansion(CalendarExpansion.Collapsed)
                 },
-                onAddWork = { vm.onEvent(ModifyWorkStateEvent(show = true)) },
+                onAddWork = { vm.onIntent(ModifyWorkState(show = true)) },
             )
 
             ListOfWorks(
                 modifier = Modifier
                     .weight(1f),
                 calendarProgress = progress,
-                showWork = { i -> vm.onEvent(ModifyWorkStateEvent(selected = i, show = true)) },
-                addWork = { vm.onEvent(ModifyWorkStateEvent(show = true)) },
+                showWork = { i -> vm.onIntent(ModifyWorkState(selected = i, show = true)) },
+                addWork = { vm.onIntent(ModifyWorkState(show = true)) },
                 works = works,
                 projects = projects,
             )

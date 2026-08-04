@@ -2,14 +2,12 @@ package org.examples.time_manager.di
 
 import android.app.NotificationManager
 import android.content.Context
-import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.core.app.NotificationCompat
 import org.examples.time_manager.R
 import org.examples.time_manager.core.service.ServiceHelper
 import org.examples.time_manager.core.service.util.Constants.NOTIFICATION_CHANNEL_ID
 
 object NotificationModule {
-    @OptIn(ExperimentalAnimationApi::class)
     fun provideNotificationBuilder(context: Context): NotificationCompat.Builder {
         return NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_ID)
             .setContentTitle(context.getString(R.string.working_notification_title))

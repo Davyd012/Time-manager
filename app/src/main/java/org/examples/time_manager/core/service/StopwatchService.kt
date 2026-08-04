@@ -2,184 +2,143 @@ package org.examples.time_manager.core.service
 
 import android.annotation.SuppressLint
 import android.app.NotificationChannel
-import android.app.NotificationManager
 import android.app.Service
 import android.content.Intent
 import android.os.Binder
 import android.os.IBinder
-import androidx.compose.animation.ExperimentalAnimationApi
-import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.core.app.NotificationCompat
-import org.examples.time_manager.App
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import org.examples.time_manager.R
+import org.examples.time_manager.core.repository.StopwatchSnapshot
+import org.examples.time_manager.core.repository.StopwatchRepository
 import org.examples.time_manager.core.service.util.Constants.ACTION_SERVICE_CANCEL
 import org.examples.time_manager.core.service.util.Constants.ACTION_SERVICE_START
 import org.examples.time_manager.core.service.util.Constants.ACTION_SERVICE_STOP
 import org.examples.time_manager.core.service.util.Constants.NOTIFICATION_CHANNEL_ID
 import org.examples.time_manager.core.service.util.Constants.NOTIFICATION_CHANNEL_NAME
 import org.examples.time_manager.core.service.util.Constants.NOTIFICATION_ID
-import org.examples.time_manager.core.service.util.Constants.STOPWATCH_STATE
 import org.examples.time_manager.core.service.util.formatTime
 import org.examples.time_manager.core.service.util.pad
 import org.examples.time_manager.di.NotificationModule
-import java.util.*
+import java.util.Timer
 import kotlin.concurrent.fixedRateTimer
-import kotlin.time.Duration
-import kotlin.time.Duration.Companion.seconds
 
 class StopwatchService : Service() {
-    var project: Int = 1
-    private val notificationManager by lazy { NotificationModule.provideNotificationManager(App.context) }
-    private val notificationBuilder by lazy { NotificationModule.provideNotificationBuilder(App.context) }
-
+    private val _snapshot = MutableStateFlow(StopwatchSnapshot())
+    val snapshot: StateFlow<StopwatchSnapshot> = _snapshot.asStateFlow()
     private val binder = StopwatchBinder()
+    private var timer: Timer? = null
+    private var seconds = 0
+    private var observer: ((org.examples.time_manager.core.repository.StopwatchSnapshot) -> Unit)? = null
 
-    private var duration: Duration = Duration.ZERO
-    private lateinit var timer: Timer
+    private val notificationManager by lazy { NotificationModule.provideNotificationManager(this) }
+    private val notificationBuilder by lazy { NotificationModule.provideNotificationBuilder(this) }
 
-    var seconds = mutableIntStateOf(0)
-    private var currentState = mutableStateOf(StopwatchState.Idle)
-
-    var running = false
-
-    override fun onBind(p0: Intent?): IBinder {
-        return binder
-    }
+    override fun onBind(intent: Intent?): IBinder = binder
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        when (intent?.getStringExtra(STOPWATCH_STATE)) {
-            StopwatchState.Started.name -> {
-                setStopButton()
-                startForegroundService()
-                startStopwatch { seconds ->
-                    updateNotification(seconds = seconds)
-                }
-            }
-            StopwatchState.Stopped.name -> {
-                stopStopwatch()
-                setResumeButton()
-            }
-            StopwatchState.Canceled.name -> {
-                stopStopwatch()
-                cancelStopwatch()
-                stopForegroundService()
-            }
+        when (intent?.action) {
+            ACTION_SERVICE_START -> startStopwatch()
+            ACTION_SERVICE_STOP -> pauseStopwatch()
+            ACTION_SERVICE_CANCEL -> cancelStopwatch()
         }
-        intent?.action.let {
-            when (it) {
-                ACTION_SERVICE_START -> {
-                    setStopButton()
-                    startForegroundService()
-                    startStopwatch { seconds ->
-                        updateNotification(seconds = seconds)
-                    }
-                }
-                ACTION_SERVICE_STOP -> {
-                    stopStopwatch()
-                    setResumeButton()
-                }
-                ACTION_SERVICE_CANCEL -> {
-                    stopStopwatch()
-                    cancelStopwatch()
-                    stopForegroundService()
-                }
-            }
-        }
-        return super.onStartCommand(intent, flags, startId)
+        return START_STICKY
     }
 
-    private fun startStopwatch(onTick: (s: Int) -> Unit) {
-        running = true
-        currentState.value = StopwatchState.Started
+    fun setProject(projectId: Int) {
+        publish(_snapshot.value.copy(selectedProject = projectId))
+    }
+
+    fun observe(observer: (org.examples.time_manager.core.repository.StopwatchSnapshot) -> Unit) {
+        this.observer = observer
+        observer(_snapshot.value)
+    }
+
+    private fun startStopwatch() {
+        if (timer != null) return
+        publish(_snapshot.value.copy(isRunning = true))
+        startForegroundService()
         timer = fixedRateTimer(initialDelay = 1000L, period = 1000L) {
-            duration = duration.plus(1.seconds)
-            updateTimeUnits()
-            onTick(seconds.intValue)
+            seconds += 1
+            publish(_snapshot.value.copy(elapsedSeconds = seconds, isRunning = true))
+            updateNotification(seconds)
         }
     }
 
-    private fun stopStopwatch() {
-        running = false
-        if (this::timer.isInitialized) {
-            timer.cancel()
-        }
-        currentState.value = StopwatchState.Stopped
+    private fun pauseStopwatch() {
+        timer?.cancel()
+        timer = null
+        publish(_snapshot.value.copy(isRunning = false))
+        setResumeButton()
     }
 
     private fun cancelStopwatch() {
-        running = false
-        duration = Duration.ZERO
-        currentState.value = StopwatchState.Idle
-        updateTimeUnits()
-    }
-
-    private fun updateTimeUnits() {
-        duration.toComponents { value, _ ->
-            this@StopwatchService.seconds.intValue = value.toInt()
-        }
+        timer?.cancel()
+        timer = null
+        seconds = 0
+        publish(_snapshot.value.copy(elapsedSeconds = 0, isRunning = false))
+        notificationManager.cancel(NOTIFICATION_ID)
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelf()
     }
 
     @SuppressLint("ForegroundServiceType")
     private fun startForegroundService() {
         createNotificationChannel()
         startForeground(NOTIFICATION_ID, notificationBuilder.build())
-    }
-
-    private fun stopForegroundService() {
-        notificationManager.cancel(NOTIFICATION_ID)
-        stopForeground(STOP_FOREGROUND_REMOVE)
-        stopSelf()
+        setStopButton()
     }
 
     private fun createNotificationChannel() {
-        val channel = NotificationChannel(
-            NOTIFICATION_CHANNEL_ID,
-            NOTIFICATION_CHANNEL_NAME,
-            NotificationManager.IMPORTANCE_LOW
+        notificationManager.createNotificationChannel(
+            NotificationChannel(
+                NOTIFICATION_CHANNEL_ID,
+                NOTIFICATION_CHANNEL_NAME,
+                android.app.NotificationManager.IMPORTANCE_LOW,
+            ),
         )
-        notificationManager.createNotificationChannel(channel)
     }
 
-    private fun updateNotification(seconds: Int) {
+    private fun updateNotification(value: Int) {
         notificationManager.notify(
             NOTIFICATION_ID,
             notificationBuilder.setContentText(
                 formatTime(
-                    hours = (seconds / 3600).pad(),
-                    minutes = ((seconds % 3600) / 60).pad(),
-                    seconds = (seconds % 60).pad(),
-                )
-            ).build()
+                    hours = (value / 3600).pad(),
+                    minutes = ((value % 3600) / 60).pad(),
+                    seconds = (value % 60).pad(),
+                ),
+            ).build(),
         )
     }
 
-    @OptIn(ExperimentalAnimationApi::class)
+    private fun publish(value: org.examples.time_manager.core.repository.StopwatchSnapshot) {
+        _snapshot.value = value
+        observer?.invoke(value)
+    }
+
     @SuppressLint("RestrictedApi")
     private fun setStopButton() {
-        notificationBuilder.mActions.removeAt(0)
-        notificationBuilder.mActions.add(
-            0,
-            NotificationCompat.Action(
-                0,
-                getString(org.examples.time_manager.R.string.stop),
-                ServiceHelper.stopPendingIntent(this)
-            )
+        replaceAction(
+            getString(R.string.stop),
+            ServiceHelper.stopPendingIntent(this),
         )
-        notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build())
     }
 
     @SuppressLint("RestrictedApi")
-    @OptIn(ExperimentalAnimationApi::class)
     private fun setResumeButton() {
-        notificationBuilder.mActions.removeAt(0)
-        notificationBuilder.mActions.add(
-            0,
-            NotificationCompat.Action(
-                0,
-                getString(org.examples.time_manager.R.string.resume),
-                ServiceHelper.resumePendingIntent(this)
-            )
+        replaceAction(
+            getString(R.string.resume),
+            ServiceHelper.resumePendingIntent(this),
         )
+    }
+
+    @SuppressLint("RestrictedApi")
+    private fun replaceAction(label: String, intent: android.app.PendingIntent) {
+        if (notificationBuilder.mActions.isNotEmpty()) notificationBuilder.mActions.removeAt(0)
+        notificationBuilder.mActions.add(0, NotificationCompat.Action(0, label, intent))
         notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build())
     }
 
@@ -188,9 +147,35 @@ class StopwatchService : Service() {
     }
 }
 
-enum class StopwatchState {
-    Idle,
-    Started,
-    Stopped,
-    Canceled
+class StopwatchGateway(private val context: android.content.Context) : StopwatchRepository,
+    android.content.ServiceConnection {
+    private val _state = MutableStateFlow(StopwatchSnapshot())
+    override val state: StateFlow<StopwatchSnapshot> = _state.asStateFlow()
+    private var service: StopwatchService? = null
+
+    fun bind() {
+        context.bindService(
+            Intent(context, StopwatchService::class.java),
+            this,
+            android.content.Context.BIND_AUTO_CREATE,
+        )
+    }
+
+    override fun onServiceConnected(name: android.content.ComponentName?, binder: IBinder?) {
+        service = (binder as StopwatchService.StopwatchBinder).getService()
+        service?.observe { snapshot -> _state.value = snapshot }
+    }
+
+    override fun onServiceDisconnected(name: android.content.ComponentName?) {
+        service = null
+        _state.value = _state.value.copy(isRunning = false)
+    }
+
+    override fun start() = ServiceHelper.triggerForegroundService(context, ACTION_SERVICE_START)
+    override fun pause() = ServiceHelper.triggerForegroundService(context, ACTION_SERVICE_STOP)
+    override fun cancel() = ServiceHelper.triggerForegroundService(context, ACTION_SERVICE_CANCEL)
+    override fun selectProject(projectId: Int) {
+        service?.setProject(projectId)
+        _state.value = _state.value.copy(selectedProject = projectId)
+    }
 }

@@ -1,111 +1,79 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Time manager</string>
-
-    <!-- Generic -->
+    <string name="app_name">Tidsstyring</string>
     <string name="ok">OK</string>
-    <string name="cancel">Cancel</string>
+    <string name="cancel">Avbryt</string>
     <string name="back_cd">Tilbake</string>
-    <string name="delete_cd">Fjerne</string>
-    <string name="stop">Stop</string>
-    <string name="resume">Resume</string>
-    <string name="working_notification_title">Working</string>
-    <string name="remove_cd">Fjerne</string>
-
-    <!-- Calendar -->
-    <string name="previous_month_cd">Previous month</string>
-    <string name="next_month_cd">Next month</string>
-    <string name="calendar_title">Kalendar</string>
+    <string name="delete_cd">Slett</string>
+    <string name="stop">Stopp</string>
+    <string name="resume">Fortsett</string>
+    <string name="working_notification_title">Arbeid pågår</string>
+    <string name="remove_cd">Fjern</string>
+    <string name="previous_month_cd">Forrige måned</string>
+    <string name="next_month_cd">Neste måned</string>
+    <string name="calendar_title">Kalender</string>
     <string name="selected_projects">Valgte prosjekter</string>
     <string name="reset">Nullstill</string>
-    <string name="share_month_cd">Del manedsoversikt</string>
-    <string name="total_month_prefix">Total for måned: %1$.2fh</string>
-    <string name="hours_suffix"> h</string>
+    <string name="share_month_cd">Del månedsoversikt</string>
+    <string name="total_month_prefix">Totalt for måneden: %1$.2f t</string>
+    <string name="hours_suffix"> t</string>
     <string name="share_chooser_title">Del</string>
-
-    <!-- Share Summary Strings -->
     <string name="summary_no_hours">Ingen timer registrert i %1$s.
 Ny måned, nye muligheter.</string>
-    <string name="summary_quiet_month">Oppsummert for %1$s: %2$.2f %3$s registrert - en rolig måned.</string>
-    <string name="summary_active_month">Jeg har jobbet totalt %1$.2f %2$s i %3$s - for en innsats!</string>
+    <string name="summary_quiet_month">Oppsummert for %1$s: %2$.2f %3$s registrert – en rolig måned.</string>
+    <string name="summary_active_month">Jeg har jobbet totalt %1$.2f %2$s i %3$s – for en innsats!</string>
     <string name="summary_normal_month">Jeg har jobbet totalt %1$.2f %2$s i %3$s.</string>
     <string name="hour_singular">time</string>
     <string name="hour_plural">timer</string>
-
-    <!-- Month Picker -->
-    <string name="select_month_title">Select Month</string>
-    
+    <string name="select_month_title">Velg måned</string>
     <string-array name="months_array">
-        <item>Januar</item>
-        <item>Februar</item>
-        <item>Mars</item>
-        <item>April</item>
-        <item>Mai</item>
-        <item>Juni</item>
-        <item>Juli</item>
-        <item>August</item>
-        <item>September</item>
-        <item>Oktober</item>
-        <item>November</item>
-        <item>Desember</item>
+        <item>Januar</item><item>Februar</item><item>Mars</item><item>April</item>
+        <item>Mai</item><item>Juni</item><item>Juli</item><item>August</item>
+        <item>September</item><item>Oktober</item><item>November</item><item>Desember</item>
     </string-array>
-
-    <!-- Days -->
     <string-array name="week_days_array">
-        <item>Mandag</item>
-        <item>Tirsdag</item>
-        <item>Onsdag</item>
-        <item>Torsdag</item>
-        <item>Fredag</item>
-        <item>Lørdag</item>
-        <item>Søndag</item>
+        <item>Mandag</item><item>Tirsdag</item><item>Onsdag</item><item>Torsdag</item>
+        <item>Fredag</item><item>Lørdag</item><item>Søndag</item>
     </string-array>
-
-    <!-- Work Input / Home -->
-    <string name="register_hours_title">Registrere timer</string>
+    <string name="register_hours_title">Registrer timer</string>
     <string name="project_label">Prosjekt</string>
-    <string name="time_date_label">Tid &amp; dato</string>
-    <string name="time_details_label">Tid &amp; detaljer</string>
+    <string name="time_date_label">Tid og dato</string>
+    <string name="time_details_label">Tid og detaljer</string>
     <string name="hours_btn">Timer</string>
     <string name="select_dates_btn">Velg datoer</string>
     <string name="day_btn">Dag</string>
     <string name="start_work_btn">Start arbeidet</string>
     <string name="comment_label">Kommentar</string>
-    <string name="comment_placeholder">Skriv en kommentar...</string>
-    <string name="period_registration_label">Periode registrering</string>
+    <string name="comment_placeholder">Skriv en kommentar …</string>
+    <string name="period_registration_label">Perioderegistrering</string>
     <string name="register_period_btn">Registrer periode</string>
     <string name="save_changes_btn">Lagre endringer</string>
-    <string name="edit_period_btn">Redigere for en period</string>
+    <string name="edit_period_btn">Rediger periode</string>
     <string name="select_date_range_title">Velg datointervall</string>
     <string name="date_label">Dato</string>
     <string name="period_label">Periode</string>
     <string name="done_btn">Ferdig</string>
-
-    <!-- Project -->
-    <string name="new_project_title">Ny projekt</string>
+    <string name="new_project_title">Nytt prosjekt</string>
     <string name="name_label">Navn</string>
-    <string name="name_hint">Bedriften Min AS</string>
+    <string name="name_hint">Mitt firma AS</string>
     <string name="description_label">Beskrivelse</string>
-    <string name="description_hint">Veldig seriøst selskapet</string>
-    <string name="new_project_btn">Ny project</string>
+    <string name="description_hint">Kort beskrivelse</string>
+    <string name="new_project_btn">Nytt prosjekt</string>
     <string name="save_btn">Lagre</string>
-
-    <!-- Home Tab -->
     <string name="home_tab">Hjem</string>
     <string name="stopwatch_tab">Stoppeklokke</string>
-    <string name="no_work_logs">Ingen arbeidsregnskap</string>
-    <string name="no_work_logs_description">Du har ingen registrerte timer for denne dagen.</string>
+    <string name="no_work_logs">Ingen arbeidsføringer</string>
+    <string name="no_work_logs_description">Du har ingen registrerte timer denne dagen.</string>
     <string name="add_hours_btn">Legg til timer</string>
-    <string name="no_project">No project</string>
-    <string name="create_project_first_msg">Skap et projekt først</string>
-    <string name="click_me_action">Click me</string>
+    <string name="no_project">Ukjent prosjekt</string>
+    <string name="create_project_first_msg">Opprett et prosjekt først</string>
+    <string name="create_project_and_register_msg">Opprett et prosjekt og registrer tid</string>
+    <string name="click_me_action">Lukk</string>
     <string name="calendar_closed_state">Kalender lukket</string>
     <string name="calendar_open_state">Kalender utvidet</string>
     <string name="open_calendar_action">Åpne kalender</string>
     <string name="close_calendar_action">Lukk kalender</string>
     <string name="export_action">Eksporter timer</string>
-
-    <!-- Dialog -->
-    <string name="input_tape_text_title">Input Tape text</string>
-    <string name="tape_text_hint">Tape text</string>
-
+    <string name="input_tape_text_title">Skriv inn tekst</string>
+    <string name="tape_text_hint">Tekst</string>
 </resources>

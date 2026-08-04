@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.HorizontalDivider
@@ -54,7 +53,7 @@ fun MonthGrid(
     modifier: Modifier = Modifier,
     cellHeight: Dp = 68.dp,
     totalHours: Double,
-    monthColors: MonthViewColors = MonthViewColors.defaults(),
+    monthColors: MonthViewColors,
 ) {
     val colors = MaterialTheme.colorScheme
 
@@ -73,7 +72,7 @@ fun MonthGrid(
     val itemRows = gridCells.chunked(7)
     Surface(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(22.dp),
+        shape = MaterialTheme.shapes.large,
         color = MaterialTheme.colorScheme.primary,
         tonalElevation = 2.dp,
         border = BorderStroke(1.dp, monthColors.border),
@@ -167,7 +166,7 @@ private fun ShareMonthButton(
     monthYear: YearMonth,
     totalHours: Double,
     modifier: Modifier = Modifier,
-    monthColors: MonthViewColors = MonthViewColors.defaults(),
+    monthColors: MonthViewColors,
 ) {
     val context = LocalContext.current
     val shareText =
@@ -177,7 +176,7 @@ private fun ShareMonthButton(
 
     Surface(
         modifier = modifier,
-        shape = RoundedCornerShape(999.dp),
+        shape = MaterialTheme.shapes.extraLarge,
         color = monthColors.chipBackground.copy(alpha = 0.75f),
         border = BorderStroke(1.dp, monthColors.border),
         tonalElevation = 2.dp,
@@ -203,7 +202,7 @@ private fun DayCell(
     selectedDate: LocalDate?,
     onSelectDate: (LocalDate) -> Unit,
     modifier: Modifier = Modifier,
-    monthColors: MonthViewColors = MonthViewColors.defaults(),
+    monthColors: MonthViewColors,
 ) {
     val colors = MaterialTheme.colorScheme
     val texts = MaterialTheme.typography
@@ -302,7 +301,7 @@ private fun buildMonthShareText(
     monthYear: YearMonth,
     totalHours: Double
 ): String {
-    val locale = Locale("nb", "NO")
+    val locale = Locale.Builder().setLanguage("nb").setRegion("NO").build()
     val formatter = DateTimeFormatter.ofPattern("MMMM yyyy", locale)
     val monthLabel = monthYear.format(formatter).lowercase(locale)
     val hoursLabel =

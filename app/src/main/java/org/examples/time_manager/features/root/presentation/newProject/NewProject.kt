@@ -29,8 +29,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import org.examples.time_manager.R
 import org.examples.time_manager.features.root.HomeViewModel
-import org.examples.time_manager.features.root.data.RootScreenEvents.NewProjectEvent
-import org.examples.time_manager.ui.theme.BorderColor
+import org.examples.time_manager.features.root.data.HomeIntent.NewProject
 
 @Composable
 fun NewProject(vm: HomeViewModel, modifier: Modifier) {
@@ -64,7 +63,7 @@ fun NewProject(vm: HomeViewModel, modifier: Modifier) {
 
         Spacer(modifier = Modifier.weight(1f))
         Button(
-            onClick = { vm.onEvent(NewProjectEvent(
+            onClick = { vm.onIntent(NewProject(
                 name = name,
                 description = description,
                 project = null
@@ -96,7 +95,6 @@ fun InfoTextField(
     val typography = MaterialTheme.typography
     val colors = MaterialTheme.colorScheme
 
-    val roundedClip = 10.dp
     BasicTextField(
         value = value,
         onValueChange = {
@@ -109,8 +107,8 @@ fun InfoTextField(
             )
         },
         modifier = modifier
-            .clip(RoundedCornerShape(roundedClip))
-            .border(width = 1.5.dp, color = BorderColor, shape = RoundedCornerShape(roundedClip))
+            .clip(MaterialTheme.shapes.medium)
+            .border(width = 1.5.dp, color = MaterialTheme.colorScheme.outline, shape = MaterialTheme.shapes.medium)
             .background(background)
             .padding(15.dp)
             .height((maxLines * 17).dp),

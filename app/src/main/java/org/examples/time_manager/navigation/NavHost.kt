@@ -1,131 +1,102 @@
 package org.examples.time_manager.navigation
 
-import android.util.Log
-import androidx.compose.animation.EnterTransition
-import androidx.compose.animation.ExitTransition
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
-import androidx.compose.animation.togetherWith
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Icon
+import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
-import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
-import androidx.navigation3.runtime.rememberNavBackStack
-import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
+import org.examples.time_manager.R
 import org.examples.time_manager.di.DIContainer
-import org.examples.time_manager.features.calendar.CalendarScreen
-import org.examples.time_manager.features.calendar.CalendarViewModel
 import org.examples.time_manager.features.month_view.MonthViewModel
 import org.examples.time_manager.features.month_view.MonthViewScreen
-import java.time.LocalDate
+import org.examples.time_manager.features.root.HomeViewModel
+import org.examples.time_manager.features.root.HomeScreen
+import org.examples.time_manager.features.root.StopwatchViewModel
+import org.examples.time_manager.features.root.presentation.stopwatch.Stopwatch
+import org.examples.time_manager.ui.theme.homeIcon
+import org.examples.time_manager.ui.theme.watchIcon
+import java.time.YearMonth
 
 @Composable
 fun AppNavHost(
     diContainer: DIContainer,
+    onExit: () -> Unit,
 ) {
-    val rootBackStack = rememberNavBackStack(navSavedStateConfiguration, Route.RootRoute.Root)
-    val navigator = remember(rootBackStack) { Navigator(rootBackStack) }
-    val rootEntryDecorators =
-        listOf(
-            rememberSaveableStateHolderNavEntryDecorator(),
-            rememberViewModelStoreNavEntryDecorator<NavKey>(),
-        )
-
-    Log.d("NavHost", "Created a Nav host")
-    NavDisplay(
-        backStack = rootBackStack,
-        entryDecorators = rootEntryDecorators,
-        onBack = { rootBackStack.removeLastOrNull() },
-        transitionSpec = {
-            val fromKey = initialState.key
-            val toKey = targetState.key
-            if (fromKey == Route.RootRoute.Root.toString() && toKey == Route.Calendar.toString()) {
-                Log.d("NavHost", "Created a Calendar composable")
-                (slideInVertically(
-                    initialOffsetY = { fullHeight -> -fullHeight },
-                    animationSpec = tween(600, easing = FastOutSlowInEasing),
-                ) + fadeIn(animationSpec = tween(120)))
-                    .togetherWith(ExitTransition.KeepUntilTransitionsFinished)
-            } else {
-                EnterTransition.None togetherWith ExitTransition.None
-            }
-        },
-        popTransitionSpec = {
-            val fromKey = initialState.key
-            val toKey = targetState.key
-            if (fromKey == Route.Calendar.toString() && toKey == Route.RootRoute.Root.toString()) {
-                EnterTransition.None.togetherWith(
-                    slideOutVertically(
-                        targetOffsetY = { fullHeight -> -fullHeight },
-                        animationSpec = tween(260, easing = FastOutSlowInEasing),
-                    ) + fadeOut(animationSpec = tween(120)),
-                )
-            } else {
-                EnterTransition.None togetherWith ExitTransition.None
-            }
-        },
-        predictivePopTransitionSpec = {
-            val fromKey = initialState.key
-            val toKey = targetState.key
-            if (fromKey == Route.Calendar.toString() && toKey == Route.RootRoute.Root.toString()) {
-                EnterTransition.None.togetherWith(
-                    slideOutVertically(
-                        targetOffsetY = { fullHeight -> -fullHeight },
-                        animationSpec = tween(260, easing = FastOutSlowInEasing),
-                    ) + fadeOut(animationSpec = tween(120)),
-                )
-            } else {
-                EnterTransition.None togetherWith ExitTransition.None
-            }
-        },
-        entryProvider =
-            entryProvider {
-                entry<Route.RootRoute.Root> {
-                    HomeNavGraph(
-                        diContainer = diContainer,
-                        navigator = navigator,
-                    )
-                }
-
-                entry<Route.Calendar> {
-                    val vm =
-                        viewModel<CalendarViewModel>(
-                            factory =
-                                getCalendarViewModelFactory(
-                                    diContainer = diContainer,
-                                )
-                        )
-                    CalendarScreen(
-                        vm = vm,
-                        navigator = navigator,
-                        modifier = Modifier.fillMaxSize(),
-                    )
-                }
-
-                entry<Route.MonthView> { monthDetail ->
-                    Log.d("NavHost", "Created a Month view composable ${monthDetail.date}")
-                    val month = LocalDate.parse(monthDetail.date)
-                    val vm =
-                        viewModel<MonthViewModel>(
-                            factory =
-                                getMonthViewModelFactory(
-                                    diContainer = diContainer,
-                                    month = month,
-                                    selectedDay = monthDetail.day,
-                                )
-                        )
-                    Log.d("NavHost", "Created a Month view composable $month")
-                    MonthViewScreen(vm = vm, modifier = Modifier, navigator = navigator)
-                }
-            },
+    val navigationState = rememberNavigationState()
+    val navigator = remember(navigationState) { Navigator(navigationState) }
+    val homeViewModel = viewModel<HomeViewModel>(
+        factory = getHomeViewModelFactory(diContainer),
     )
+    val stopwatchViewModel = viewModel<StopwatchViewModel>(
+        factory = getStopwatchViewModelFactory(diContainer),
+    )
+
+    val entries = navigationState.toDecoratedEntries(
+        entryProvider {
+            entry<AppRoute.Home> {
+                HomeScreen(
+                    vm = homeViewModel,
+                    navigator = navigator,
+                )
+            }
+            entry<AppRoute.Stopwatch> {
+                Stopwatch(
+                    vm = stopwatchViewModel,
+                    modifier = Modifier,
+                )
+            }
+            entry<AppRoute.MonthView> { route ->
+                val safeMonth = YearMonth.of(
+                    route.year,
+                    route.month.coerceIn(1, 12),
+                )
+                val safeDay = route.selectedDay.coerceIn(1, safeMonth.lengthOfMonth())
+                val monthViewModel = viewModel<MonthViewModel>(
+                    factory = getMonthViewModelFactory(
+                        diContainer = diContainer,
+                        month = safeMonth.atDay(1),
+                        selectedDay = safeDay,
+                    ),
+                )
+                MonthViewScreen(
+                    vm = monthViewModel,
+                    modifier = Modifier,
+                    navigator = navigator,
+                )
+            }
+        },
+    )
+
+    Scaffold(
+        bottomBar = {
+            NavigationBar {
+                NavigationBarItem(
+                    selected = navigationState.selectedTopLevelRoute == AppRoute.Home,
+                    onClick = { PageNavigator(navigator).select(AppRoute.Home) },
+                    icon = { Icon(homeIcon(), contentDescription = stringResource(R.string.home_tab)) },
+                    label = { Text(stringResource(R.string.home_tab)) },
+                )
+                NavigationBarItem(
+                    selected = navigationState.selectedTopLevelRoute == AppRoute.Stopwatch,
+                    onClick = { PageNavigator(navigator).select(AppRoute.Stopwatch) },
+                    icon = { Icon(watchIcon(), contentDescription = stringResource(R.string.stopwatch_tab)) },
+                    label = { Text(stringResource(R.string.stopwatch_tab)) },
+                )
+            }
+        },
+    ) { paddingValues ->
+        NavDisplay(
+            entries = entries,
+            onBack = { if (!navigator.goBack()) onExit() },
+            modifier = Modifier.padding(paddingValues),
+        )
+    }
 }

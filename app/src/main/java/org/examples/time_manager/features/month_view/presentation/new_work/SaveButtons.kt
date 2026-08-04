@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -23,9 +22,9 @@ import androidx.compose.ui.unit.dp
 import org.examples.time_manager.R
 import org.examples.time_manager.core.database.work.Work
 import org.examples.time_manager.features.month_view.MonthViewModel
-import org.examples.time_manager.features.root.data.RootScreenEvents.ModifyWorkEvent
-import org.examples.time_manager.features.root.data.RootScreenEvents.WriteWorkEvent
-import org.examples.time_manager.features.root.data.RootScreenEvents.WriteRangeWorkEvent
+import org.examples.time_manager.features.month_view.data.MonthViewIntent.ModifyWork
+import org.examples.time_manager.features.month_view.data.MonthViewIntent.WriteRangeWork
+import org.examples.time_manager.features.month_view.data.MonthViewIntent.WriteWork
 import org.examples.time_manager.features.root.presentation.home.utils.getIntFromTime
 import org.examples.time_manager.features.root.presentation.home.utils.localDateTime
 import org.examples.time_manager.features.root.presentation.home.utils.localDateTimeWithStartTime
@@ -54,8 +53,8 @@ fun SaveButtons(
             onClick = {
                 if (dates.size < 2) return@Button
                 onDismiss()
-                vm.onEvent(
-                    WriteRangeWorkEvent(
+                vm.onIntent(
+                    WriteRangeWork(
                         project = selectedProject,
                         dates = dates,
                         notes = notes,
@@ -81,8 +80,8 @@ fun SaveButtons(
         Button(
             onClick = {
                 onDismiss()
-                vm.onEvent(
-                    WriteWorkEvent(
+                vm.onIntent(
+                    WriteWork(
                         project = selectedProject,
                         hours = getIntFromTime(time),
                         date = startedJobDateTime,
@@ -109,11 +108,11 @@ fun SaveButtons(
             contentDescription = stringResource(R.string.delete_cd),
             tint = colors.onError,
             modifier = Modifier
-                .clip(RoundedCornerShape(15.dp))
+                .clip(MaterialTheme.shapes.medium)
                 .clickable {
                     onDismiss()
-                    vm.onEvent(
-                        ModifyWorkEvent(work = work, delete = true)
+                    vm.onIntent(
+                        ModifyWork(work = work, delete = true)
                     )
                 }
                 .background(colors.error)
@@ -125,11 +124,11 @@ fun SaveButtons(
             stringResource(R.string.save_changes_btn),
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(15.dp))
+                .clip(MaterialTheme.shapes.medium)
                 .clickable {
                     onDismiss()
-                    vm.onEvent(
-                        ModifyWorkEvent(
+                    vm.onIntent(
+                        ModifyWork(
                             work = work.copy(
                                 date = startedJobDateTime,
                                 project = selectedProject,

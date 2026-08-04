@@ -128,14 +128,14 @@ fun NewWorkInput(
         sheetState = rememberModalBottomSheetState(),
         containerColor = colors.surface,
         contentColor = colors.onSurface,
-        shape = RoundedCornerShape(30.dp),
+        shape = MaterialTheme.shapes.large,
         dragHandle = null,
-        scrimColor = Color.Black.copy(alpha = .5f),
+        scrimColor = MaterialTheme.colorScheme.scrim.copy(alpha = 0.5f),
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .clip(RoundedCornerShape(topStart = 10.dp, topEnd = 10.dp))
+                .clip(MaterialTheme.shapes.medium)
                 .background(colors.surface)
                 .padding(10.dp)
                 .heightIn(min = 500.dp)
@@ -199,7 +199,7 @@ fun NewWorkInput(
                     Text(stringResource(R.string.comment_label), color = colors.onSurface)
                 },
                 minLines = 3,
-                shape = RoundedCornerShape(8.dp),
+                shape = MaterialTheme.shapes.small,
                 modifier = Modifier.fillMaxWidth()
             )
 

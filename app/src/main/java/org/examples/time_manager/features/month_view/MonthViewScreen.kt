@@ -10,8 +10,8 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -19,15 +19,15 @@ import kotlinx.coroutines.launch
 import org.examples.time_manager.features.month_view.presentation.components.ListOfWorks
 import org.examples.time_manager.features.month_view.presentation.components.HeaderWidget
 import org.examples.time_manager.features.month_view.presentation.NewWorkInput
-import org.examples.time_manager.features.root.data.RootScreenEvents.ModifyWorkStateEvent
+import org.examples.time_manager.features.month_view.data.MonthViewIntent.ModifyWorkState
 import org.examples.time_manager.navigation.Navigator
 
 @Composable
 fun MonthViewScreen(vm: MonthViewModel, modifier: Modifier, navigator: Navigator) {
     val colors = MaterialTheme.colorScheme
-    val state by vm.state.collectAsState()
-    val works by state.workQueries.collectAsState(initial = emptyList())
-    val projects by state.projects.collectAsState(initial = emptyList())
+    val state by vm.state.collectAsStateWithLifecycle()
+    val works = state.workQueries
+    val projects = state.projects
 
     val listState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
@@ -45,7 +45,7 @@ fun MonthViewScreen(vm: MonthViewModel, modifier: Modifier, navigator: Navigator
         val index = state.selectedWork.selectedWork
         NewWorkInput(
             onDismiss = {
-                vm.onEvent(ModifyWorkStateEvent(show = false))
+                vm.onIntent(ModifyWorkState(show = false))
             },
             vm = vm,
             projects = projects,
@@ -64,9 +64,9 @@ fun MonthViewScreen(vm: MonthViewModel, modifier: Modifier, navigator: Navigator
         Spacer(modifier = Modifier.height(5.dp))
         ListOfWorks(
             showWork = { i: Int ->
-                vm.onEvent(ModifyWorkStateEvent(selected = i, show = true))
+                vm.onIntent(ModifyWorkState(selected = i, show = true))
             },
-            addWork = { vm.onEvent(ModifyWorkStateEvent(show = true)) },
+            addWork = { vm.onIntent(ModifyWorkState(show = true)) },
             works = works,
             projects = projects
         )

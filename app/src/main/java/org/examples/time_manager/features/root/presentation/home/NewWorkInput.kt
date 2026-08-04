@@ -65,7 +65,7 @@ fun NewWorkInput(
 ) {
     val colors = MaterialTheme.colorScheme
     val typography = MaterialTheme.typography
-    val sheetShape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+    val sheetShape = MaterialTheme.shapes.large
 
     var selectedProject by remember {
         mutableIntStateOf(
@@ -145,7 +145,7 @@ fun NewWorkInput(
         contentColor = colors.onSurface,
         shape = sheetShape,
         dragHandle = null,
-        scrimColor = Color.Black.copy(alpha = .5f),
+        scrimColor = MaterialTheme.colorScheme.scrim.copy(alpha = 0.5f),
     ) {
         Column(
             modifier = Modifier
@@ -231,7 +231,7 @@ fun NewWorkInput(
                     Text(stringResource(R.string.comment_placeholder), color = colors.onSurfaceVariant)
                 },
                 minLines = if (notesFocused || notes.isNotBlank()) 4 else 2,
-                shape = RoundedCornerShape(12.dp),
+                shape = MaterialTheme.shapes.medium,
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = colors.outlineVariant,
                     unfocusedBorderColor = colors.outlineVariant,

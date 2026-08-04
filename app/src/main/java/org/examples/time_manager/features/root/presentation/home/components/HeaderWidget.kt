@@ -29,7 +29,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -38,7 +37,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
@@ -76,8 +74,11 @@ import org.examples.time_manager.features.calendar.presentation.components.Month
 import org.examples.time_manager.features.calendar.presentation.components.MonthViewColors
 import org.examples.time_manager.features.root.HomeViewModel
 import org.examples.time_manager.features.root.data.HomeState
-import org.examples.time_manager.features.root.data.RootScreenEvents.CreateExcelDocumentEvent
-import org.examples.time_manager.features.root.data.RootScreenEvents.SelectDayEvent
+import org.examples.time_manager.features.root.data.HomeIntent.ChangeCalendarMonth
+import org.examples.time_manager.features.root.data.HomeIntent.CreateExcelDocument
+import org.examples.time_manager.features.root.data.HomeIntent.SelectDay
+import org.examples.time_manager.features.root.data.HomeIntent.ToggleCalendarProject
+import org.examples.time_manager.features.root.data.HomeIntent.ClearCalendarProjects
 import org.examples.time_manager.features.root.presentation.home.CalendarExpansion
 import org.examples.time_manager.features.root.presentation.home.MonthPickerDialog
 import org.examples.time_manager.features.utils.formatHoursFromSeconds
@@ -111,7 +112,7 @@ fun HeaderWidget(
             if (result.resultCode == android.app.Activity.RESULT_OK) {
                 val month = result.data?.getStringExtra("stringKey")?.toIntOrNull()
                 result.data?.data?.let { uri ->
-                    vm.onEvent(CreateExcelDocumentEvent(context, uri, month))
+                    vm.onIntent(CreateExcelDocument(uri.toString(), month))
                 }
             }
         }
@@ -134,7 +135,7 @@ fun HeaderWidget(
                 if (month >= 0) openSaveFilePicker(month)
                 showMonthPicker = false
             },
-            onEvent = vm::onEvent,
+            onIntent = vm::onIntent,
             projectValues = state.projects,
         )
     }
@@ -238,41 +239,38 @@ fun HeaderWidget(
                 monthColors = monthColors,
                 dayWorks = dayWorks,
                 selectedCalendarDate = selectedCalendarDate,
-                onSelectDay = { day -> vm.onEvent(SelectDayEvent(day)) },
+                onSelectDay = { day -> vm.onIntent(SelectDay(day)) },
                 onSelectCalendarDate = { date ->
                     onCalendarDateSelected(date)
-                    navigator.toMonthView(
-                        date = date.withDayOfMonth(1).toString(),
-                        day = date.dayOfMonth,
-                    )
+                    navigator.openMonth(date.year, date.monthValue, date.dayOfMonth)
                 },
                 onPrevMonth = {
-                    vm.onEvent(
-                        org.examples.time_manager.features.root.data.RootScreenEvents.ChangeCalendarMonthEvent(
+                    vm.onIntent(
+                        ChangeCalendarMonth(
                             state.calendarMonth.minusMonths(1),
                         ),
                     )
                 },
                 onNextMonth = {
-                    vm.onEvent(
-                        org.examples.time_manager.features.root.data.RootScreenEvents.ChangeCalendarMonthEvent(
+                    vm.onIntent(
+                        ChangeCalendarMonth(
                             state.calendarMonth.plusMonths(1),
                         ),
                     )
                 },
                 onViewMonth = {
-                    navigator.toMonthView(state.calendarMonth.atDay(1).toString(), 1)
+                    navigator.openMonth(state.calendarMonth.year, state.calendarMonth.monthValue, 1)
                 },
                 onSelectProject = { project ->
-                    vm.onEvent(
-                        org.examples.time_manager.features.root.data.RootScreenEvents.ToggleCalendarProjectEvent(
+                    vm.onIntent(
+                        ToggleCalendarProject(
                             project
                         ),
                     )
                 },
                 onClearProjects = {
-                    vm.onEvent(
-                        org.examples.time_manager.features.root.data.RootScreenEvents.ClearCalendarProjectsEvent,
+                    vm.onIntent(
+                        ClearCalendarProjects,
                     )
                 },
                 showCalendar = true,
@@ -330,7 +328,7 @@ private fun HomeHeaderSurface(
         modifier = modifier
             .fillMaxWidth()
             .then(if (showCalendar) Modifier.fillMaxSize() else Modifier)
-            .clip(RoundedCornerShape(bottomStart = 30.dp, bottomEnd = 30.dp))
+            .clip(MaterialTheme.shapes.large)
             .background(colors.primary)
             .then(dragModifier)
             .semantics {
@@ -504,7 +502,7 @@ private fun HomeHeaderBar(
             modifier = Modifier
                 .weight(1f)
                 .heightIn(min = 48.dp)
-                .clip(RoundedCornerShape(14.dp))
+                .clip(MaterialTheme.shapes.medium)
                 .clickable(
                     enabled = enabled,
                     onClick = onToggleCalendar,
@@ -656,7 +654,7 @@ private fun CalendarBody(
             monthColors = monthColors,
         )
         CategorySegments(
-            projects = state.projects.collectAsState(initial = emptyList()).value,
+            projects = state.projects,
             selectedProjects = state.calendarSelectedProjects,
             onSelectProject = onSelectProject,
             onClearSelection = onClearProjects,
@@ -705,15 +703,15 @@ private fun PullHandle(
                 indication = null,
             )
             .testTag("home-pull-handle"),
-        color = Color.Transparent,
-        shape = RoundedCornerShape(999.dp),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0f),
+        shape = MaterialTheme.shapes.extraLarge,
     ) {
         Box(contentAlignment = Alignment.Center) {
             Box(
                 modifier = Modifier
                     .width(36.dp)
                     .height(5.dp)
-                    .clip(RoundedCornerShape(999.dp))
+                    .clip(MaterialTheme.shapes.extraLarge)
                     .background(colors.onPrimary.copy(alpha = 0.52f)),
             )
         }
@@ -787,7 +785,7 @@ private fun WeekDayChip(
         ),
         modifier = modifier
             .height(if (compact) 72.dp else 80.dp)
-            .clip(RoundedCornerShape(if (isSelected) 22.dp else 18.dp))
+            .clip(MaterialTheme.shapes.large)
             .background(
                 if (isSelected) colors.primaryContainer else colors.surfaceContainerHigh.copy(
                     alpha = 0.34f

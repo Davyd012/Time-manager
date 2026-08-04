@@ -36,7 +36,7 @@ fun MonthDaysList(
         state = listState,
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(5.dp))
+            .clip(MaterialTheme.shapes.small)
 //            .background(colors.primaryContainer)
             .padding(5.dp),
     ) {

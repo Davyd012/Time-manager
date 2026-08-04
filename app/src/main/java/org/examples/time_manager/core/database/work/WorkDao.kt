@@ -17,6 +17,9 @@ interface WorkDao {
     @Query("SELECT * FROM work WHERE date >= :startOfDay AND date <= :endOfDay")
     fun getAllWorks(startOfDay: Long, endOfDay: Long): Flow<List<Work>>
 
+    @Query("SELECT * FROM work WHERE date >= :startOfDay AND date <= :endOfDay AND project IN (:ids)")
+    fun getAllWorksForProjects(startOfDay: Long, endOfDay: Long, ids: List<Int>): Flow<List<Work>>
+
     @Query("SELECT SUM(time) FROM work WHERE date >= :startOfDay AND date <= :endOfDay")
     fun getHoursByDay(startOfDay: Long, endOfDay: Long): Int
 

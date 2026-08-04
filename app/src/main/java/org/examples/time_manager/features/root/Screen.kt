@@ -1,56 +1,38 @@
 package org.examples.time_manager.features.root
 
-import android.os.Build
 import android.provider.Settings
-import androidx.annotation.RequiresApi
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.snap
 import androidx.compose.foundation.gestures.AnchoredDraggableState
 import androidx.compose.foundation.gestures.animateTo
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.platform.LocalContext
-import androidx.navigation3.runtime.NavBackStack
-import androidx.navigation3.runtime.NavKey
-import kotlinx.coroutines.flow.drop
 import androidx.compose.ui.res.stringResource
-import org.examples.time_manager.R
-import org.examples.time_manager.features.root.presentation.components.BottomBar
-import org.examples.time_manager.features.root.presentation.home.CalendarExpansion
-import org.examples.time_manager.navigation.PageNavigator
-import org.examples.time_manager.navigation.Route
+import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.padding
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.launch
+import org.examples.time_manager.features.root.presentation.home.CalendarExpansion
+import org.examples.time_manager.features.root.presentation.home.MainPage
+import org.examples.time_manager.navigation.Navigator
 
-@RequiresApi(Build.VERSION_CODES.O)
 @Composable
 fun HomeScreen(
     vm: HomeViewModel,
-    pageBackStack: NavBackStack<NavKey>,
-    content: @Composable (
-        PaddingValues,
-        AnchoredDraggableState<CalendarExpansion>,
-        (CalendarExpansion) -> Unit,
-    ) -> Unit,
+    navigator: Navigator,
 ) {
-    val pageNavigator = remember(pageBackStack) { PageNavigator(pageBackStack) }
-    val currentRoute = pageBackStack.lastOrNull() as? Route ?: Route.HomeRoute.HomeTab
-
-    val snackbarHostState = remember { SnackbarHostState() }
+    val state by vm.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
+    val message = state.messageResId?.let { stringResource(it) }
+    val scope = rememberCoroutineScope()
     val expansionState = rememberSaveable(
         saver = AnchoredDraggableState.Saver<CalendarExpansion>(),
-    ) {
-        AnchoredDraggableState(CalendarExpansion.Collapsed)
-    }
+    ) { AnchoredDraggableState(CalendarExpansion.Collapsed) }
     val animationsEnabled = remember(context) {
         Settings.Global.getFloat(
             context.contentResolver,
@@ -58,9 +40,14 @@ fun HomeScreen(
             1f,
         ) > 0f
     }
+    val snackbarHostState = remember { androidx.compose.material3.SnackbarHostState() }
+
+    LaunchedEffect(message) {
+        message?.let { snackbarHostState.showSnackbar(it) }
+    }
 
     fun setCalendarExpansion(target: CalendarExpansion) {
-        coroutineScope.launch {
+        scope.launch {
             expansionState.animateTo(
                 targetValue = target,
                 animationSpec = if (animationsEnabled) {
@@ -72,34 +59,16 @@ fun HomeScreen(
         }
     }
 
-    val createProjectMsg = stringResource(R.string.create_project_first_msg)
-    val actionLabel = stringResource(R.string.click_me_action)
-
-    LaunchedEffect(Unit) {
-        vm.snackbarMessage.drop(1).collect { snackbarMessage ->
-            snackbarMessage.let {
-                snackbarHostState.showSnackbar(
-                    message = createProjectMsg,
-                    actionLabel = actionLabel,
-                    duration = SnackbarDuration.Short
-                )
-        //            viewModel.showSnackbar(null) // Clear the message after showing it
-            }
-        }
-    }
-
-    Scaffold(
-        bottomBar = {
-            BottomBar(
-                navigator = pageNavigator,
-                currentRoute = currentRoute,
-                onHomeClick = {
-                    setCalendarExpansion(CalendarExpansion.Collapsed)
-                },
-            )
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-    ) {
-        content.invoke(it, expansionState, ::setCalendarExpansion)
+    androidx.compose.material3.Scaffold(
+        snackbarHost = { androidx.compose.material3.SnackbarHost(snackbarHostState) },
+    ) { paddingValues ->
+        MainPage(
+            vm = vm,
+            state = state,
+            modifier = androidx.compose.ui.Modifier.padding(paddingValues),
+            navigator = navigator,
+            expansionState = expansionState,
+            onSetCalendarExpansion = ::setCalendarExpansion,
+        )
     }
 }

@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
@@ -60,7 +59,7 @@ fun ListOfWorks(
     Column(
         modifier = Modifier
             .padding(top = 6.dp)
-            .clip(RoundedCornerShape(topEnd = 30.dp, topStart = 30.dp))
+            .clip(MaterialTheme.shapes.large)
             .fillMaxHeight()
             .background(colors.tertiaryContainer)
             .padding(10.dp)
@@ -91,7 +90,7 @@ fun ListOfWorks(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
                                 .padding(vertical = 5.dp)
-                                .clip(RoundedCornerShape(5.dp))
+                                .clip(MaterialTheme.shapes.small)
                                 .clickable {
                                     showWork(works.indexOf(work))
                                 }
@@ -103,7 +102,7 @@ fun ListOfWorks(
                                     .width(10.dp)
                                     .fillMaxHeight()
                                     .background(colors.secondaryContainer)
-                                    .clip(RoundedCornerShape(5.dp))
+                                    .clip(MaterialTheme.shapes.small)
                             )
                             Spacer(modifier = Modifier.width(10.dp))
                             Column {
@@ -113,7 +112,7 @@ fun ListOfWorks(
                                     style = style.titleMedium.copy(color = colors.secondaryContainer)
                                 )
                                 if (work.description.isNotEmpty()) Text(
-                                    work.description.toString(),
+                                    work.description,
                                     style = style.bodyMedium.copy(color = colors.secondaryContainer)
                                 )
                             }
@@ -186,7 +185,7 @@ fun NoJobsView(
             Spacer(modifier = Modifier.height(28.dp))
             Button(
                 onClick = addWork,
-                shape = RoundedCornerShape(24.dp),
+                shape = MaterialTheme.shapes.large,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = colors.secondary,
                     contentColor = colors.onSecondary,

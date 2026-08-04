@@ -3,7 +3,6 @@ package org.examples.time_manager.features.root.presentation.home.components
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -37,7 +36,7 @@ fun OutlinedButton(
         },
         textStyle = valueStyle.copy(color = colors.onSurface),
         leadingIcon = { Icon(icon, contentDescription = null, tint = colors.onSurfaceVariant) },
-        shape = RoundedCornerShape(12.dp),
+        shape = MaterialTheme.shapes.medium,
         readOnly = true,
         singleLine = true,
         colors = OutlinedTextFieldDefaults.colors(

@@ -23,7 +23,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
@@ -167,7 +166,7 @@ private fun EmptyWorksState(
             Spacer(modifier = Modifier.height(28.dp))
             Button(
                 onClick = addWork,
-                shape = RoundedCornerShape(24.dp),
+                shape = MaterialTheme.shapes.large,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = colors.secondary,
                     contentColor = colors.onSecondary,
@@ -205,7 +204,7 @@ private fun WorksListState(
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .clip(RoundedCornerShape(topEnd = 30.dp, topStart = 30.dp))
+            .clip(MaterialTheme.shapes.large)
             .background(colors.tertiaryContainer)
             .verticalScroll(rememberScrollState())
             .padding(10.dp)
@@ -238,7 +237,7 @@ private fun WorksListState(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier
                                 .padding(vertical = 5.dp)
-                                .clip(RoundedCornerShape(5.dp))
+                                .clip(MaterialTheme.shapes.small)
                                 .clickable { showWork(works.indexOf(work)) }
                                 .background(colors.onSecondaryContainer)
                                 .height(60.dp)

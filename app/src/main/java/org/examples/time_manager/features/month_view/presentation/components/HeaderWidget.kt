@@ -15,13 +15,13 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -31,15 +31,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.delay
 import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import org.examples.time_manager.R
-import org.examples.time_manager.App
 import org.examples.time_manager.features.components.MonthDaysList
 import org.examples.time_manager.features.month_view.MonthViewModel
 import org.examples.time_manager.features.month_view.data.MonthViewState
-import org.examples.time_manager.features.root.data.RootScreenEvents.SelectDayEvent
+import org.examples.time_manager.features.month_view.data.MonthViewIntent.CreateExcelDocument
+import org.examples.time_manager.features.month_view.data.MonthViewIntent.SelectDay
 import org.examples.time_manager.navigation.Navigator
 import org.examples.time_manager.ui.theme.arrowLeftIcon
 
@@ -65,10 +64,7 @@ fun HeaderWidget(
                 val data = result.data?.getStringExtra("stringKey")?.toInt()
                 Log.d("MonthPickerViewModel", "Got a result $data")
                 result.data?.data?.let { uri ->
-                    TODO("Create excel document function")
-//                    vm.onEvent(
-//                        CreateExcelDocumentEvent(context, uri, data)
-//                    )
+                    vm.onIntent(CreateExcelDocument(uri.toString()))
                 }
             }
         }
@@ -86,7 +82,7 @@ fun HeaderWidget(
     }
 
     if (showMonthPicker) {
-        TODO("Create month picker")
+        showMonthPicker = false
 //        MonthPickerDialog(
 //            onDismiss = { month: Int ->
 //                if (month >= 0) {
@@ -105,39 +101,27 @@ fun HeaderWidget(
         label = ""
     )
 
-    // Trigger navigation when expanded to full size
-    LaunchedEffect(isExpanded) {
-        if (isExpanded) {
-            // Small delay to let animation complete visually before navigating
-            delay(100)
-            navigator.toCalendar()
-        }
-    }
-
     Column(
         modifier = Modifier
             .clip(
-                if (isExpanded) RoundedCornerShape(0.dp) else RoundedCornerShape(
-                    bottomEnd = 30.dp,
-                    bottomStart = 30.dp
-                )
+                if (isExpanded) RectangleShape else MaterialTheme.shapes.large
             )
             .background(colors.primary)
-            .padding(top = App.statusBarHeight)
+            .statusBarsPadding()
             .padding(10.dp)
             .then(if (isExpanded) Modifier.height(animatedHeight) else Modifier),
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier
-                .clip(RoundedCornerShape(10.dp))
+                .clip(MaterialTheme.shapes.small)
                 .clickable {
                     isExpanded = true
                 }
         ) {
             Spacer(modifier = Modifier.width(7.dp))
             IconButton(
-                onClick = { navigator.close() },
+                onClick = { navigator.goBack() },
                 content = {
                     Icon(
                         arrowLeftIcon(),
@@ -161,8 +145,7 @@ fun HeaderWidget(
 //            )
 //            IconButton(
 //                onClick = {
-//                    TODO("Fix events")
-////                vm.onEvent(ModifyWorkStateEvent(show = true))
+////                vm.onIntent(MonthViewIntent.ModifyWorkState(show = true))
 //                },
 //                content = {
 //                    Icon(
@@ -179,7 +162,7 @@ fun HeaderWidget(
             listState,
             monthDays = state.dayPerMonth,
             selectedDay = state.selectedDay,
-            selectDay = { index: Int -> vm.onEvent(SelectDayEvent(index + 1)) }
+            selectDay = { index: Int -> vm.onIntent(SelectDay(index + 1)) }
         )
     }
 }

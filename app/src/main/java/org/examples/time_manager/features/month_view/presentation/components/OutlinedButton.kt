@@ -3,7 +3,6 @@ package org.examples.time_manager.features.month_view.presentation.components
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -31,7 +30,7 @@ fun OutlinedButton(
             Text(text, color = colors.onSurface)
         },
         leadingIcon = { Icon(icon, contentDescription = null, tint = colors.onSurface) },
-        shape = RoundedCornerShape(8.dp),
+        shape = MaterialTheme.shapes.small,
         readOnly = true,
         interactionSource = remember { MutableInteractionSource() }
             .also { interactionSource ->

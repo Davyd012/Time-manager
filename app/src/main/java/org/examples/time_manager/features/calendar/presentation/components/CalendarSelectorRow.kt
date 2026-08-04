@@ -42,9 +42,9 @@ fun CalendarSelectorRow(
     onNextMonth: () -> Unit,
     onViewMonth: () -> Unit,
     modifier: Modifier = Modifier,
-    monthColors: MonthViewColors = MonthViewColors.defaults(),
+    monthColors: MonthViewColors,
 ) {
-    val shape = RoundedCornerShape(28.dp)
+    val shape = MaterialTheme.shapes.large
     val currentTitle = formatMonthTitle(monthYear, "MMMM yyyy")
     val prevTitle = formatMonthTitle(monthYear.minusMonths(1), "MMM yyyy")
     val nextTitle = formatMonthTitle(monthYear.plusMonths(1), "MMM yyyy")
@@ -67,7 +67,7 @@ fun CalendarSelectorRow(
             /* Previous month text */
             Surface(
                 onClick = onPrevMonth,
-                color = Color.Transparent,
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0f),
                 shape = shape,
                 modifier = Modifier.weight(1f),
             ) {
@@ -112,7 +112,7 @@ fun CalendarSelectorRow(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier
-                        .clip(RoundedCornerShape(25.dp))
+                        .clip(MaterialTheme.shapes.medium)
                         .background(colors.primaryContainer)
                         .padding(horizontal = 12.dp, vertical = 10.dp)
                         .clickable(
@@ -136,7 +136,7 @@ fun CalendarSelectorRow(
             /* Next month text */
             Surface(
                 onClick = onNextMonth,
-                color = Color.Transparent,
+                color = MaterialTheme.colorScheme.surface.copy(alpha = 0f),
                 shape = shape,
                 modifier = Modifier.weight(1f),
             ) {
@@ -156,8 +156,9 @@ fun CalendarSelectorRow(
 }
 
 private fun formatMonthTitle(monthYear: YearMonth, pattern: String): String {
-    val formatter = DateTimeFormatter.ofPattern(pattern, Locale("nb", "NO"))
+    val norwegian = Locale.Builder().setLanguage("nb").setRegion("NO").build()
+    val formatter = DateTimeFormatter.ofPattern(pattern, norwegian)
     return monthYear.format(formatter).replaceFirstChar {
-        if (it.isLowerCase()) it.titlecase(Locale("nb", "NO")) else it.toString()
+        if (it.isLowerCase()) it.titlecase(norwegian) else it.toString()
     }
 }

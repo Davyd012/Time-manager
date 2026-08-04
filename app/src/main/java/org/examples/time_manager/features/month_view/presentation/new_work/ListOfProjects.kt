@@ -6,7 +6,6 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -44,7 +43,7 @@ fun ListOfProjects(
                 ),
                 modifier = paddingModifier
                     .clip(
-                        RoundedCornerShape(5.dp)
+                        MaterialTheme.shapes.small
                     )
                     .clickable { selectProject(it.id) }
                     .background(if (selectedProjects.contains(it.id)) colors.primaryContainer else colors.secondaryContainer)

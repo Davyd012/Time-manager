@@ -14,7 +14,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -26,13 +25,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringArrayResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.flow.Flow
 import org.examples.time_manager.core.database.project.Project
-import org.examples.time_manager.features.root.data.RootScreenEvents
+import org.examples.time_manager.features.root.data.HomeIntent
+import org.examples.time_manager.features.root.data.HomeIntent.ModifyExportProjects
 import org.examples.time_manager.features.root.presentation.home.new_work.ListOfProjects
 import java.time.LocalDate
 import kotlin.reflect.KFunction1
@@ -40,22 +41,17 @@ import kotlin.reflect.KFunction1
 @Composable
 fun MonthPickerDialog(
     onDismiss: (Int) -> Unit,
-    onEvent: KFunction1<RootScreenEvents, Unit>,
-    projectValues: Flow<List<Project>>
+    onIntent: KFunction1<HomeIntent, Unit>,
+    projectValues: List<Project>
 ) {
     val currentMonth = LocalDate.now().month.ordinal
 
-    val months = remember {
-        listOf(
-            "Januar", "Februar", "Mars", "April", "Mai", "Juni",
-            "Juli", "August", "September", "Oktober", "November", "Desember"
-        )
-    }
+    val months = stringArrayResource(org.examples.time_manager.R.array.months_array).toList()
 
     val state = rememberLazyListState(1200 + currentMonth - 2)
 
     var displayIndices by remember { mutableStateOf((0..7).toList()) }
-    val projects by projectValues.collectAsState(initial = emptyList())
+    val projects = projectValues
 
     LaunchedEffect(state) {
         snapshotFlow { state.firstVisibleItemIndex }
@@ -75,7 +71,7 @@ fun MonthPickerDialog(
 
     AlertDialog(
         onDismissRequest = { onDismiss(-1) },
-        title = { Text("Select Month") },
+        title = { Text(stringResource(org.examples.time_manager.R.string.select_month_title)) },
         text = {
             Column {
                 ListOfProjects(
@@ -86,7 +82,7 @@ fun MonthPickerDialog(
                         exportProjects =
                             if (selected != null) exportProjects.filter { it.id != projectId }
                             else exportProjects.plus(projects.first { it.id == projectId })
-                        onEvent(RootScreenEvents.ModifyExportProjects(projects.first { it.id == projectId }))
+                        onIntent(ModifyExportProjects(projects.first { it.id == projectId }))
                     },
                 )
                 LazyColumn(
@@ -130,7 +126,7 @@ fun MonthPickerDialog(
         confirmButton = {
             TextButton(onClick = {
                 onDismiss(lastSelectedIndex % 12)
-            }) { Text("OK") }
+            }) { Text(stringResource(org.examples.time_manager.R.string.ok)) }
         }
     )
 }

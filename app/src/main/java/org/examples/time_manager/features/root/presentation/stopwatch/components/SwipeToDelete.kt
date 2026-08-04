@@ -28,6 +28,7 @@ import org.examples.time_manager.ui.theme.deleteIcon
 import org.examples.time_manager.ui.theme.editIcon
 
 @OptIn(ExperimentalMaterial3Api::class)
+@Suppress("DEPRECATION")
 @Composable
 fun SwipeToDeleteContainer(
     animationDuration: Int = 500,

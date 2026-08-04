@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Surface
@@ -14,7 +15,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import org.examples.time_manager.App
 import org.examples.time_manager.R
 import org.examples.time_manager.ui.theme.arrowLeftIcon
 import org.examples.time_manager.ui.theme.dateRangeIcon
@@ -23,7 +23,7 @@ import org.examples.time_manager.ui.theme.dateRangeIcon
 fun MonthHeader(
     onClose: () -> Unit,
     modifier: Modifier = Modifier,
-    colors: MonthViewColors = MonthViewColors.defaults(),
+    colors: MonthViewColors,
 ) {
     Surface(
         modifier = modifier.fillMaxWidth(),
@@ -31,7 +31,7 @@ fun MonthHeader(
     ) {
         Row(
             modifier = Modifier
-                .padding(top = App.statusBarHeight)
+                .statusBarsPadding()
                 .padding(horizontal = 12.dp, vertical = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {

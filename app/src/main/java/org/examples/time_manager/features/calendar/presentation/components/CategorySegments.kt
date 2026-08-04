@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -41,7 +40,7 @@ fun CategorySegments(
     onSelectProject: (Project) -> Unit,
     onClearSelection: () -> Unit,
     modifier: Modifier = Modifier,
-    monthColors: MonthViewColors = MonthViewColors.defaults(),
+    monthColors: MonthViewColors,
 ) {
     if (projects.isEmpty()) {
         return
@@ -100,7 +99,7 @@ fun CategorySegments(
                     modifier =
                         Modifier
                             .height(48.dp),
-                    shape = RoundedCornerShape(25.dp),
+                    shape = MaterialTheme.shapes.large,
                     color =
                         if (isSelected) {
                             monthColors.chipBackground
@@ -153,7 +152,7 @@ fun CategorySegments(
 private fun SelectionCountBadge(
     count: Int,
     modifier: Modifier = Modifier,
-    monthColors: MonthViewColors = MonthViewColors.defaults(),
+    monthColors: MonthViewColors,
 ) {
     val borderColor =
         if (count > 0) {
@@ -171,7 +170,7 @@ private fun SelectionCountBadge(
 
     Surface(
         modifier = modifier,
-        shape = RoundedCornerShape(999.dp),
+        shape = MaterialTheme.shapes.extraLarge,
         color = backgroundColor,
         border = BorderStroke(1.dp, borderColor),
         tonalElevation = 1.dp,
@@ -199,7 +198,7 @@ private fun ClearSelectionButton(
 
     Surface(
         modifier = modifier,
-        shape = RoundedCornerShape(12.dp),
+        shape = MaterialTheme.shapes.medium,
         tonalElevation = 1.dp,
     ) {
         Box(

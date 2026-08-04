@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -48,7 +47,7 @@ fun ListOfProjects(
                 text = project.name,
                 style = typography.titleMedium.copy(color = contentColor),
                 modifier = Modifier
-                    .clip(RoundedCornerShape(12.dp))
+                    .clip(MaterialTheme.shapes.medium)
                     .clickable { selectProject(project.id) }
                     .background(backgroundColor)
                     .padding(horizontal = 14.dp, vertical = 10.dp),

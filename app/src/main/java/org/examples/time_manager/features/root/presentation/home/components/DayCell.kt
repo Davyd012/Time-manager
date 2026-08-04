@@ -12,8 +12,8 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.Typography
 import androidx.compose.material3.ripple
@@ -56,7 +56,7 @@ fun DayCell(
         label = "contentColor"
     )
     val borderColor by androidx.compose.animation.animateColorAsState(
-        targetValue = if (isSelected) colors.onPrimaryContainer.copy(alpha = 0.22f) else Color.Transparent,
+        targetValue = if (isSelected) colors.onPrimaryContainer.copy(alpha = 0.22f) else colors.surface.copy(alpha = 0f),
         animationSpec = tween(durationMillis = 160),
         label = "borderColor"
     )
@@ -92,7 +92,7 @@ fun DayCell(
         label = "elevation"
     )
 
-    val shape = RoundedCornerShape(radius)
+    val shape = MaterialTheme.shapes.medium
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,

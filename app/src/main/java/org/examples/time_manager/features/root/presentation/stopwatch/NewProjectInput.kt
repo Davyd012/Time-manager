@@ -25,15 +25,15 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import org.examples.time_manager.R
 import org.examples.time_manager.core.database.project.Project
-import org.examples.time_manager.features.root.data.RootScreenEvents
-import org.examples.time_manager.features.root.data.RootScreenEvents.NewProjectEvent
+import org.examples.time_manager.features.root.data.StopwatchIntent
+import org.examples.time_manager.features.root.data.StopwatchIntent.NewProject
 import org.examples.time_manager.features.root.presentation.newProject.InfoTextField
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NewProjectInput(
     onDismiss: () -> Unit,
-    onEvent: (event: RootScreenEvents) -> Unit,
+    onIntent: (event: StopwatchIntent) -> Unit,
     project: Project?
 ) {
     val colors = MaterialTheme.colorScheme
@@ -49,9 +49,9 @@ fun NewProjectInput(
         sheetState = rememberModalBottomSheetState(),
         containerColor = colors.surface,
         contentColor = colors.onSurface,
-        shape = RoundedCornerShape(30.dp),
+        shape = MaterialTheme.shapes.large,
         dragHandle = null,
-        scrimColor = Color.Black.copy(alpha = .5f),
+        scrimColor = MaterialTheme.colorScheme.scrim.copy(alpha = 0.5f),
     ) {
         Column(modifier = Modifier.padding(20.dp)) {
             Text(stringResource(R.string.new_project_title), style = texts.headlineSmall.copy(fontWeight = FontWeight.Bold))
@@ -80,7 +80,7 @@ fun NewProjectInput(
 
             Button(
                 onClick = {
-                    onEvent(NewProjectEvent(name = name, description = description, project = project))
+                    onIntent(NewProject(name = name, description = description, project = project))
                     onDismiss()
                 },
                 colors = ButtonDefaults.elevatedButtonColors()

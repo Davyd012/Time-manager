@@ -3,22 +3,19 @@ package org.examples.time_manager.core.service
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.core.content.ContextCompat
 import org.examples.time_manager.MainActivity
 import org.examples.time_manager.core.service.util.Constants.CANCEL_REQUEST_CODE
 import org.examples.time_manager.core.service.util.Constants.CLICK_REQUEST_CODE
 import org.examples.time_manager.core.service.util.Constants.RESUME_REQUEST_CODE
-import org.examples.time_manager.core.service.util.Constants.STOPWATCH_STATE
 import org.examples.time_manager.core.service.util.Constants.STOP_REQUEST_CODE
 
-@ExperimentalAnimationApi
 object ServiceHelper {
 
     private const val FLAG = PendingIntent.FLAG_IMMUTABLE
 
     fun clickPendingIntent(context: Context): PendingIntent {
         val clickIntent = Intent(context, MainActivity::class.java).apply {
-            putExtra(STOPWATCH_STATE, StopwatchState.Started.name)
         }
         return PendingIntent.getActivity(
             context, CLICK_REQUEST_CODE, clickIntent, FLAG
@@ -27,7 +24,7 @@ object ServiceHelper {
 
     fun stopPendingIntent(context: Context): PendingIntent {
         val stopIntent = Intent(context, StopwatchService::class.java).apply {
-            putExtra(STOPWATCH_STATE, StopwatchState.Stopped.name)
+            action = org.examples.time_manager.core.service.util.Constants.ACTION_SERVICE_STOP
         }
         return PendingIntent.getService(
             context, STOP_REQUEST_CODE, stopIntent, FLAG
@@ -36,7 +33,7 @@ object ServiceHelper {
 
     fun resumePendingIntent(context: Context): PendingIntent {
         val resumeIntent = Intent(context, StopwatchService::class.java).apply {
-            putExtra(STOPWATCH_STATE, StopwatchState.Started.name)
+            action = org.examples.time_manager.core.service.util.Constants.ACTION_SERVICE_START
         }
         return PendingIntent.getService(
             context, RESUME_REQUEST_CODE, resumeIntent, FLAG
@@ -45,7 +42,7 @@ object ServiceHelper {
 
     fun cancelPendingIntent(context: Context): PendingIntent {
         val cancelIntent = Intent(context, StopwatchService::class.java).apply {
-            putExtra(STOPWATCH_STATE, StopwatchState.Canceled.name)
+            action = org.examples.time_manager.core.service.util.Constants.ACTION_SERVICE_CANCEL
         }
         return PendingIntent.getService(
             context, CANCEL_REQUEST_CODE, cancelIntent, FLAG
@@ -55,7 +52,7 @@ object ServiceHelper {
     fun triggerForegroundService(context: Context, action: String) {
         Intent(context, StopwatchService::class.java).apply {
             this.action = action
-            context.startService(this)
+            ContextCompat.startForegroundService(context, this)
         }
     }
 }

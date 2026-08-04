@@ -1,53 +1,41 @@
 package org.examples.time_manager.navigation
 
-import androidx.navigation3.runtime.NavBackStack
-import androidx.navigation3.runtime.NavKey
-
-class Navigator(
-    private val backStack: NavBackStack<NavKey>
-) {
-    fun toCalendar() {
-        navigateTo(Route.Calendar)
+class Navigator(private val state: NavigationState) {
+    internal fun select(route: TopLevelRoute) {
+        state.select(route)
     }
 
-    fun toHome() {
-        while (backStack.size > 1) {
-            backStack.removeLast()
+    fun openMonth(year: Int, month: Int, selectedDay: Int) {
+        val route = AppRoute.MonthView(year, month, selectedDay)
+        val stack = state.homeStack
+        if (stack.lastOrNull() != route) stack.add(route)
+        state.select(AppRoute.Home)
+    }
+
+    fun goBack(): Boolean {
+        return when (state.selectedTopLevelRoute) {
+            AppRoute.Home -> {
+                if (state.homeStack.size > 1) {
+                    state.homeStack.removeAt(state.homeStack.lastIndex)
+                    true
+                } else {
+                    false
+                }
+            }
+            AppRoute.Stopwatch -> {
+                state.select(AppRoute.Home)
+                true
+            }
         }
     }
 
-    fun toMonthView(date: String, day: Int = 1) {
-        navigateTo(Route.MonthView(date = date, day = day))
-    }
-
-    fun close() {
-        if (backStack.size > 1) {
-            backStack.removeLast()
-        }
-    }
-
-    private fun navigateTo(route: Route) {
-        if (backStack.lastOrNull() != route) {
-            backStack.add(route)
-        }
+    fun returnHome() {
+        state.select(AppRoute.Home)
     }
 }
 
-class PageNavigator(
-    private val backStack: NavBackStack<NavKey>
-) {
-    fun changePage(route: Route) {
-        if (backStack.isEmpty()) {
-            backStack.add(route)
-            return
-        }
-
-        while (backStack.size > 1) {
-            backStack.removeLast()
-        }
-
-        if (backStack.lastOrNull() != route) {
-            backStack[backStack.lastIndex] = route
-        }
+class PageNavigator(private val navigator: Navigator) {
+    fun select(route: TopLevelRoute) {
+        navigator.select(route)
     }
 }

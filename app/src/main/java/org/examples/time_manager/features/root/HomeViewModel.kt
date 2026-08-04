@@ -1,404 +1,199 @@
 package org.examples.time_manager.features.root
 
-import android.util.Log
-import androidx.compose.animation.ExperimentalAnimationApi
-import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import org.examples.time_manager.App
-import org.examples.time_manager.core.database.work.Work
-import org.examples.time_manager.core.database.work.WorkDao
-import org.examples.time_manager.core.database.getDatabase
 import org.examples.time_manager.core.database.project.Project
-import org.examples.time_manager.core.database.project.ProjectDao
-import org.examples.time_manager.core.service.ServiceHelper
-import org.examples.time_manager.core.service.StopwatchService
-import org.examples.time_manager.core.service.util.Constants.ACTION_SERVICE_CANCEL
-import org.examples.time_manager.core.service.util.Constants.ACTION_SERVICE_START
-import org.examples.time_manager.core.service.util.Constants.ACTION_SERVICE_STOP
-import org.examples.time_manager.features.root.data.HomeState
-import org.examples.time_manager.features.root.data.ModifyWork
-import org.examples.time_manager.features.root.data.RootScreenEvents
-import org.examples.time_manager.features.root.data.TimerStates
+import org.examples.time_manager.R
+import org.examples.time_manager.core.database.work.Work
 import org.examples.time_manager.core.dates.DatesController
+import org.examples.time_manager.core.dates.models.DayModel
 import org.examples.time_manager.core.dates.models.Today
-import org.examples.time_manager.features.root.domain.ExcelController
+import org.examples.time_manager.core.repository.ProjectRepository
+import org.examples.time_manager.core.repository.SpreadsheetExporter
+import org.examples.time_manager.core.repository.StopwatchRepository
+import org.examples.time_manager.core.repository.WorkRepository
+import org.examples.time_manager.features.root.data.HomeUiState
+import org.examples.time_manager.features.root.data.ModifyWork
+import org.examples.time_manager.features.root.data.HomeIntent
+import org.examples.time_manager.features.root.data.TimerStates
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.YearMonth
-import java.time.temporal.TemporalAdjusters
+import java.time.format.TextStyle
+import java.util.Locale
 
-
+@OptIn(ExperimentalCoroutinesApi::class)
 class HomeViewModel(
-    private val stopwatchService: StopwatchService?,
+    private val workRepository: WorkRepository,
+    private val projectRepository: ProjectRepository,
+    private val stopwatchRepository: StopwatchRepository,
+    private val spreadsheetExporter: SpreadsheetExporter,
 ) : ViewModel() {
-    private val _state = MutableStateFlow(HomeState())
-    val state = _state.asStateFlow()
+    private val selectedDate = MutableStateFlow(LocalDate.now())
+    private val calendarMonth = MutableStateFlow(YearMonth.now())
+    private val selectedCalendarProjects = MutableStateFlow<List<Project>>(emptyList())
+    private val editor = MutableStateFlow(ModifyWork())
+    private val exportProjects = MutableStateFlow<List<Project>>(emptyList())
+    private val message = MutableStateFlow<Int?>(null)
 
-    private val _timeCount = MutableStateFlow(0.0)
-    val timeCount = _timeCount.asStateFlow()
-
-    private val _snackbarMessage = MutableStateFlow(false)
-    val snackbarMessage: StateFlow<Boolean> = _snackbarMessage.asStateFlow()
-
-    //    private val worksDao: WorkDao = getDatabase(null).workDao()
-//    private val projectDao: ProjectDao = getDatabase(null).projectDao()
-    private val worksDao: WorkDao = getDatabase(App.context).workDao()
-    private val projectDao: ProjectDao = getDatabase(App.context).projectDao()
-
-    private val excelController = ExcelController()
-
-    private val datesController = DatesController(worksDao = worksDao)
-
-    private var exportProjects = mutableStateOf(emptyList<Project>())
-
-    init {
-        viewModelScope.launch(Dispatchers.IO) {
-            Log.d("RootViewModel", "init")
-            Log.d("RootViewModel", "init ${stopwatchService == null}")
-
-            _timeCount.value = stopwatchService?.seconds?.intValue?.toDouble() ?: 0.0
-
-            val today = LocalDate.now()
-            val days = datesController.getDatesForCurrentMonth()
-            val calendarMonth = YearMonth.from(today)
-            val works = getWorksForCertainDate(today)
-
-            _state.update {
-                it.copy(
-                    dayPerMonth = days,
-                    calendarMonth = calendarMonth,
-                    calendarDays = days,
-                    workQueries = works,
-                    selectedDay = today.dayOfMonth,
-                    today = Today(
-                        weekDay = datesController.weekDays.elementAt(today.dayOfWeek.value - 1),
-                        day = today.dayOfMonth,
-                        month = today.month.name,
-                        year = today.year
-                    ),
-                    selectedProject = stopwatchService?.project ?: 1,
-                    counting = stopwatchService?.running ?: false
-                )
-            }
-
-            val projects = projectDao.getAllProjects()
-//            val projects = projectDao.getAllProjects().stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
-            _state.update { it.copy(projects = projects) }
-
-            runStopwatch()
-            Log.d("HomeViewModel", "Started a stopwatch from the init")
-        }
+    private val projects = projectRepository.observeAll()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    private val works = selectedDate.flatMapLatest(workRepository::observeForDay)
+    private val calendarWorks = combine(calendarMonth, selectedCalendarProjects) { month, selected ->
+        month to selected.map(Project::id)
+    }.flatMapLatest { (month, ids) -> workRepository.observeForMonth(month, ids) }
+    private val calendarDays = combine(calendarMonth, calendarWorks) { month, works ->
+        month.toDayModels(works)
     }
 
-    private fun getWorksForCertainDate(date: LocalDate): Flow<List<Work>> {
-        val (startOfDay, endOfDay) = datesController.getBoundariesOfDay(date)
-        val works = worksDao.getAllWorks(startOfDay, endOfDay)
-        return works
+    private val baseState = combine(
+        selectedDate,
+        calendarMonth,
+        selectedCalendarProjects,
+        projects,
+        works,
+    ) { date, month, selectedProjects, projectList, workList ->
+        HomeBase(date, month, selectedProjects, projectList, workList)
     }
 
-    @OptIn(ExperimentalAnimationApi::class)
-    fun onEvent(event: RootScreenEvents) {
+    val state = combine(
+        baseState,
+        calendarDays,
+        stopwatchRepository.state,
+        editor,
+        message,
+    ) { base, days, stopwatch, modifyWork, stateMessage ->
+        HomeUiState(
+            isLoading = false,
+            messageResId = stateMessage,
+            counting = stopwatch.isRunning,
+            elapsedSeconds = stopwatch.elapsedSeconds,
+            dayPerMonth = days,
+            selectedDay = base.date.dayOfMonth,
+            selectedProject = stopwatch.selectedProject,
+            selectedWork = modifyWork,
+            projects = base.projects,
+            workQueries = base.works,
+            today = base.date.toToday(),
+            calendarMonth = base.month,
+            calendarDays = days,
+            calendarSelectedProjects = base.selectedProjects,
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
+
+    fun onIntent(event: HomeIntent) {
         when (event) {
-            is RootScreenEvents.ModifyWorkEvent -> viewModelScope.launch(Dispatchers.IO) {
-                if (event.delete) {
-                    worksDao.delete(event.work)
-                } else worksDao.upsert(event.work)
-
-                val days = datesController.getDatesForCurrentMonth()
-                _state.update {
-                    it.copy(
-                        dayPerMonth = days,
-                        calendarDays = getCalendarDays(it.calendarMonth, it.calendarSelectedProjects),
-                    )
-                }
-            }
-
-            is RootScreenEvents.ModifyWorkStateEvent -> viewModelScope.launch(Dispatchers.IO) {
-                _state.update {
-                    it.copy(
-                        selectedWork = ModifyWork(
-                            selectedWork = event.selected,
-                            showModal = event.show
-                        )
-                    )
-                }
-            }
-
-            is RootScreenEvents.NewProjectEvent -> viewModelScope.launch(Dispatchers.IO) {
-                Log.d("HomeViewModel", "New project")
-                val newProject = Project(
-                    name = event.name,
-                    description = event.description
-                ).takeIf { event.project == null } ?: event.project!!.copy(
-                    name = event.name,
-                    description = event.description
-                )
-                projectDao.upsert(newProject)
-            }
-
-            is RootScreenEvents.SelectDayEvent -> viewModelScope.launch(Dispatchers.IO) {
-                Log.d("HomeViewModel", "Selecting another day")
-                val works = getWorksForCertainDate(LocalDate.now().withDayOfMonth(event.value))
-                _state.update {
-                    it.copy(selectedDay = event.value, workQueries = works)
-                }
-            }
-
-            is RootScreenEvents.UpdateTimerEvent -> when (event.type) {
-                TimerStates.StartStopwatch -> viewModelScope.launch(Dispatchers.IO) {
-                    Log.d("HomeViewModel", "Starting a stopwatch")
-                    val count = state.value.projects.firstOrNull()?.isEmpty() ?: false
-
-                    if (count) {
-                        Log.d("HomeViewModel", "Starting a service11111")
-                        _snackbarMessage.value = !snackbarMessage.value
-                        return@launch
-                    }
-
-                    Log.d("HomeViewModel", "Starting a service")
-                    ServiceHelper.triggerForegroundService(
-                        context = App.context, action = ACTION_SERVICE_START
-                    )
-
-                    _state.update {
-                        it.copy(counting = true)
-                    }
-                    runStopwatch()
-                }
-
-                TimerStates.PauseStopwatch -> viewModelScope.launch(Dispatchers.IO) {
-                    _state.update {
-                        it.copy(
-                            counting = false,
-                        )
-                    }
-
-                    ServiceHelper.triggerForegroundService(
-                        context = App.context, action = ACTION_SERVICE_STOP
-                    )
-                }
-
-                TimerStates.SaveResult -> viewModelScope.launch(Dispatchers.IO) {
-                    Log.d("HomeViewModel", "Saving result")
-                    val count = state.value.projects.first()
-                    if (count.isEmpty()) {
-                        _snackbarMessage.value = !snackbarMessage.value
-                        return@launch
-                    }
-                    if (timeCount.value == 0.0) return@launch
-                    ServiceHelper.triggerForegroundService(
-                        context = App.context, action = ACTION_SERVICE_CANCEL
-                    )
-
-                    val time = timeCount.value.toInt()
-                    _timeCount.update { 0.0 }
-                    val newMonthDays = datesController.updateHoursForDay(
-                        state.value.dayPerMonth,
-                        state.value.selectedDay - 1,
-                        time
-                    )
-                    _state.update {
-                        it.copy(
-                            dayPerMonth = newMonthDays,
-                            calendarDays = getCalendarDays(it.calendarMonth, it.calendarSelectedProjects),
-                            counting = false,
-                        )
-                    }
-                    val date = LocalDateTime.now().minusSeconds(time.toLong())
-
-                    worksDao.upsert(
-                        Work(
-                            description = "",
-                            date = date,
-                            project = state.value.selectedProject,
-                            task = 0,
-                            time = time,
-                        )
-                    )
-                }
-            }
-
-            is RootScreenEvents.WriteWorkEvent -> viewModelScope.launch(Dispatchers.IO) {
-                Log.d("HomeViewModel", "Saving result ${event.project}")
-                val count = state.value.projects.first()
-                if (count.isEmpty()) {
-                    _snackbarMessage.value = !snackbarMessage.value
-                    return@launch
-                }
-                if (event.hours == 0) {
-                    _snackbarMessage.value = !snackbarMessage.value
-                    return@launch
-                }
-
-                val dayOfMonth = event.date.dayOfMonth
-//                val date = datesController.getDate(event.date)
-                if (event.date.month == LocalDate.now().month && event.date.year == LocalDate.now().year) {
-                    val newMonthDays = datesController.updateHoursForDay(
-                        state.value.dayPerMonth,
-                        dayOfMonth - 1,
-                        event.hours
-                    )
-                    _state.update {
-                        it.copy(
-                            dayPerMonth = newMonthDays,
-                            calendarDays = getCalendarDays(it.calendarMonth, it.calendarSelectedProjects),
-                        )
-                    }
-                }
-                Log.d("HomeViewModel", "Saving result ${event.date}")
-                worksDao.upsert(
-                    Work(
-                        description = event.notes,
-                        date = event.date,
-                        project = event.project,
-                        task = 0,
-                        time = event.hours,
-                    )
+            is HomeIntent.NewProject -> viewModelScope.launch(Dispatchers.IO) {
+                projectRepository.upsert(
+                    event.project?.copy(name = event.name, description = event.description)
+                        ?: Project(name = event.name, description = event.description),
                 )
             }
-
-            is RootScreenEvents.SelectProjectEvent -> viewModelScope.launch(Dispatchers.IO) {
-                _state.update { it.copy(selectedProject = event.value) }
-                if (stopwatchService != null) {
-                    stopwatchService.project = event.value
-                }
+            is HomeIntent.SelectDay -> {
+                val day = event.value.coerceIn(1, selectedDate.value.lengthOfMonth())
+                selectedDate.value = selectedDate.value.withDayOfMonth(day)
             }
-
-            is RootScreenEvents.CreateExcelDocumentEvent -> viewModelScope.launch(Dispatchers.IO) {
-                Log.d("RootViewModel", "Launching a creating document activity")
-                val dayPerMonth = if (event.month != null) {
-                    val today =
-                        LocalDate.now().withMonth(event.month)
-                    val firstDayOfMonth = today.with(TemporalAdjusters.firstDayOfMonth())
-                    val lastDayOfMonth = today.with(TemporalAdjusters.lastDayOfMonth())
-
-                    datesController.getDatesForAMonth(
-                        firstDayOfMonth,
-                        lastDayOfMonth,
-                        projects = exportProjects.value
-                    )
-                } else datesController.getDatesForCurrentMonth(projects = exportProjects.value)
-
-                excelController.createExcelFile(
-                    context = event.context,
-                    uri = event.uri,
-                    dayPerMonth = dayPerMonth
+            is HomeIntent.WriteWork -> writeWork(event.project, event.hours, event.date, event.notes)
+            is HomeIntent.WriteRangeWork -> writeRange(event)
+            is HomeIntent.ModifyWork -> viewModelScope.launch(Dispatchers.IO) {
+                if (event.delete) workRepository.delete(event.work) else workRepository.upsert(event.work)
+            }
+            is HomeIntent.ModifyWorkState -> editor.value = ModifyWork(event.selected, event.show)
+            is HomeIntent.ModifyExportProjects -> exportProjects.update { selected ->
+                if (event.project in selected) selected - event.project else selected + event.project
+            }
+            is HomeIntent.CreateExcelDocument -> viewModelScope.launch(Dispatchers.IO) {
+                val month = event.month?.let { YearMonth.of(LocalDate.now().year, it + 1) }
+                    ?: state.value.calendarMonth
+                val selectedIds = exportProjects.value.map(Project::id)
+                val monthWorks = workRepository.observeForMonth(month, selectedIds).first()
+                spreadsheetExporter.export(
+                    event.uri,
+                    month.toDayModels(monthWorks),
                 )
                 exportProjects.value = emptyList()
             }
-
-            is RootScreenEvents.ModifyExportProjects -> viewModelScope.launch(Dispatchers.IO) {
-                val selected = exportProjects.value.firstOrNull { it.id == event.project.id }
-                exportProjects.value =
-                    if (selected != null) exportProjects.value.filter { it.id != event.project.id }
-                    else exportProjects.value.plus(event.project)
+            is HomeIntent.ModifyProject -> viewModelScope.launch(Dispatchers.IO) {
+                if (event.delete) projectRepository.delete(event.project)
+                else projectRepository.upsert(event.project)
             }
-
-            is RootScreenEvents.WriteRangeWorkEvent -> viewModelScope.launch(Dispatchers.IO) {
-                Log.d("RootViewModel", "Launching a write range event")
-
-                val date = LocalDateTime.now()
-
-                var newInfoForCurrentMonth = state.value.dayPerMonth
-                for (day in event.dates) {
-                    if (listOf(5, 6).contains(day.dayOfWeek.ordinal)) continue
-                    val time = if (day.dayOfWeek.ordinal == 4) (5.5 * 3600).toInt() else 8 * 3600
-                    if (day.year == date.year && day.month == date.month) {
-                        newInfoForCurrentMonth = datesController.updateHoursForDay(
-                            newInfoForCurrentMonth,
-                            day.dayOfMonth - 1,
-                            time
-                        )
-                    }
-                    worksDao.upsert(
-                        Work(
-                            description = event.notes,
-                            date = day.withHour(7)
-                                .withMinute(0),
-                            project = event.project,
-                            task = 0,
-                            time = time,
-                        )
-                    )
-                }
-
-                Log.d("RootViewModel", "Done inserting new work events")
-                _state.update {
-                    it.copy(
-                        dayPerMonth = newInfoForCurrentMonth,
-                        calendarDays = getCalendarDays(it.calendarMonth, it.calendarSelectedProjects),
-                    )
-                }
-                Log.d("RootViewModel", "Done updating the state")
+            is HomeIntent.ChangeCalendarMonth -> calendarMonth.value = event.month
+            is HomeIntent.ToggleCalendarProject -> selectedCalendarProjects.update { selected ->
+                if (event.project in selected) selected - event.project else selected + event.project
             }
-
-            is RootScreenEvents.ModifyProjectEvent -> viewModelScope.launch(Dispatchers.IO) {
-                if (event.delete) {
-                    projectDao.delete(event.project)
-                    return@launch
-                }
-
-            }
-
-            is RootScreenEvents.ChangeCalendarMonthEvent -> viewModelScope.launch(Dispatchers.IO) {
-                val days = getCalendarDays(event.month, state.value.calendarSelectedProjects)
-                _state.update {
-                    it.copy(
-                        calendarMonth = event.month,
-                        calendarDays = days,
-                    )
-                }
-            }
-
-            is RootScreenEvents.ToggleCalendarProjectEvent -> viewModelScope.launch(Dispatchers.IO) {
-                val selectedProjects = state.value.calendarSelectedProjects.let { selected ->
-                    if (event.project in selected) selected.filterNot { it.id == event.project.id }
-                    else selected + event.project
-                }
-                val days = getCalendarDays(state.value.calendarMonth, selectedProjects)
-                _state.update {
-                    it.copy(
-                        calendarSelectedProjects = selectedProjects,
-                        calendarDays = days,
-                    )
-                }
-            }
-
-            RootScreenEvents.ClearCalendarProjectsEvent -> viewModelScope.launch(Dispatchers.IO) {
-                val days = getCalendarDays(state.value.calendarMonth, emptyList())
-                _state.update {
-                    it.copy(
-                        calendarSelectedProjects = emptyList(),
-                        calendarDays = days,
-                    )
-                }
-            }
+            HomeIntent.ClearCalendarProjects -> selectedCalendarProjects.value = emptyList()
         }
     }
 
-    private fun getCalendarDays(month: YearMonth, projects: List<Project>): List<org.examples.time_manager.core.dates.models.DayModel> {
-        return datesController.getDatesForAMonth(
-            firstDayOfMonth = month.atDay(1),
-            lastDayOfMonth = month.atEndOfMonth(),
-            projects = projects.takeIf { it.isNotEmpty() },
+    private fun saveStopwatch() {
+        val snapshot = stopwatchRepository.state.value
+        if (snapshot.elapsedSeconds == 0) return
+        stopwatchRepository.cancel()
+        writeWork(
+            project = snapshot.selectedProject,
+            hours = snapshot.elapsedSeconds,
+            date = LocalDateTime.now().minusSeconds(snapshot.elapsedSeconds.toLong()),
+            notes = "",
         )
     }
 
-    private suspend fun runStopwatch() {
-        while (state.value.counting) {
-            delay(100L)
-            _timeCount.update { it + 0.1 }
+    private fun writeWork(project: Int, hours: Int, date: LocalDateTime, notes: String) {
+        if (state.value.projects.isEmpty() || hours == 0) {
+            showMessage(R.string.create_project_and_register_msg)
+            return
+        }
+        viewModelScope.launch(Dispatchers.IO) {
+            workRepository.upsert(Work(description = notes, date = date, project = project, time = hours))
+            editor.value = ModifyWork()
         }
     }
+
+    private fun writeRange(event: HomeIntent.WriteRangeWork) {
+        viewModelScope.launch(Dispatchers.IO) {
+            event.dates.filter { it.dayOfWeek.value < 6 }.forEach { date ->
+                val seconds = if (date.dayOfWeek.value == 5) (5.5 * 3600).toInt() else 8 * 3600
+                workRepository.upsert(
+                    Work(description = event.notes, date = date.withHour(7), project = event.project, time = seconds),
+                )
+            }
+        }
+    }
+
+    private fun showMessage(message: Int) {
+        this.message.value = message
+    }
 }
+
+private data class HomeBase(
+    val date: LocalDate,
+    val month: YearMonth,
+    val selectedProjects: List<Project>,
+    val projects: List<Project>,
+    val works: List<Work>,
+)
+
+private fun YearMonth.toDayModels(works: List<Work>): List<DayModel> {
+    val hours = works.groupBy { it.date.toLocalDate() }.mapValues { (_, entries) -> entries.sumOf { it.time } }
+    return (1..lengthOfMonth()).map { day ->
+        val date = atDay(day)
+        DayModel(date.dayOfWeek.name, date, hours[date] ?: 0)
+    }
+}
+
+private fun LocalDate.toToday() = Today(
+    weekDay = dayOfWeek.getDisplayName(TextStyle.FULL, Locale.Builder().setLanguage("nb").setRegion("NO").build()),
+    day = dayOfMonth,
+    month = month.getDisplayName(TextStyle.FULL, Locale.Builder().setLanguage("nb").setRegion("NO").build()),
+    year = year,
+)
