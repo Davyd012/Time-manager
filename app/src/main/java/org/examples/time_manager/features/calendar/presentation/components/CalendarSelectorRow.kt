@@ -1,30 +1,20 @@
 package org.examples.time_manager.features.calendar.presentation.components
 
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.ripple
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import org.examples.time_manager.R
@@ -44,106 +34,107 @@ fun CalendarSelectorRow(
     modifier: Modifier = Modifier,
     monthColors: MonthViewColors,
 ) {
-    val shape = MaterialTheme.shapes.large
     val currentTitle = formatMonthTitle(monthYear, "MMMM yyyy")
     val prevTitle = formatMonthTitle(monthYear.minusMonths(1), "MMM yyyy")
     val nextTitle = formatMonthTitle(monthYear.plusMonths(1), "MMM yyyy")
-
     val colors = MaterialTheme.colorScheme
 
-    Row(
-        modifier = Modifier
+    BoxWithConstraints(
+        modifier = modifier
+            .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
     ) {
-
-        /* Previous month text */
-        Surface(
-            onClick = onPrevMonth,
-            color = MaterialTheme.colorScheme.surface.copy(alpha = 0f),
-            shape = shape,
-            modifier = Modifier.weight(1f),
-        ) {
-            Text(
-                text = prevTitle,
-                color = colors.onSurface.copy(alpha = .5f),
-                fontWeight = FontWeight.Medium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                textAlign = TextAlign.Start,
-                modifier = Modifier
-                    .padding(horizontal = 8.dp, vertical = 6.dp),
-            )
-        }
-
-        /* Center controls */
+        val compact = maxWidth < 360.dp
         Row(
-            modifier = Modifier
-                .weight(2.5f),
+            modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center,
         ) {
-
-            IconButton(
-                onClick = onPrevMonth,
-                modifier = Modifier.size(36.dp),
-            ) {
-                Icon(
-                    imageVector = arrowLeftIcon(),
-                    contentDescription = stringResource(R.string.previous_month_cd),
-                    tint = colors.onSurface,
+            if (!compact) {
+                MonthLabel(
+                    text = prevTitle,
+                    onClick = onPrevMonth,
+                    modifier = Modifier.weight(1f),
                 )
             }
 
-            val interactionSource = remember { MutableInteractionSource() }
-
-            Text(
-                text = currentTitle,
-                color = colors.primary,
-                fontWeight = FontWeight.W700,
-                textAlign = TextAlign.Center,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier
-                    .clip(MaterialTheme.shapes.medium)
-                    .background(colors.primaryContainer)
-                    .padding(horizontal = 12.dp, vertical = 10.dp)
-                    .clickable(
-                        interactionSource = interactionSource,
-                        indication = ripple(bounded = false),
-                    ) { onViewMonth() },
-            )
-
-            IconButton(
-                onClick = onNextMonth,
-                modifier = Modifier.size(36.dp),
+            Row(
+                modifier = Modifier.weight(if (compact) 1f else 2.5f),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
             ) {
-                Icon(
-                    imageVector = arrowRightIcon(),
-                    contentDescription = stringResource(R.string.next_month_cd),
-                    tint = colors.onSurface,
+                IconButton(
+                    onClick = onPrevMonth,
+                    modifier = Modifier.size(48.dp),
+                ) {
+                    androidx.compose.material3.Icon(
+                        imageVector = arrowLeftIcon(),
+                        contentDescription = stringResource(R.string.previous_month_cd),
+                        tint = colors.onSurface,
+                    )
+                }
+
+                Surface(
+                    onClick = onViewMonth,
+                    color = colors.primaryContainer,
+                    contentColor = colors.onPrimaryContainer,
+                    shape = MaterialTheme.shapes.medium,
+                ) {
+                    Text(
+                        text = currentTitle,
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                    )
+                }
+
+                IconButton(
+                    onClick = onNextMonth,
+                    modifier = Modifier.size(48.dp),
+                ) {
+                    Icon(
+                        imageVector = arrowRightIcon(),
+                        contentDescription = stringResource(R.string.next_month_cd),
+                        tint = colors.onSurface,
+                    )
+                }
+            }
+
+            if (!compact) {
+                MonthLabel(
+                    text = nextTitle,
+                    onClick = onNextMonth,
+                    endAligned = true,
+                    modifier = Modifier.weight(1f),
                 )
             }
         }
+    }
+}
 
-        /* Next month text */
-        Surface(
-            onClick = onNextMonth,
-            color = MaterialTheme.colorScheme.surface.copy(alpha = 0f),
-            shape = shape,
-            modifier = Modifier.weight(1f),
-        ) {
-            Text(
-                text = nextTitle,
-                color = colors.onSurface.copy(alpha = .5f),
-                fontWeight = FontWeight.Medium,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                textAlign = TextAlign.End,
-                modifier = Modifier
-                    .padding(horizontal = 8.dp, vertical = 6.dp),
-            )
-        }
+@Composable
+private fun MonthLabel(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    endAligned: Boolean = false,
+) {
+    Surface(
+        onClick = onClick,
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0f),
+        shape = MaterialTheme.shapes.large,
+        modifier = modifier,
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = if (endAligned) androidx.compose.ui.text.style.TextAlign.End
+            else androidx.compose.ui.text.style.TextAlign.Start,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp),
+        )
     }
 }
 

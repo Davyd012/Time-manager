@@ -73,8 +73,8 @@ fun MonthGrid(
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = MaterialTheme.shapes.large,
-        color = MaterialTheme.colorScheme.primary,
-        tonalElevation = 2.dp,
+        color = colors.primary,
+        tonalElevation = 0.dp,
         border = BorderStroke(1.dp, monthColors.border),
     ) {
         Column(
@@ -237,8 +237,8 @@ private fun DayCell(
             ) {
                 Text(
                     text = cell.dayOfMonth.toString(),
+                    style = texts.titleMedium,
                     color = monthColors.text,
-                    fontSize = 18.sp,
                     fontWeight = FontWeight.SemiBold,
                 )
                 val hoursCountText = remember(hours) {
@@ -258,15 +258,13 @@ private fun DayCell(
                 }
                 Text(
                     text = hoursCountText,
-                    style = texts.labelMedium.copy(
-                        color =
-                            if (hours == 0.0) {
-                                colors.secondary.copy(alpha = .4f)
-                            } else {
-                                colors.secondary
-                            },
-                        fontWeight = FontWeight.Medium,
-                    ),
+                    style = texts.labelMedium,
+                    color = if (hours == 0.0) {
+                        colors.onSurfaceVariant.copy(alpha = .6f)
+                    } else {
+                        colors.secondary
+                    },
+                    fontWeight = FontWeight.Medium,
                 )
             }
             if (isSelected) {

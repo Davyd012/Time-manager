@@ -81,6 +81,13 @@ Ny måned, nye muligheter.</string>
     <string name="open_calendar_action">Åpne kalender</string>
     <string name="close_calendar_action">Lukk kalender</string>
     <string name="export_action">Eksporter timer</string>
+    <string name="project_filter_cd">Filtrer prosjekter</string>
+    <string name="project_date_cd">Åpne månedsvisning</string>
+    <string name="project_filter_close_cd">Lukk prosjektfilter</string>
+    <string name="project_filter_title">Velg prosjekter</string>
+    <string name="project_filter_search_hint">Søk prosjekter…</string>
+    <string name="project_filter_select_all">Velg alle</string>
+    <string name="project_hours">%1$s t</string>
     <string name="input_tape_text_title">Skriv inn tekst</string>
     <string name="tape_text_hint">Tekst</string>
 </resources>

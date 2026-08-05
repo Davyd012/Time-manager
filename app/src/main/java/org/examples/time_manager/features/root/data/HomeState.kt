@@ -22,6 +22,7 @@ data class HomeUiState(
     val calendarMonth: YearMonth = YearMonth.now(),
     val calendarDays: List<DayModel> = emptyList(),
     val calendarSelectedProjects: List<Project> = emptyList(),
+    val calendarProjectHours: Map<Int, Double> = emptyMap(),
 )
 
 typealias HomeState = HomeUiState

@@ -17,5 +17,6 @@ sealed interface HomeIntent {
     data class ModifyProject(val project: Project, val delete: Boolean = false) : HomeIntent
     data class ChangeCalendarMonth(val month: YearMonth) : HomeIntent
     data class ToggleCalendarProject(val project: Project) : HomeIntent
+    data class SetCalendarProjects(val projects: List<Project>) : HomeIntent
     data object ClearCalendarProjects : HomeIntent
 }

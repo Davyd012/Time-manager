@@ -100,3 +100,8 @@ fun shareIcon(): ImageVector {
 fun workIcon(): ImageVector {
     return ImageVector.vectorResource(id = R.drawable.baseline_work_outline_24)
 }
+
+@Composable
+fun filterIcon(): ImageVector {
+    return ImageVector.vectorResource(id = R.drawable.outline_filter_alt_24)
+}

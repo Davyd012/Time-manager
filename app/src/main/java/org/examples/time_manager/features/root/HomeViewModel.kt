@@ -27,6 +27,7 @@ import org.examples.time_manager.features.root.data.HomeUiState
 import org.examples.time_manager.features.root.data.ModifyWork
 import org.examples.time_manager.features.root.data.HomeIntent
 import org.examples.time_manager.features.root.data.TimerStates
+import org.examples.time_manager.features.calendar.presentation.components.projectHoursById
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.YearMonth
@@ -50,11 +51,15 @@ class HomeViewModel(
     private val projects = projectRepository.observeAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     private val works = selectedDate.flatMapLatest(workRepository::observeForDay)
+    private val calendarMonthWorks = calendarMonth.flatMapLatest(workRepository::observeForMonth)
     private val calendarWorks = combine(calendarMonth, selectedCalendarProjects) { month, selected ->
         month to selected.map(Project::id)
     }.flatMapLatest { (month, ids) -> workRepository.observeForMonth(month, ids) }
     private val calendarDays = combine(calendarMonth, calendarWorks) { month, works ->
         month.toDayModels(works)
+    }
+    private val calendarProjectHours = calendarMonthWorks.map { works ->
+        projectHoursById(works)
     }
 
     private val baseState = combine(
@@ -69,17 +74,19 @@ class HomeViewModel(
 
     val state = combine(
         baseState,
-        calendarDays,
+        combine(calendarDays, calendarProjectHours) { days, projectHours ->
+            days to projectHours
+        },
         stopwatchRepository.state,
         editor,
         message,
-    ) { base, days, stopwatch, modifyWork, stateMessage ->
+    ) { base, calendarData, stopwatch, modifyWork, stateMessage ->
         HomeUiState(
             isLoading = false,
             messageResId = stateMessage,
             counting = stopwatch.isRunning,
             elapsedSeconds = stopwatch.elapsedSeconds,
-            dayPerMonth = days,
+            dayPerMonth = calendarData.first,
             selectedDay = base.date.dayOfMonth,
             selectedProject = stopwatch.selectedProject,
             selectedWork = modifyWork,
@@ -87,8 +94,9 @@ class HomeViewModel(
             workQueries = base.works,
             today = base.date.toToday(),
             calendarMonth = base.month,
-            calendarDays = days,
+            calendarDays = calendarData.first,
             calendarSelectedProjects = base.selectedProjects,
+            calendarProjectHours = calendarData.second,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
 
@@ -132,6 +140,7 @@ class HomeViewModel(
             is HomeIntent.ToggleCalendarProject -> selectedCalendarProjects.update { selected ->
                 if (event.project in selected) selected - event.project else selected + event.project
             }
+            is HomeIntent.SetCalendarProjects -> selectedCalendarProjects.value = event.projects
             HomeIntent.ClearCalendarProjects -> selectedCalendarProjects.value = emptyList()
         }
     }

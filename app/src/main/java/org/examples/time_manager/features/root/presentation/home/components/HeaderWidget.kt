@@ -8,6 +8,7 @@ import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.snap
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.AnchoredDraggableDefaults
 import androidx.compose.foundation.gestures.AnchoredDraggableState
@@ -65,20 +66,18 @@ import androidx.compose.ui.unit.sp
 import kotlin.math.roundToInt
 import java.time.LocalDate
 import org.examples.time_manager.R
-import org.examples.time_manager.core.database.project.Project
 import org.examples.time_manager.core.dates.models.DayModel
 import org.examples.time_manager.features.calendar.presentation.components.CalendarSelectorRow
-import org.examples.time_manager.features.calendar.presentation.components.CategorySegments
 import org.examples.time_manager.features.calendar.presentation.components.DayWork
 import org.examples.time_manager.features.calendar.presentation.components.MonthGrid
 import org.examples.time_manager.features.calendar.presentation.components.MonthViewColors
+import org.examples.time_manager.features.calendar.presentation.components.ProjectFilterSheet
 import org.examples.time_manager.features.root.HomeViewModel
 import org.examples.time_manager.features.root.data.HomeState
 import org.examples.time_manager.features.root.data.HomeIntent.ChangeCalendarMonth
 import org.examples.time_manager.features.root.data.HomeIntent.CreateExcelDocument
 import org.examples.time_manager.features.root.data.HomeIntent.SelectDay
-import org.examples.time_manager.features.root.data.HomeIntent.ToggleCalendarProject
-import org.examples.time_manager.features.root.data.HomeIntent.ClearCalendarProjects
+import org.examples.time_manager.features.root.data.HomeIntent.SetCalendarProjects
 import org.examples.time_manager.features.root.presentation.home.CalendarExpansion
 import org.examples.time_manager.features.root.presentation.home.MonthPickerDialog
 import org.examples.time_manager.features.utils.formatHoursFromSeconds
@@ -87,6 +86,8 @@ import org.examples.time_manager.ui.theme.addIcon
 import org.examples.time_manager.ui.theme.arrowLeftIcon
 import org.examples.time_manager.ui.theme.dateRangeIcon
 import org.examples.time_manager.ui.theme.exportIcon
+import org.examples.time_manager.ui.theme.filterIcon
+import org.examples.time_manager.ui.theme.spacing
 import java.time.format.TextStyle
 
 @Composable
@@ -104,6 +105,7 @@ fun HeaderWidget(
     modifier: Modifier = Modifier,
 ) {
     var showMonthPicker by remember { mutableStateOf(false) }
+    var showProjectFilter by remember { mutableStateOf(false) }
     val months = stringArrayResource(R.array.months_array).toList()
     val context = LocalContext.current
 
@@ -137,6 +139,19 @@ fun HeaderWidget(
             },
             onIntent = vm::onIntent,
             projectValues = state.projects,
+        )
+    }
+
+    if (showProjectFilter) {
+        ProjectFilterSheet(
+            projects = state.projects,
+            selectedProjects = state.calendarSelectedProjects,
+            projectHours = state.calendarProjectHours,
+            onApply = { projects ->
+                vm.onIntent(SetCalendarProjects(projects))
+                showProjectFilter = false
+            },
+            onDismiss = { showProjectFilter = false },
         )
     }
 
@@ -195,8 +210,7 @@ fun HeaderWidget(
                 onPrevMonth = {},
                 onNextMonth = {},
                 onViewMonth = {},
-                onSelectProject = {},
-                onClearProjects = {},
+                onShowProjectFilter = {},
                 showCalendar = false,
                 modifier = Modifier,
                 dragModifier = Modifier,
@@ -261,18 +275,7 @@ fun HeaderWidget(
                 onViewMonth = {
                     navigator.openMonth(state.calendarMonth.year, state.calendarMonth.monthValue, 1)
                 },
-                onSelectProject = { project ->
-                    vm.onIntent(
-                        ToggleCalendarProject(
-                            project
-                        ),
-                    )
-                },
-                onClearProjects = {
-                    vm.onIntent(
-                        ClearCalendarProjects,
-                    )
-                },
+                onShowProjectFilter = { showProjectFilter = true },
                 showCalendar = true,
                 modifier = Modifier,
                 dragModifier = Modifier
@@ -306,8 +309,7 @@ private fun HomeHeaderSurface(
     onPrevMonth: () -> Unit,
     onNextMonth: () -> Unit,
     onViewMonth: () -> Unit,
-    onSelectProject: (Project) -> Unit,
-    onClearProjects: () -> Unit,
+    onShowProjectFilter: () -> Unit,
     showCalendar: Boolean,
     modifier: Modifier,
     dragModifier: Modifier,
@@ -340,7 +342,12 @@ private fun HomeHeaderSurface(
             },
     ) {
         if (showCalendarHeader) {
-            CalendarHeaderBase(onCloseCalendar = onCloseCalendar)
+            CalendarHeaderBase(
+                onCloseCalendar = onCloseCalendar,
+                onShowProjectFilter = onShowProjectFilter,
+                onViewMonth = onViewMonth,
+                hasActiveProjectFilter = state.calendarSelectedProjects.isNotEmpty(),
+            )
         } else {
             HomeHeaderBase(
                 state = state,
@@ -364,8 +371,6 @@ private fun HomeHeaderSurface(
                 onPrevMonth = onPrevMonth,
                 onNextMonth = onNextMonth,
                 onViewMonth = onViewMonth,
-                onSelectProject = onSelectProject,
-                onClearProjects = onClearProjects,
                 modifier = Modifier.weight(1f),
             )
         }
@@ -453,6 +458,9 @@ private fun HomeHeaderBase(
 @Composable
 private fun CalendarHeaderBase(
     onCloseCalendar: () -> Unit,
+    onShowProjectFilter: () -> Unit,
+    onViewMonth: () -> Unit,
+    hasActiveProjectFilter: Boolean,
 ) {
     val colors = MaterialTheme.colorScheme
     Surface(
@@ -464,6 +472,9 @@ private fun CalendarHeaderBase(
     ) {
         CalendarHeaderBar(
             onBack = onCloseCalendar,
+            onShowProjectFilter = onShowProjectFilter,
+            onViewMonth = onViewMonth,
+            hasActiveProjectFilter = hasActiveProjectFilter,
             enabled = true,
             modifier = Modifier
                 .statusBarsPadding()
@@ -566,23 +577,25 @@ private fun HomeHeaderBar(
 @Composable
 private fun CalendarHeaderBar(
     onBack: () -> Unit,
+    onShowProjectFilter: () -> Unit,
+    onViewMonth: () -> Unit,
+    hasActiveProjectFilter: Boolean,
     enabled: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val colors = MaterialTheme.colorScheme
     val typography = MaterialTheme.typography
 
-    Row(
-        modifier = modifier
-            .padding(horizontal = 10.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
+    Box(
+        modifier = modifier.padding(horizontal = 16.dp),
+        contentAlignment = Alignment.Center,
     ) {
         IconButton(
             onClick = onBack,
             enabled = enabled,
             modifier = Modifier
                 .size(48.dp)
+                .align(Alignment.CenterStart)
                 .testTag("calendar-header-back"),
         ) {
             Icon(
@@ -604,15 +617,66 @@ private fun CalendarHeaderBar(
             maxLines = 1,
         )
 
-        Box(
-            contentAlignment = Alignment.Center,
-            modifier = Modifier.size(48.dp),
+        Row(
+            modifier = Modifier.align(Alignment.CenterEnd),
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
+        ) {
+            CalendarHeaderIconButton(
+                onClick = onShowProjectFilter,
+                icon = filterIcon(),
+                contentDescription = stringResource(R.string.project_filter_cd),
+                active = hasActiveProjectFilter,
+                enabled = enabled,
+                testTag = "calendar-header-filter",
+            )
+            CalendarHeaderIconButton(
+                onClick = onViewMonth,
+                icon = dateRangeIcon(),
+                contentDescription = stringResource(R.string.project_date_cd),
+                active = false,
+                enabled = enabled,
+                testTag = "calendar-header-month-view",
+            )
+        }
+    }
+}
+
+@Composable
+private fun CalendarHeaderIconButton(
+    onClick: () -> Unit,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    contentDescription: String,
+    active: Boolean,
+    enabled: Boolean,
+    testTag: String,
+) {
+    val colors = MaterialTheme.colorScheme
+    Box(modifier = Modifier.size(48.dp)) {
+        IconButton(
+            onClick = onClick,
+            enabled = enabled,
+            modifier = Modifier
+                .fillMaxSize()
+                .clip(MaterialTheme.shapes.medium)
+                .background(colors.surfaceContainerHigh)
+                .border(1.dp, colors.outlineVariant, MaterialTheme.shapes.medium)
+                .testTag(testTag),
         ) {
             Icon(
-                imageVector = dateRangeIcon(),
-                contentDescription = stringResource(R.string.calendar_title),
+                imageVector = icon,
+                contentDescription = contentDescription,
                 tint = colors.onSurface,
                 modifier = Modifier.size(24.dp),
+            )
+        }
+        if (active) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(4.dp)
+                    .size(8.dp)
+                    .clip(MaterialTheme.shapes.extraLarge)
+                    .background(colors.primaryContainer),
             )
         }
     }
@@ -629,8 +693,6 @@ private fun CalendarBody(
     onPrevMonth: () -> Unit,
     onNextMonth: () -> Unit,
     onViewMonth: () -> Unit,
-    onSelectProject: (Project) -> Unit,
-    onClearProjects: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val bodyAlpha = ((progress - 0.15f) / 0.4f).coerceIn(0f, 1f)
@@ -642,8 +704,8 @@ private fun CalendarBody(
                 alpha = bodyAlpha
                 translationY = (1f - progress) * 24.dp.toPx()
             }
-            .padding(horizontal = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+            .padding(horizontal = MaterialTheme.spacing.small),
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
     ) {
         CalendarSelectorRow(
             monthYear = state.calendarMonth,
@@ -653,14 +715,6 @@ private fun CalendarBody(
             onViewMonth = onViewMonth,
             monthColors = monthColors,
         )
-        CategorySegments(
-            projects = state.projects,
-            selectedProjects = state.calendarSelectedProjects,
-            onSelectProject = onSelectProject,
-            onClearSelection = onClearProjects,
-            monthColors = monthColors,
-        )
-
         BoxWithConstraints(
             modifier = Modifier
                 .fillMaxWidth()
@@ -668,8 +722,8 @@ private fun CalendarBody(
         ) {
             val gridOffset = (state.calendarMonth.atDay(1).dayOfWeek.value - 1)
             val weekCount = (gridOffset + state.calendarMonth.lengthOfMonth() + 6) / 7
-            val cellHeight = ((maxHeight - 140.dp) / weekCount.coerceAtLeast(4))
-                .coerceIn(48.dp, 68.dp)
+            val cellHeight = ((maxHeight - 120.dp) / weekCount.coerceAtLeast(4))
+                .coerceIn(48.dp, 72.dp)
             MonthGrid(
                 monthYear = state.calendarMonth,
                 days = dayWorks,

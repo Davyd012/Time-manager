@@ -13,7 +13,6 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
-import androidx.compose.ui.unit.sp
 import org.examples.time_manager.R
 import java.util.Locale
 
@@ -51,8 +50,7 @@ fun MonthlyTotalPill(
         Text(
             text = label,
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
-//            color = monthColors.text,
-            fontSize = 13.sp,
+            style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.Medium,
         )
     }
