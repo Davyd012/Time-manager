@@ -15,7 +15,7 @@
     <string name="selected_projects">Valgte prosjekter</string>
     <string name="reset">Nullstill</string>
     <string name="share_month_cd">Del månedsoversikt</string>
-    <string name="total_month_prefix">Totalt for måneden: %1$.2f t</string>
+    <string name="total_month_prefix">Totalt for måneden: %1$.0f t</string>
     <string name="hours_suffix"> t</string>
     <string name="share_chooser_title">Del</string>
     <string name="summary_no_hours">Ingen timer registrert i %1$s.

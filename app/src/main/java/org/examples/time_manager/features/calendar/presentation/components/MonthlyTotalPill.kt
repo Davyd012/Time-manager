@@ -23,14 +23,20 @@ fun MonthlyTotalPill(
     modifier: Modifier = Modifier,
     monthColors: MonthViewColors,
 ) {
-    val prefix = stringResource(R.string.total_month_prefix)
     val locale = Locale.Builder().setLanguage("nb").setRegion("NO").build()
-    val value = String.format(locale, "%.2fh", totalHours)
+    val formattedLabel = stringResource(R.string.total_month_prefix, totalHours)
+    val value = String.format(locale, "%.0f", totalHours)
+    val valueStart = formattedLabel.indexOf(value)
     val label =
         buildAnnotatedString {
-            append(prefix.substringBefore("%1$.2fh"))
-            withStyle(SpanStyle(color = monthColors.accent, fontWeight = FontWeight.SemiBold)) {
-                append(value)
+            if (valueStart >= 0) {
+                append(formattedLabel.substring(0, valueStart))
+                withStyle(SpanStyle(color = monthColors.accent, fontWeight = FontWeight.SemiBold)) {
+                    append(value)
+                }
+                append(formattedLabel.substring(valueStart + value.length))
+            } else {
+                append(formattedLabel)
             }
         }
 
