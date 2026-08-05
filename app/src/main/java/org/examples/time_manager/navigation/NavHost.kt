@@ -7,7 +7,10 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -34,6 +37,7 @@ fun AppNavHost(
 ) {
     val navigationState = rememberNavigationState()
     val navigator = remember(navigationState) { Navigator(navigationState) }
+    var homeReselectionCount by remember { mutableStateOf(0) }
     val homeViewModel = viewModel<HomeViewModel>(
         factory = getHomeViewModelFactory(diContainer),
     )
@@ -47,6 +51,7 @@ fun AppNavHost(
                 HomeScreen(
                     vm = homeViewModel,
                     navigator = navigator,
+                    homeReselectionCount = homeReselectionCount,
                 )
             }
             entry<AppRoute.Stopwatch> {
@@ -98,6 +103,12 @@ fun AppNavHost(
                 items = items,
                 isCurrent = { route -> navigationState.selectedTopLevelRoute == route },
                 onSelect = { route: TopLevelRoute ->
+                    if (
+                        route == AppRoute.Home &&
+                        navigationState.selectedTopLevelRoute == AppRoute.Home
+                    ) {
+                        homeReselectionCount++
+                    }
                     PageNavigator(navigator).select(route)
                 },
                 modifier = Modifier

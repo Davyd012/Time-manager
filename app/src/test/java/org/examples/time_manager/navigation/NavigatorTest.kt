@@ -33,6 +33,18 @@ class NavigatorTest {
     }
 
     @Test
+    fun selectingHomeFromMonthReturnsToHomeRoot() {
+        val state = navigationState()
+        val navigator = Navigator(state)
+
+        navigator.openMonth(2026, 2, 7)
+        PageNavigator(navigator).select(AppRoute.Home)
+
+        assertEquals(AppRoute.Home, state.homeStack.last())
+        assertEquals(1, state.homeStack.size)
+    }
+
+    @Test
     fun backFromMonthReturnsToHomeAndBackFromStopwatchSelectsHome() {
         val state = navigationState()
         val navigator = Navigator(state)

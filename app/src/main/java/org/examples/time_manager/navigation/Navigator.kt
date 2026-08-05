@@ -2,6 +2,14 @@ package org.examples.time_manager.navigation
 
 class Navigator(private val state: NavigationState) {
     internal fun select(route: TopLevelRoute) {
+        if (
+            route == AppRoute.Home &&
+            state.selectedTopLevelRoute == AppRoute.Home &&
+            state.homeStack.size > 1
+        ) {
+            goBack()
+            return
+        }
         state.select(route)
     }
 

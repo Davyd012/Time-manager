@@ -28,6 +28,7 @@ import org.examples.time_manager.navigation.Navigator
 fun HomeScreen(
     vm: HomeViewModel,
     navigator: Navigator,
+    homeReselectionCount: Int,
 ) {
     val state by vm.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
@@ -59,6 +60,12 @@ fun HomeScreen(
                     snap()
                 },
             )
+        }
+    }
+
+    LaunchedEffect(homeReselectionCount) {
+        if (homeReselectionCount > 0) {
+            setCalendarExpansion(CalendarExpansion.Collapsed)
         }
     }
 
