@@ -35,6 +35,8 @@ import androidx.compose.ui.unit.sp
 import org.examples.time_manager.R
 import org.examples.time_manager.core.database.project.Project
 import org.examples.time_manager.features.root.StopwatchViewModel
+import org.examples.time_manager.features.root.data.StopwatchIntent
+import org.examples.time_manager.features.root.data.StopwatchUiState
 import org.examples.time_manager.features.root.data.StopwatchIntent.ModifyProject
 import org.examples.time_manager.features.root.data.StopwatchIntent.SelectProject
 import org.examples.time_manager.features.root.data.StopwatchIntent.UpdateTimer
@@ -47,24 +49,46 @@ import org.examples.time_manager.ui.theme.playIcon
 
 @Composable
 fun Stopwatch(vm: StopwatchViewModel, modifier: Modifier) {
+    val state by vm.state.collectAsStateWithLifecycle()
+    var showInputNewProject by remember { mutableStateOf(false) }
+    var currentProject by remember { mutableStateOf<Project?>(null) }
+
+    StopwatchContent(
+        state = state,
+        modifier = modifier,
+        onIntent = vm::onIntent,
+        showInputNewProject = showInputNewProject,
+        currentProject = currentProject,
+        onShowNewProject = { project ->
+            currentProject = project
+            showInputNewProject = true
+        },
+        onDismissNewProject = {
+            showInputNewProject = false
+            currentProject = null
+        },
+    )
+}
+
+@Composable
+fun StopwatchContent(
+    state: StopwatchUiState,
+    modifier: Modifier,
+    onIntent: (StopwatchIntent) -> Unit,
+    showInputNewProject: Boolean = false,
+    currentProject: Project? = null,
+    onShowNewProject: (Project?) -> Unit = {},
+    onDismissNewProject: () -> Unit = {},
+) {
     val colors = MaterialTheme.colorScheme
     val styles = MaterialTheme.typography
-
-    val state by vm.state.collectAsStateWithLifecycle()
     val time = state.elapsedSeconds.toDouble()
     val projects = state.projects
 
-    var showInputNewProject by remember { mutableStateOf(false) }
-
-    var currentProject by remember { mutableStateOf<Project?>(null) }
-
     if (showInputNewProject) {
         NewProjectInput(
-            onDismiss = {
-                showInputNewProject = false
-                currentProject = null
-            },
-            onIntent = vm::onIntent,
+            onDismiss = onDismissNewProject,
+            onIntent = onIntent,
             project = currentProject,
         )
     }
@@ -101,13 +125,12 @@ fun Stopwatch(vm: StopwatchViewModel, modifier: Modifier) {
                 SwipeToDeleteContainer(
                     color = colors.error,
                     removeAction = {
-                        vm.onIntent(
+                        onIntent(
                             ModifyProject(project = it, delete = true)
                         )
                     },
                     modifyProject = {
-                        showInputNewProject = true
-                        currentProject = it
+                        onShowNewProject(it)
                     },
                     content = {
                         Text(
@@ -119,7 +142,7 @@ fun Stopwatch(vm: StopwatchViewModel, modifier: Modifier) {
                                 .clip(
                                     MaterialTheme.shapes.small
                                 )
-                                .clickable { vm.onIntent(SelectProject(value = it.id)) }
+                                .clickable { onIntent(SelectProject(value = it.id)) }
                                 .background(if (it.id == state.selectedProject) colors.primaryContainer else colors.secondaryContainer)
                                 .padding(15.dp),
                         )
@@ -141,10 +164,10 @@ fun Stopwatch(vm: StopwatchViewModel, modifier: Modifier) {
                     .clip(MaterialTheme.shapes.large)
                     .clickable {
                         if (state.isRunning) {
-                            vm.onIntent(UpdateTimer(TimerStates.PauseStopwatch))
+                            onIntent(UpdateTimer(TimerStates.PauseStopwatch))
                             return@clickable
                         }
-                        vm.onIntent(UpdateTimer(TimerStates.StartStopwatch))
+                        onIntent(UpdateTimer(TimerStates.StartStopwatch))
                     }
                     .background(colors.tertiaryContainer)
                     .padding(12.dp)
@@ -161,7 +184,7 @@ fun Stopwatch(vm: StopwatchViewModel, modifier: Modifier) {
                     .clip(MaterialTheme.shapes.medium)
                     .background(colors.secondary)
                     .clickable {
-                        vm.onIntent(UpdateTimer(TimerStates.SaveResult))
+                        onIntent(UpdateTimer(TimerStates.SaveResult))
                     }
                     .padding(vertical = 17.dp, horizontal = 30.dp),
             )
@@ -177,7 +200,7 @@ fun Stopwatch(vm: StopwatchViewModel, modifier: Modifier) {
 //                    .padding(10.dp)
                     .size(50.dp)
                     .clickable {
-                        showInputNewProject = true
+                        onShowNewProject(null)
                     },
             )
         }

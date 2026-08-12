@@ -44,12 +44,11 @@ import org.examples.time_manager.ui.theme.doneIcon
 import org.examples.time_manager.ui.theme.exportIcon
 import org.examples.time_manager.ui.theme.spacing
 import java.time.LocalDate
-import kotlin.reflect.KFunction1
 
 @Composable
 fun MonthPickerDialog(
     onDismiss: (Int) -> Unit,
-    onIntent: KFunction1<HomeIntent, Unit>,
+    onIntent: (HomeIntent) -> Unit,
     projectValues: List<Project>,
 ) {
     val colors = MaterialTheme.colorScheme

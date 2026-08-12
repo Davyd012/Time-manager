@@ -21,7 +21,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import org.examples.time_manager.R
 import org.examples.time_manager.core.database.work.Work
-import org.examples.time_manager.features.month_view.MonthViewModel
+import org.examples.time_manager.features.month_view.data.MonthViewIntent
 import org.examples.time_manager.features.month_view.data.MonthViewIntent.ModifyWork
 import org.examples.time_manager.features.month_view.data.MonthViewIntent.WriteRangeWork
 import org.examples.time_manager.features.month_view.data.MonthViewIntent.WriteWork
@@ -36,7 +36,7 @@ import java.time.LocalDateTime
 fun SaveButtons(
     work: Work?,
     onDismiss: () -> Unit,
-    vm: MonthViewModel,
+    onIntent: (MonthViewIntent) -> Unit,
     selectedProject: Int,
     time: String,
     millisToLocalDate: LocalDateTime,
@@ -53,7 +53,7 @@ fun SaveButtons(
             onClick = {
                 if (dates.size < 2) return@Button
                 onDismiss()
-                vm.onIntent(
+                onIntent(
                     WriteRangeWork(
                         project = selectedProject,
                         dates = dates,
@@ -80,7 +80,7 @@ fun SaveButtons(
         Button(
             onClick = {
                 onDismiss()
-                vm.onIntent(
+                onIntent(
                     WriteWork(
                         project = selectedProject,
                         hours = getIntFromTime(time),
@@ -111,7 +111,7 @@ fun SaveButtons(
                 .clip(MaterialTheme.shapes.medium)
                 .clickable {
                     onDismiss()
-                    vm.onIntent(
+                    onIntent(
                         ModifyWork(work = work, delete = true)
                     )
                 }
@@ -127,7 +127,7 @@ fun SaveButtons(
                 .clip(MaterialTheme.shapes.medium)
                 .clickable {
                     onDismiss()
-                    vm.onIntent(
+                    onIntent(
                         ModifyWork(
                             work = work.copy(
                                 date = startedJobDateTime,

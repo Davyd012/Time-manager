@@ -7,6 +7,7 @@ plugins {
     alias(libs.plugins.room)
     alias(libs.plugins.compose.compiler)
     alias(libs.plugins.jetbrains.kotlin.serialization)
+    alias(libs.plugins.screenshot)
 }
 
 kotlin {
@@ -23,6 +24,7 @@ object Version {
 android {
     namespace = "org.examples.time_manager"
     compileSdk = 37
+    experimentalProperties["android.experimental.enableScreenshotTest"] = true
 
     defaultConfig {
         applicationId = "org.examples.time_manager"
@@ -93,6 +95,8 @@ dependencies {
     androidTestImplementation(libs.ui.test.junit4)
     debugImplementation(libs.ui.tooling)
     debugImplementation(libs.ui.test.manifest)
+    screenshotTestImplementation(libs.screenshot.validation.api)
+    screenshotTestImplementation(libs.ui.tooling)
 
     implementation(libs.room.runtime)
     implementation(libs.sqlite.bundled)
@@ -105,4 +109,9 @@ dependencies {
     implementation(libs.poi.ooxml)
 
     ksp(libs.room.compiler)
+}
+
+tasks.register<Exec>("exportUiCatalog") {
+    dependsOn("updateDebugScreenshotTest")
+    commandLine("python", rootProject.file("tools/export_ui_catalog.py").absolutePath)
 }

@@ -72,8 +72,8 @@ import org.examples.time_manager.features.calendar.presentation.components.DayWo
 import org.examples.time_manager.features.calendar.presentation.components.MonthGrid
 import org.examples.time_manager.features.calendar.presentation.components.MonthViewColors
 import org.examples.time_manager.features.calendar.presentation.components.ProjectFilterSheet
-import org.examples.time_manager.features.root.HomeViewModel
 import org.examples.time_manager.features.root.data.HomeState
+import org.examples.time_manager.features.root.data.HomeIntent
 import org.examples.time_manager.features.root.data.HomeIntent.ChangeCalendarMonth
 import org.examples.time_manager.features.root.data.HomeIntent.CreateExcelDocument
 import org.examples.time_manager.features.root.data.HomeIntent.SelectDay
@@ -93,7 +93,7 @@ import java.time.format.TextStyle
 @Composable
 fun HeaderWidget(
     state: HomeState,
-    vm: HomeViewModel,
+    onIntent: (HomeIntent) -> Unit,
     navigator: Navigator,
     expansionState: AnchoredDraggableState<CalendarExpansion>,
     availableHeightPx: Int,
@@ -114,7 +114,7 @@ fun HeaderWidget(
             if (result.resultCode == android.app.Activity.RESULT_OK) {
                 val month = result.data?.getStringExtra("stringKey")?.toIntOrNull()
                 result.data?.data?.let { uri ->
-                    vm.onIntent(CreateExcelDocument(uri.toString(), month))
+                    onIntent(CreateExcelDocument(uri.toString(), month))
                 }
             }
         }
@@ -137,7 +137,7 @@ fun HeaderWidget(
                 if (month >= 0) openSaveFilePicker(month)
                 showMonthPicker = false
             },
-            onIntent = vm::onIntent,
+            onIntent = onIntent,
             projectValues = state.projects,
         )
     }
@@ -148,7 +148,7 @@ fun HeaderWidget(
             selectedProjects = state.calendarSelectedProjects,
             projectHours = state.calendarProjectHours,
             onApply = { projects ->
-                vm.onIntent(SetCalendarProjects(projects))
+                onIntent(SetCalendarProjects(projects))
                 showProjectFilter = false
             },
             onDismiss = { showProjectFilter = false },
@@ -253,20 +253,20 @@ fun HeaderWidget(
                 monthColors = monthColors,
                 dayWorks = dayWorks,
                 selectedCalendarDate = selectedCalendarDate,
-                onSelectDay = { day -> vm.onIntent(SelectDay(day)) },
+                onSelectDay = { day -> onIntent(SelectDay(day)) },
                 onSelectCalendarDate = { date ->
                     onCalendarDateSelected(date)
                     navigator.openMonth(date.year, date.monthValue, date.dayOfMonth)
                 },
                 onPrevMonth = {
-                    vm.onIntent(
+                    onIntent(
                         ChangeCalendarMonth(
                             state.calendarMonth.minusMonths(1),
                         ),
                     )
                 },
                 onNextMonth = {
-                    vm.onIntent(
+                    onIntent(
                         ChangeCalendarMonth(
                             state.calendarMonth.plusMonths(1),
                         ),
@@ -556,10 +556,10 @@ private fun HomeHeaderBar(
 
         Spacer(Modifier.width(4.dp))
 
-        FilledIconButton(
+        IconButton(
             onClick = onAddWork,
             enabled = enabled,
-            modifier = Modifier.size(48.dp),
+            modifier = Modifier.size(42.dp),
             colors = IconButtonDefaults.filledIconButtonColors(
                 containerColor = colors.primaryContainer,
                 contentColor = colors.onPrimaryContainer,

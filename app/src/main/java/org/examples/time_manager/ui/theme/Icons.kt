@@ -67,8 +67,11 @@ fun playIcon(): ImageVector {
 }
 
 @Composable
-fun addIcon(): ImageVector {
-    return ImageVector.vectorResource(id = R.drawable.baseline_add_circle_24)
+fun addIcon(circle: Boolean = false): ImageVector {
+    val icon = if (circle) ImageVector.vectorResource(id = R.drawable.baseline_add_circle_24)
+    else ImageVector.vectorResource(id = R.drawable.baseline_add_24)
+
+    return icon
 }
 
 @Composable

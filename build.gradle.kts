@@ -5,5 +5,10 @@ plugins {
     alias(libs.plugins.org.jetbrains.kotlin.jvm) apply false
     alias(libs.plugins.compose.compiler) apply false
     alias(libs.plugins.jetbrains.kotlin.serialization) apply false
+    alias(libs.plugins.screenshot) apply false
 }
 true // Needed to make the Suppress annotation work for the plugins block
+
+tasks.register("generateUiCatalog") {
+    dependsOn(":app:exportUiCatalog")
+}

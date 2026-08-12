@@ -16,12 +16,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import org.examples.time_manager.features.root.HomeViewModel
+import org.examples.time_manager.features.root.data.HomeIntent
 import org.examples.time_manager.features.root.data.HomeUiState
 import org.examples.time_manager.features.root.data.HomeIntent.ModifyWorkState
 import org.examples.time_manager.features.root.presentation.home.components.HeaderWidget
 import org.examples.time_manager.features.root.presentation.home.components.ListOfWorks
 import org.examples.time_manager.navigation.Navigator
 import java.time.LocalDate
+import java.time.LocalDateTime
 
 enum class CalendarExpansion {
     Collapsed,
@@ -36,6 +38,28 @@ fun MainPage(
     navigator: Navigator,
     expansionState: AnchoredDraggableState<CalendarExpansion>,
     onSetCalendarExpansion: (CalendarExpansion) -> Unit,
+    initialDateTime: LocalDateTime? = null,
+) {
+    MainPageContent(
+        state = state,
+        onIntent = vm::onIntent,
+        modifier = modifier,
+        navigator = navigator,
+        expansionState = expansionState,
+        onSetCalendarExpansion = onSetCalendarExpansion,
+        initialDateTime = initialDateTime,
+    )
+}
+
+@Composable
+fun MainPageContent(
+    state: HomeUiState,
+    onIntent: (HomeIntent) -> Unit,
+    modifier: Modifier,
+    navigator: Navigator,
+    expansionState: AnchoredDraggableState<CalendarExpansion>,
+    onSetCalendarExpansion: (CalendarExpansion) -> Unit,
+    initialDateTime: LocalDateTime? = null,
 ) {
     val works = state.workQueries
     val projects = state.projects
@@ -70,11 +94,12 @@ fun MainPage(
     if (state.selectedWork.showModal) {
         val index = state.selectedWork.selectedWork
         NewWorkInput(
-            onDismiss = { vm.onIntent(ModifyWorkState(show = false)) },
-            vm = vm,
+            onDismiss = { onIntent(ModifyWorkState(show = false)) },
+            onIntent = onIntent,
             projects = projects,
             day = state.selectedDay,
             work = works.takeIf { index >= 0 }?.elementAt(index),
+            initialDateTime = initialDateTime,
         )
     }
 
@@ -87,7 +112,7 @@ fun MainPage(
         Column(modifier = Modifier.fillMaxSize()) {
             HeaderWidget(
                 state = state,
-                vm = vm,
+                onIntent = onIntent,
                 navigator = navigator,
                 expansionState = expansionState,
                 availableHeightPx = availableHeightPx,
@@ -97,15 +122,15 @@ fun MainPage(
                 onCloseCalendar = {
                     onSetCalendarExpansion(CalendarExpansion.Collapsed)
                 },
-                onAddWork = { vm.onIntent(ModifyWorkState(show = true)) },
+                onAddWork = { onIntent(ModifyWorkState(show = true)) },
             )
 
             ListOfWorks(
                 modifier = Modifier
                     .weight(1f),
                 calendarProgress = progress,
-                showWork = { i -> vm.onIntent(ModifyWorkState(selected = i, show = true)) },
-                addWork = { vm.onIntent(ModifyWorkState(show = true)) },
+                showWork = { i -> onIntent(ModifyWorkState(selected = i, show = true)) },
+                addWork = { onIntent(ModifyWorkState(show = true)) },
                 works = works,
                 projects = projects,
             )

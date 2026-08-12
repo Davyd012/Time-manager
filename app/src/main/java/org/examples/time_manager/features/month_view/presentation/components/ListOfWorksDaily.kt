@@ -153,7 +153,7 @@ fun NoJobsView(
 
     val progress by animateLottieCompositionAsState(
         composition,
-        iterations = LottieConstants.IterateForever,
+        iterations = 1,
         restartOnPlay = false
     )
 

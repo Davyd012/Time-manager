@@ -37,11 +37,6 @@ fun NewProjectInput(
     project: Project?
 ) {
     val colors = MaterialTheme.colorScheme
-    val texts = MaterialTheme.typography
-
-    var name by remember { mutableStateOf(project?.name ?: "") }
-    var description by remember { mutableStateOf(project?.description ?: "") }
-
     ModalBottomSheet(
         onDismissRequest = {
             onDismiss()
@@ -53,7 +48,26 @@ fun NewProjectInput(
         dragHandle = null,
         scrimColor = MaterialTheme.colorScheme.scrim.copy(alpha = 0.5f),
     ) {
-        Column(modifier = Modifier.padding(20.dp)) {
+        NewProjectSheetContent(
+            project = project,
+            onIntent = onIntent,
+            onDismiss = onDismiss,
+        )
+    }
+}
+
+@Composable
+fun NewProjectSheetContent(
+    project: Project?,
+    onIntent: (StopwatchIntent) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    val colors = MaterialTheme.colorScheme
+    val texts = MaterialTheme.typography
+    var name by remember { mutableStateOf(project?.name ?: "") }
+    var description by remember { mutableStateOf(project?.description ?: "") }
+
+    Column(modifier = Modifier.padding(20.dp)) {
             Text(stringResource(R.string.new_project_title), style = texts.headlineSmall.copy(fontWeight = FontWeight.Bold))
             Spacer(modifier = Modifier.height(5.dp))
             Text(stringResource(R.string.name_label), style = texts.titleMedium)
@@ -94,5 +108,4 @@ fun NewProjectInput(
                 )
             }
         }
-    }
 }

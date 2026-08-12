@@ -267,12 +267,6 @@ private fun DayCell(
                     fontWeight = FontWeight.Medium,
                 )
             }
-            if (isSelected) {
-                SelectedUnderline(
-                    color = monthColors.accent,
-                    modifier = Modifier.align(Alignment.BottomCenter),
-                )
-            }
         }
     }
 }

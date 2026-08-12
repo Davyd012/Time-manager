@@ -35,8 +35,8 @@ import androidx.compose.ui.res.stringArrayResource
 import androidx.compose.ui.res.stringResource
 import org.examples.time_manager.R
 import org.examples.time_manager.features.components.MonthDaysList
-import org.examples.time_manager.features.month_view.MonthViewModel
 import org.examples.time_manager.features.month_view.data.MonthViewState
+import org.examples.time_manager.features.month_view.data.MonthViewIntent
 import org.examples.time_manager.features.month_view.data.MonthViewIntent.CreateExcelDocument
 import org.examples.time_manager.features.month_view.data.MonthViewIntent.SelectDay
 import org.examples.time_manager.navigation.Navigator
@@ -46,7 +46,7 @@ import org.examples.time_manager.ui.theme.arrowLeftIcon
 fun HeaderWidget(
     state: MonthViewState,
     listState: LazyListState,
-    vm: MonthViewModel,
+    onIntent: (MonthViewIntent) -> Unit,
     navigator: Navigator,
 ) {
     val colors = MaterialTheme.colorScheme
@@ -64,7 +64,7 @@ fun HeaderWidget(
                 val data = result.data?.getStringExtra("stringKey")?.toInt()
                 Log.d("MonthPickerViewModel", "Got a result $data")
                 result.data?.data?.let { uri ->
-                    vm.onIntent(CreateExcelDocument(uri.toString()))
+                    onIntent(CreateExcelDocument(uri.toString()))
                 }
             }
         }
@@ -162,7 +162,7 @@ fun HeaderWidget(
             listState,
             monthDays = state.dayPerMonth,
             selectedDay = state.selectedDay,
-            selectDay = { index: Int -> vm.onIntent(SelectDay(index + 1)) }
+            selectDay = { index: Int -> onIntent(SelectDay(index + 1)) }
         )
     }
 }

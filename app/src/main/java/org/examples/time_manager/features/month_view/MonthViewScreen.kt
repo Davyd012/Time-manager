@@ -20,12 +20,29 @@ import org.examples.time_manager.features.month_view.presentation.components.Lis
 import org.examples.time_manager.features.month_view.presentation.components.HeaderWidget
 import org.examples.time_manager.features.month_view.presentation.NewWorkInput
 import org.examples.time_manager.features.month_view.data.MonthViewIntent.ModifyWorkState
+import org.examples.time_manager.features.month_view.data.MonthViewIntent
+import org.examples.time_manager.features.month_view.data.MonthViewUiState
 import org.examples.time_manager.navigation.Navigator
 
 @Composable
 fun MonthViewScreen(vm: MonthViewModel, modifier: Modifier, navigator: Navigator) {
-    val colors = MaterialTheme.colorScheme
     val state by vm.state.collectAsStateWithLifecycle()
+    MonthViewContent(
+        state = state,
+        modifier = modifier,
+        navigator = navigator,
+        onIntent = vm::onIntent,
+    )
+}
+
+@Composable
+fun MonthViewContent(
+    state: MonthViewUiState,
+    modifier: Modifier,
+    navigator: Navigator,
+    onIntent: (MonthViewIntent) -> Unit,
+) {
+    val colors = MaterialTheme.colorScheme
     val works = state.workQueries
     val projects = state.projects
 
@@ -45,9 +62,9 @@ fun MonthViewScreen(vm: MonthViewModel, modifier: Modifier, navigator: Navigator
         val index = state.selectedWork.selectedWork
         NewWorkInput(
             onDismiss = {
-                vm.onIntent(ModifyWorkState(show = false))
+                onIntent(ModifyWorkState(show = false))
             },
-            vm = vm,
+            onIntent = onIntent,
             projects = projects,
             day = state.selectedDay,
             selectedDate = state.dayPerMonth.getOrNull(state.selectedDay - 1)?.date,
@@ -60,13 +77,13 @@ fun MonthViewScreen(vm: MonthViewModel, modifier: Modifier, navigator: Navigator
             .background(colors.surface)
             .fillMaxSize()
     ) {
-        HeaderWidget(state, listState, vm = vm, navigator = navigator)
+        HeaderWidget(state, listState, onIntent = onIntent, navigator = navigator)
         Spacer(modifier = Modifier.height(5.dp))
         ListOfWorks(
             showWork = { i: Int ->
-                vm.onIntent(ModifyWorkState(selected = i, show = true))
+                onIntent(ModifyWorkState(selected = i, show = true))
             },
-            addWork = { vm.onIntent(ModifyWorkState(show = true)) },
+            addWork = { onIntent(ModifyWorkState(show = true)) },
             works = works,
             projects = projects
         )

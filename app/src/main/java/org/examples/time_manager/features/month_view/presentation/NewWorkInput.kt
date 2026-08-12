@@ -40,7 +40,7 @@ import org.examples.time_manager.R
 import org.examples.time_manager.core.database.project.Project
 import org.examples.time_manager.core.database.work.Work
 import org.examples.time_manager.core.service.util.pad
-import org.examples.time_manager.features.month_view.MonthViewModel
+import org.examples.time_manager.features.month_view.data.MonthViewIntent
 import org.examples.time_manager.features.root.presentation.home.components.OutlinedButton
 import org.examples.time_manager.features.root.presentation.home.components.getTimePicker
 import org.examples.time_manager.features.root.presentation.home.new_work.DatePickerWidget
@@ -57,7 +57,7 @@ import java.time.ZoneOffset
 @Composable
 fun NewWorkInput(
     onDismiss: () -> Unit,
-    vm: MonthViewModel,
+    onIntent: (MonthViewIntent) -> Unit,
     projects: List<Project>,
     day: Int,
     selectedDate: LocalDate?,
@@ -235,7 +235,7 @@ fun NewWorkInput(
             SaveButtons(
                 work = work,
                 onDismiss = onDismiss,
-                vm = vm,
+                onIntent = onIntent,
                 selectedProject = selectedProject,
                 time = time,
                 millisToLocalDate = millisToLocalDate,

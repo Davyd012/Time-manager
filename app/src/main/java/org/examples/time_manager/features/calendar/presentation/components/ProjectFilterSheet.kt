@@ -57,6 +57,29 @@ fun ProjectFilterSheet(
     onDismiss: () -> Unit,
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = sheetState,
+        dragHandle = { BottomSheetDefaults.DragHandle() },
+    ) {
+        ProjectFilterSheetContent(
+            projects = projects,
+            selectedProjects = selectedProjects,
+            projectHours = projectHours,
+            onApply = onApply,
+            onDismiss = onDismiss,
+        )
+    }
+}
+
+@Composable
+fun ProjectFilterSheetContent(
+    projects: List<Project>,
+    selectedProjects: List<Project>,
+    projectHours: Map<Int, Double>,
+    onApply: (List<Project>) -> Unit,
+    onDismiss: () -> Unit,
+) {
     val allProjectIds = remember(projects) { projects.map(Project::id).toSet() }
     var query by rememberSaveable { mutableStateOf("") }
     var selectedIds by remember(selectedProjects, allProjectIds) {
@@ -73,73 +96,67 @@ fun ProjectFilterSheet(
         onDismiss()
     }
 
-    ModalBottomSheet(
-        onDismissRequest = ::applyAndDismiss,
-        sheetState = sheetState,
-        dragHandle = { BottomSheetDefaults.DragHandle() },
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .navigationBarsPadding(),
     ) {
-        Box(
+        Column(
             modifier = Modifier
+                .align(Alignment.TopCenter)
                 .fillMaxWidth()
-                .navigationBarsPadding(),
+                .widthIn(max = 640.dp)
+                .padding(horizontal = 16.dp),
         ) {
-            Column(
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .fillMaxWidth()
-                    .widthIn(max = 640.dp)
-                    .padding(horizontal = 16.dp),
+            ProjectFilterHeader(
+                onDismiss = ::applyAndDismiss,
+                onDone = ::applyAndDismiss,
+            )
+
+            OutlinedTextField(
+                value = query,
+                onValueChange = { query = it },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true,
+                placeholder = { Text(stringResource(R.string.project_filter_search_hint)) },
+            )
+
+            ProjectFilterSelectAllRow(
+                checked = allVisibleSelected,
+                enabled = visibleProjects.isNotEmpty(),
+                onClick = {
+                    selectedIds = toggleVisibleProjectSelection(
+                        selectedIds = selectedIds,
+                        visibleProjectIds = visibleIds,
+                        allProjectIds = allProjectIds,
+                    )
+                },
+                modifier = Modifier.padding(vertical = 8.dp),
+            )
+
+            LazyColumn(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
-                ProjectFilterHeader(
-                    onDismiss = ::applyAndDismiss,
-                    onDone = ::applyAndDismiss,
-                )
-
-                OutlinedTextField(
-                    value = query,
-                    onValueChange = { query = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true,
-                    placeholder = { Text(stringResource(R.string.project_filter_search_hint)) },
-                )
-
-                ProjectFilterSelectAllRow(
-                    checked = allVisibleSelected,
-                    enabled = visibleProjects.isNotEmpty(),
-                    onClick = {
-                        selectedIds = toggleVisibleProjectSelection(
-                            selectedIds = selectedIds,
-                            visibleProjectIds = visibleIds,
-                            allProjectIds = allProjectIds,
-                        )
-                    },
-                    modifier = Modifier.padding(vertical = 8.dp),
-                )
-
-                LazyColumn(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(2.dp),
-                ) {
-                    items(
-                        items = visibleProjects,
-                        key = Project::id,
-                    ) { project ->
-                        ProjectFilterRow(
-                            project = project,
-                            monthlyHours = projectHours[project.id] ?: 0.0,
-                            checked = selectedIds == null || project.id in selectedIds.orEmpty(),
-                            onClick = {
-                                selectedIds = toggleProjectSelection(
-                                    selectedIds = selectedIds,
-                                    projectId = project.id,
-                                    allProjectIds = allProjectIds,
-                                )
-                            },
-                        )
-                    }
+                items(
+                    items = visibleProjects,
+                    key = Project::id,
+                ) { project ->
+                    ProjectFilterRow(
+                        project = project,
+                        monthlyHours = projectHours[project.id] ?: 0.0,
+                        checked = selectedIds == null || project.id in selectedIds.orEmpty(),
+                        onClick = {
+                            selectedIds = toggleProjectSelection(
+                                selectedIds = selectedIds,
+                                projectId = project.id,
+                                allProjectIds = allProjectIds,
+                            )
+                        },
+                    )
                 }
-                Spacer(Modifier.size(8.dp))
             }
+            Spacer(Modifier.size(8.dp))
         }
     }
 }

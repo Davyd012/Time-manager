@@ -40,7 +40,7 @@ import org.examples.time_manager.R
 import org.examples.time_manager.core.database.project.Project
 import org.examples.time_manager.core.database.work.Work
 import org.examples.time_manager.core.service.util.pad
-import org.examples.time_manager.features.root.HomeViewModel
+import org.examples.time_manager.features.root.data.HomeIntent
 import org.examples.time_manager.features.root.presentation.home.components.OutlinedButton
 import org.examples.time_manager.features.root.presentation.home.components.getTimePicker
 import org.examples.time_manager.features.root.presentation.home.new_work.DatePickerWidget
@@ -58,10 +58,11 @@ import java.util.Locale
 @Composable
 fun NewWorkInput(
     onDismiss: () -> Unit,
-    vm: HomeViewModel,
+    onIntent: (HomeIntent) -> Unit,
     projects: List<Project>,
     day: Int,
-    work: Work?
+    work: Work?,
+    initialDateTime: LocalDateTime? = null,
 ) {
     val colors = MaterialTheme.colorScheme
     val typography = MaterialTheme.typography
@@ -73,7 +74,10 @@ fun NewWorkInput(
         )
     }
 
-    val currentDate = LocalDateTime.now().withDayOfMonth(day).withHour(0).withMinute(0)
+    val currentDate = (initialDateTime ?: LocalDateTime.now())
+        .withDayOfMonth(day)
+        .withHour(0)
+        .withMinute(0)
     val dateUtils = DateUtils()
     val dateState = rememberDatePickerState(
         initialSelectedDateMillis = work?.date?.toEpochSecond(ZoneOffset.UTC)?.times(1000)
@@ -141,17 +145,17 @@ fun NewWorkInput(
             onDismiss()
         },
         sheetState = rememberModalBottomSheetState(),
-        containerColor = colors.surfaceContainerHigh,
+        containerColor = colors.surfaceContainerLow,
         contentColor = colors.onSurface,
         shape = sheetShape,
-        dragHandle = null,
+//        dragHandle = null,
         scrimColor = MaterialTheme.colorScheme.scrim.copy(alpha = 0.5f),
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(sheetShape)
-                .background(colors.surfaceContainerHigh)
+                .background(colors.surfaceContainerLow)
                 .padding(horizontal = 20.dp, vertical = 16.dp)
                 .heightIn(min = 500.dp)
         ) {
@@ -194,7 +198,6 @@ fun NewWorkInput(
                         text = stringResource(R.string.hours_btn),
                         icon = timerIcon(),
                         action = { timePickerDialog.show() },
-                        isPrimary = true,
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                 }
@@ -270,7 +273,7 @@ fun NewWorkInput(
             SaveButtons(
                 work = work,
                 onDismiss = onDismiss,
-                vm = vm,
+                onIntent = onIntent,
                 selectedProject = selectedProject,
                 time = time,
                 millisToLocalDate = millisToLocalDate,

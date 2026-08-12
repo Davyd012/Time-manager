@@ -20,7 +20,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import org.examples.time_manager.R
 import org.examples.time_manager.core.database.work.Work
-import org.examples.time_manager.features.root.HomeViewModel
+import org.examples.time_manager.features.root.data.HomeIntent
 import org.examples.time_manager.features.root.data.HomeIntent.ModifyWork
 import org.examples.time_manager.features.root.data.HomeIntent.WriteRangeWork
 import org.examples.time_manager.features.root.data.HomeIntent.WriteWork
@@ -35,7 +35,7 @@ import java.time.LocalDateTime
 fun SaveButtons(
     work: Work?,
     onDismiss: () -> Unit,
-    vm: HomeViewModel,
+    onIntent: (HomeIntent) -> Unit,
     selectedProject: Int,
     time: String,
     millisToLocalDate: LocalDateTime,
@@ -48,8 +48,8 @@ fun SaveButtons(
     val typography = MaterialTheme.typography
     val primaryButtonShape = MaterialTheme.shapes.medium
     val primaryButtonColors = ButtonDefaults.buttonColors(
-        containerColor = colors.primary,
-        contentColor = colors.onPrimary,
+        containerColor = colors.primaryContainer,
+        contentColor = colors.onPrimaryContainer,
     )
     val primaryButtonPadding = PaddingValues(vertical = 14.dp, horizontal = 16.dp)
     val primaryButtonModifier = Modifier
@@ -61,7 +61,7 @@ fun SaveButtons(
             onClick = {
                 if (dates.size < 2) return@Button
                 onDismiss()
-                vm.onIntent(
+                onIntent(
                     WriteRangeWork(
                         project = selectedProject,
                         dates = dates,
@@ -90,7 +90,7 @@ fun SaveButtons(
         Button(
             onClick = {
                 onDismiss()
-                vm.onIntent(
+                onIntent(
                     WriteWork(
                         project = selectedProject,
                         hours = getIntFromTime(time),
@@ -121,7 +121,7 @@ fun SaveButtons(
         Button(
             onClick = {
                 onDismiss()
-                vm.onIntent(
+                onIntent(
                     ModifyWork(work = work, delete = true)
                 )
             },
@@ -138,7 +138,7 @@ fun SaveButtons(
         Button(
             onClick = {
                 onDismiss()
-                vm.onIntent(
+                onIntent(
                     ModifyWork(
                         work = work.copy(
                             date = startedJobDateTime,
