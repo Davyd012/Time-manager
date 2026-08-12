@@ -52,3 +52,6 @@ local.properties
 docs/ai/*
 AGENTS.md
 CAVEMAN.md
+app/src/screenshotTestDebug/*
+tools/*
+ui-catalog/*

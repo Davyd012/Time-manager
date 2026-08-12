@@ -1,13 +1,19 @@
 package org.examples.time_manager.features.calendar.presentation.components
 
-import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonColors
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -39,12 +45,13 @@ fun CalendarSelectorRow(
     val nextTitle = formatMonthTitle(monthYear.plusMonths(1), "MMM yyyy")
     val colors = MaterialTheme.colorScheme
 
+    val texts = MaterialTheme.typography
     BoxWithConstraints(
         modifier = modifier
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 8.dp),
     ) {
-        val compact = maxWidth < 360.dp
+        val compact = maxWidth < 500.dp
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -64,33 +71,57 @@ fun CalendarSelectorRow(
             ) {
                 IconButton(
                     onClick = onPrevMonth,
-                    modifier = Modifier.size(48.dp),
+                    modifier = Modifier
+                        .size(48.dp)
+                        .border(
+                            width = 1.dp,
+                            color = colors.outlineVariant,
+                            shape = CircleShape,
+                        ),
+                    colors = IconButtonDefaults.iconButtonColors(
+                        containerColor = colors.primary,
+                        contentColor = colors.onPrimary,
+                    ),
                 ) {
-                    androidx.compose.material3.Icon(
+                    Icon(
                         imageVector = arrowLeftIcon(),
                         contentDescription = stringResource(R.string.previous_month_cd),
                         tint = colors.onSurface,
                     )
                 }
 
+                Spacer(modifier = Modifier.widthIn(10.dp))
+
                 Surface(
                     onClick = onViewMonth,
                     color = colors.primaryContainer,
                     contentColor = colors.onPrimaryContainer,
-                    shape = MaterialTheme.shapes.medium,
+                    shape = MaterialTheme.shapes.extraLarge,
                 ) {
                     Text(
                         text = currentTitle,
-                        style = MaterialTheme.typography.titleMedium,
+                        style = texts.titleMedium,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                     )
                 }
 
+                Spacer(modifier = Modifier.widthIn(10.dp))
+
                 IconButton(
                     onClick = onNextMonth,
-                    modifier = Modifier.size(48.dp),
+                    modifier = Modifier
+                        .size(48.dp)
+                        .border(
+                            width = 1.dp,
+                            color = colors.outlineVariant,
+                            shape = CircleShape,
+                        ),
+                    colors = IconButtonDefaults.iconButtonColors(
+                        containerColor = colors.primary,
+                        contentColor = colors.onPrimary,
+                    ),
                 ) {
                     Icon(
                         imageVector = arrowRightIcon(),
