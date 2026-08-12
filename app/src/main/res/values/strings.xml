@@ -69,6 +69,17 @@ Ny måned, nye muligheter.</string>
     <string name="save_btn">Lagre</string>
     <string name="home_tab">Hjem</string>
     <string name="stopwatch_tab">Stoppeklokke</string>
+    <string name="stopwatch_idle_status">Trykk på Start for å begynne</string>
+    <string name="stopwatch_running_status">Du sporer tid</string>
+    <string name="stopwatch_paused_status">Tidsregistrering satt på pause</string>
+    <string name="start_action">Start</string>
+    <string name="pause_action">Pause</string>
+    <string name="resume_action">Fortsett</string>
+    <string name="select_project_title">Velg prosjekt</string>
+    <string name="select_project_before_start">Velg et prosjekt før du starter</string>
+    <string name="active_project_label">Aktivt prosjekt</string>
+    <string name="selected_project_cd">Valgt prosjekt</string>
+    <string name="no_projects_description">Opprett et prosjekt for å registrere tid.</string>
     <string name="no_work_logs">Ingen arbeidsføringer</string>
     <string name="no_work_logs_description">Du har ingen registrerte timer denne dagen.</string>
     <string name="add_hours_btn">Legg til timer</string>

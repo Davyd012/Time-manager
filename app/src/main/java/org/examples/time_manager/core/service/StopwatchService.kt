@@ -4,9 +4,11 @@ import android.annotation.SuppressLint
 import android.app.NotificationChannel
 import android.app.Service
 import android.content.Intent
+import android.content.pm.ServiceInfo
 import android.os.Binder
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
+import androidx.core.app.ServiceCompat
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -84,10 +86,15 @@ class StopwatchService : Service() {
         stopSelf()
     }
 
-    @SuppressLint("ForegroundServiceType")
+    @SuppressLint("InlinedApi")
     private fun startForegroundService() {
         createNotificationChannel()
-        startForeground(NOTIFICATION_ID, notificationBuilder.build())
+        ServiceCompat.startForeground(
+            this,
+            NOTIFICATION_ID,
+            notificationBuilder.build(),
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE,
+        )
         setStopButton()
     }
 

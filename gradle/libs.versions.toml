@@ -16,6 +16,7 @@ poi = "5.5.1"
 room = "2.8.4"
 ksp = "2.3.9"
 sqlite = "2.7.0"
+screenshot = "0.0.1-alpha15"
 
 # For native Android
 navigation3 = "1.1.4"
@@ -44,6 +45,7 @@ lifecycle-viewmodel-navigation3 = { group = "androidx.lifecycle", name = "lifecy
 room-runtime = { module = "androidx.room:room-runtime", version.ref = "room" }
 room-compiler = { module = "androidx.room:room-compiler", version.ref = "room" }
 sqlite-bundled = { module = "androidx.sqlite:sqlite-bundled", version.ref = "sqlite" }
+screenshot-validation-api = { module = "com.android.tools.screenshot:screenshot-validation-api", version.ref = "screenshot" }
 
 # For native Android
 androidx-navigation3-runtime = { module = "androidx.navigation3:navigation3-runtime", version.ref = "navigation3" }
@@ -54,5 +56,6 @@ androidApplication = { id = "com.android.application", version.ref = "agp" }
 org-jetbrains-kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version.ref = "org-jetbrains-kotlin-jvm" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
 room = { id = "androidx.room", version.ref = "room" }
+screenshot = { id = "com.android.compose.screenshot", version.ref = "screenshot" }
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
 jetbrains-kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
