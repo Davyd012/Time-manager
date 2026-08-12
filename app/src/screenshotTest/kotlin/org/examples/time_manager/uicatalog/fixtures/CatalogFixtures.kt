@@ -70,6 +70,7 @@ object CatalogFixtures {
         today = Today("Onsdag", date.dayOfMonth, "august", date.year),
         calendarMonth = month,
         calendarDays = days,
+        calendarTotalHours = 3.5,
         calendarProjectHours = mapOf(1 to 2.25, 2 to 1.25, 3 to 0.0),
     )
 

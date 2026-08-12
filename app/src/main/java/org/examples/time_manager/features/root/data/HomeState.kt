@@ -20,7 +20,9 @@ data class HomeUiState(
     val workQueries: List<Work> = emptyList(),
     val today: Today = Today("", 1, "", 0),
     val calendarMonth: YearMonth = YearMonth.now(),
+    val isCalendarLoading: Boolean = false,
     val calendarDays: List<DayModel> = emptyList(),
+    val calendarTotalHours: Double = 0.0,
     val calendarSelectedProjects: List<Project> = emptyList(),
     val calendarProjectHours: Map<Int, Double> = emptyMap(),
 )
@@ -39,4 +41,12 @@ data class StopwatchUiState(
 data class ModifyWork(
     val selectedWork: Int = -1,
     val showModal: Boolean = false,
+)
+
+data class CalendarSnapshot(
+    val month: YearMonth,
+    val selectedProjects: List<Project> = emptyList(),
+    val days: List<DayModel> = emptyList(),
+    val totalHours: Double = 0.0,
+    val projectHours: Map<Int, Double> = emptyMap(),
 )

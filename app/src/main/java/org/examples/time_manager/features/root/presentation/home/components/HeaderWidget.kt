@@ -4,9 +4,18 @@ import android.content.Intent
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.ContentTransform
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.snap
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -38,6 +47,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
@@ -63,11 +73,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.delay
 import kotlin.math.roundToInt
 import java.time.LocalDate
 import org.examples.time_manager.R
 import org.examples.time_manager.core.dates.models.DayModel
 import org.examples.time_manager.features.calendar.presentation.components.CalendarSelectorRow
+import org.examples.time_manager.features.calendar.presentation.components.calendarMonthSwipeGesture
 import org.examples.time_manager.features.calendar.presentation.components.DayWork
 import org.examples.time_manager.features.calendar.presentation.components.MonthGrid
 import org.examples.time_manager.features.calendar.presentation.components.MonthViewColors
@@ -106,6 +118,8 @@ fun HeaderWidget(
 ) {
     var showMonthPicker by remember { mutableStateOf(false) }
     var showProjectFilter by remember { mutableStateOf(false) }
+    var monthTransitioning by remember { mutableStateOf(false) }
+    var requestedMonth by remember { mutableStateOf<java.time.YearMonth?>(null) }
     val months = stringArrayResource(R.array.months_array).toList()
     val context = LocalContext.current
 
@@ -182,6 +196,26 @@ fun HeaderWidget(
     val dayWorks = remember(state.calendarDays) {
         state.calendarDays.map { DayWork(it.date, it.time / 3600.0) }
     }
+    LaunchedEffect(state.calendarMonth, requestedMonth, animationsEnabled) {
+        if (requestedMonth == state.calendarMonth) {
+            if (animationsEnabled) delay(MONTH_TRANSITION_DURATION_MS)
+            requestedMonth = null
+            monthTransitioning = false
+        }
+    }
+
+    fun requestMonthChange(month: java.time.YearMonth) {
+        if (
+            !isCalendarFullyExpanded(expansionState) ||
+            state.isCalendarLoading ||
+            monthTransitioning ||
+            requestedMonth != null
+        ) return
+
+        requestedMonth = month
+        monthTransitioning = animationsEnabled
+        onIntent(ChangeCalendarMonth(month))
+    }
     val monthColors = rememberHomeMonthColors()
 
     SubcomposeLayout(
@@ -212,6 +246,9 @@ fun HeaderWidget(
                 onViewMonth = {},
                 onShowProjectFilter = {},
                 showCalendar = false,
+                isCalendarFullyExpanded = false,
+                monthTransitioning = false,
+                animationsEnabled = animationsEnabled,
                 modifier = Modifier,
                 dragModifier = Modifier,
             )
@@ -259,24 +296,19 @@ fun HeaderWidget(
                     navigator.openMonth(date.year, date.monthValue, date.dayOfMonth)
                 },
                 onPrevMonth = {
-                    onIntent(
-                        ChangeCalendarMonth(
-                            state.calendarMonth.minusMonths(1),
-                        ),
-                    )
+                    requestMonthChange(state.calendarMonth.minusMonths(1))
                 },
                 onNextMonth = {
-                    onIntent(
-                        ChangeCalendarMonth(
-                            state.calendarMonth.plusMonths(1),
-                        ),
-                    )
+                    requestMonthChange(state.calendarMonth.plusMonths(1))
                 },
                 onViewMonth = {
                     navigator.openMonth(state.calendarMonth.year, state.calendarMonth.monthValue, 1)
                 },
                 onShowProjectFilter = { showProjectFilter = true },
                 showCalendar = true,
+                isCalendarFullyExpanded = isCalendarFullyExpanded(expansionState, actualProgress),
+                monthTransitioning = monthTransitioning || state.isCalendarLoading,
+                animationsEnabled = animationsEnabled,
                 modifier = Modifier,
                 dragModifier = Modifier
                     .anchoredDraggable(
@@ -311,6 +343,9 @@ private fun HomeHeaderSurface(
     onViewMonth: () -> Unit,
     onShowProjectFilter: () -> Unit,
     showCalendar: Boolean,
+    isCalendarFullyExpanded: Boolean,
+    monthTransitioning: Boolean,
+    animationsEnabled: Boolean,
     modifier: Modifier,
     dragModifier: Modifier,
 ) {
@@ -362,15 +397,21 @@ private fun HomeHeaderSurface(
 
         if (showCalendar) {
             CalendarBody(
-                state = state,
                 progress = progress,
                 monthColors = monthColors,
-                dayWorks = dayWorks,
+                calendarContent = CalendarContent(
+                    month = state.calendarMonth,
+                    days = dayWorks,
+                    totalHours = state.calendarTotalHours,
+                ),
                 selectedDate = selectedCalendarDate,
                 onSelectDate = onSelectCalendarDate,
                 onPrevMonth = onPrevMonth,
                 onNextMonth = onNextMonth,
                 onViewMonth = onViewMonth,
+                isCalendarFullyExpanded = isCalendarFullyExpanded,
+                monthTransitioning = monthTransitioning,
+                animationsEnabled = animationsEnabled,
                 modifier = Modifier.weight(1f),
             )
         }
@@ -684,58 +725,133 @@ private fun CalendarHeaderIconButton(
 
 @Composable
 private fun CalendarBody(
-    state: HomeState,
     progress: Float,
     monthColors: MonthViewColors,
-    dayWorks: List<DayWork>,
+    calendarContent: CalendarContent,
     selectedDate: LocalDate?,
     onSelectDate: (LocalDate) -> Unit,
     onPrevMonth: () -> Unit,
     onNextMonth: () -> Unit,
     onViewMonth: () -> Unit,
+    isCalendarFullyExpanded: Boolean,
+    monthTransitioning: Boolean,
+    animationsEnabled: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val bodyAlpha = ((progress - 0.15f) / 0.4f).coerceIn(0f, 1f)
-    val totalHours = remember(dayWorks) { dayWorks.sumOf { it.hours } }
-    Column(
+    val density = LocalDensity.current
+    val horizontalSwipeThresholdPx = with(density) {
+        (MaterialTheme.spacing.extraLarge * 2).toPx()
+    }
+    val swipeModifier = Modifier.calendarMonthSwipeGesture(
+        enabled = isCalendarFullyExpanded && !monthTransitioning,
+        thresholdPx = horizontalSwipeThresholdPx,
+        onPreviousMonth = onPrevMonth,
+        onNextMonth = onNextMonth,
+    )
+
+    AnimatedContent(
+        targetState = calendarContent,
         modifier = modifier
             .background(monthColors.background)
             .graphicsLayer {
                 alpha = bodyAlpha
                 translationY = (1f - progress) * 24.dp.toPx()
             }
-            .padding(horizontal = MaterialTheme.spacing.small),
-        verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
-    ) {
-        CalendarSelectorRow(
-            monthYear = state.calendarMonth,
-            onClose = {},
-            onPrevMonth = onPrevMonth,
-            onNextMonth = onNextMonth,
-            onViewMonth = onViewMonth,
-            monthColors = monthColors,
-        )
-        BoxWithConstraints(
+            .testTag("calendar-month-content")
+            .then(swipeModifier),
+        transitionSpec = {
+            monthTransitionSpec(
+                forward = targetState.month.isAfter(initialState.month),
+                enabled = animationsEnabled && targetState.month != initialState.month,
+            )
+        },
+        label = "calendar-month-transition",
+    ) { content ->
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .weight(1f),
+                .fillMaxSize()
+                .padding(horizontal = MaterialTheme.spacing.small),
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.small),
         ) {
-            val gridOffset = (state.calendarMonth.atDay(1).dayOfWeek.value - 1)
-            val weekCount = (gridOffset + state.calendarMonth.lengthOfMonth() + 6) / 7
-            val cellHeight = ((maxHeight - 120.dp) / weekCount.coerceAtLeast(4))
-                .coerceIn(48.dp, 72.dp)
-            MonthGrid(
-                monthYear = state.calendarMonth,
-                days = dayWorks,
-                selectedDate = selectedDate,
-                onSelectDate = onSelectDate,
-                cellHeight = cellHeight,
-                totalHours = totalHours,
+            CalendarSelectorRow(
+                monthYear = content.month,
+                onClose = {},
+                onPrevMonth = onPrevMonth,
+                onNextMonth = onNextMonth,
+                onViewMonth = onViewMonth,
                 monthColors = monthColors,
             )
+            BoxWithConstraints(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+            ) {
+                val gridOffset = (content.month.atDay(1).dayOfWeek.value - 1)
+                val weekCount = (gridOffset + content.month.lengthOfMonth() + 6) / 7
+                val cellHeight = ((maxHeight - 120.dp) / weekCount.coerceAtLeast(4))
+                    .coerceIn(48.dp, 72.dp)
+                MonthGrid(
+                    monthYear = content.month,
+                    days = content.days,
+                    selectedDate = selectedDate,
+                    onSelectDate = onSelectDate,
+                    cellHeight = cellHeight,
+                    totalHours = content.totalHours,
+                    monthColors = monthColors,
+                )
+            }
         }
     }
 }
+
+private const val MONTH_TRANSITION_DURATION_MS = 300L
+
+private data class CalendarContent(
+    val month: java.time.YearMonth,
+    val days: List<DayWork>,
+    val totalHours: Double,
+)
+
+private fun monthTransitionSpec(
+    forward: Boolean,
+    enabled: Boolean,
+): ContentTransform {
+    if (!enabled) return ContentTransform(EnterTransition.None, ExitTransition.None)
+
+    val enterOffset: (Int) -> Int = if (forward) {
+        { width -> width }
+    } else {
+        { width -> -width }
+    }
+    val exitOffset: (Int) -> Int = if (forward) {
+        { width -> -width }
+    } else {
+        { width -> width }
+    }
+    return ContentTransform(
+        targetContentEnter = fadeIn(tween(MONTH_TRANSITION_DURATION_MS.toInt())) +
+            slideInHorizontally(
+                animationSpec = tween(MONTH_TRANSITION_DURATION_MS.toInt()),
+                initialOffsetX = enterOffset,
+            ),
+        initialContentExit = fadeOut(tween(MONTH_TRANSITION_DURATION_MS.toInt())) +
+            slideOutHorizontally(
+                animationSpec = tween(MONTH_TRANSITION_DURATION_MS.toInt()),
+                targetOffsetX = exitOffset,
+            ),
+    )
+}
+
+private fun isCalendarFullyExpanded(
+    expansionState: AnchoredDraggableState<CalendarExpansion>,
+): Boolean = expansionState.currentValue == CalendarExpansion.Expanded &&
+    expansionState.targetValue == CalendarExpansion.Expanded
+
+private fun isCalendarFullyExpanded(
+    expansionState: AnchoredDraggableState<CalendarExpansion>,
+    progress: Float,
+): Boolean = progress >= 1f && isCalendarFullyExpanded(expansionState)
 
 @Composable
 private fun PullHandle(

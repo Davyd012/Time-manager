@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -22,8 +22,10 @@ import org.examples.time_manager.core.dates.models.Today
 import org.examples.time_manager.core.repository.ProjectRepository
 import org.examples.time_manager.core.repository.SpreadsheetExporter
 import org.examples.time_manager.core.repository.StopwatchRepository
+import org.examples.time_manager.core.repository.StopwatchSnapshot
 import org.examples.time_manager.core.repository.WorkRepository
 import org.examples.time_manager.features.root.data.HomeUiState
+import org.examples.time_manager.features.root.data.CalendarSnapshot
 import org.examples.time_manager.features.root.data.ModifyWork
 import org.examples.time_manager.features.root.data.HomeIntent
 import org.examples.time_manager.features.root.data.TimerStates
@@ -44,6 +46,7 @@ class HomeViewModel(
     private val selectedDate = MutableStateFlow(LocalDate.now())
     private val calendarMonth = MutableStateFlow(YearMonth.now())
     private val selectedCalendarProjects = MutableStateFlow<List<Project>>(emptyList())
+    private val calendarIsLoading = MutableStateFlow(false)
     private val editor = MutableStateFlow(ModifyWork())
     private val exportProjects = MutableStateFlow<List<Project>>(emptyList())
     private val message = MutableStateFlow<Int?>(null)
@@ -51,52 +54,59 @@ class HomeViewModel(
     private val projects = projectRepository.observeAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     private val works = selectedDate.flatMapLatest(workRepository::observeForDay)
-    private val calendarMonthWorks = calendarMonth.flatMapLatest(workRepository::observeForMonth)
-    private val calendarWorks = combine(calendarMonth, selectedCalendarProjects) { month, selected ->
-        month to selected.map(Project::id)
-    }.flatMapLatest { (month, ids) -> workRepository.observeForMonth(month, ids) }
-    private val calendarDays = combine(calendarMonth, calendarWorks) { month, works ->
-        month.toDayModels(works)
-    }
-    private val calendarProjectHours = calendarMonthWorks.map { works ->
-        projectHoursById(works)
-    }
+    private val calendarSnapshot = combine(calendarMonth, selectedCalendarProjects) { month, selectedProjects ->
+        month to selectedProjects
+    }.flatMapLatest { (month, selectedProjects) ->
+        combine(
+            workRepository.observeForMonth(month, selectedProjects.map(Project::id)),
+            workRepository.observeForMonth(month),
+        ) { filteredWorks, allWorks ->
+            buildCalendarSnapshot(month, selectedProjects, filteredWorks, allWorks)
+        }
+    }.stateIn(
+        viewModelScope,
+        SharingStarted.WhileSubscribed(5_000),
+        CalendarSnapshot(calendarMonth.value),
+    )
 
     private val baseState = combine(
         selectedDate,
-        calendarMonth,
         selectedCalendarProjects,
         projects,
         works,
-    ) { date, month, selectedProjects, projectList, workList ->
-        HomeBase(date, month, selectedProjects, projectList, workList)
+    ) { date, selectedProjects, projectList, workList ->
+        HomeBase(date, selectedProjects, projectList, workList)
     }
 
     val state = combine(
         baseState,
-        combine(calendarDays, calendarProjectHours) { days, projectHours ->
-            days to projectHours
+        combine(calendarSnapshot, calendarIsLoading) { calendarData, isCalendarLoading ->
+            calendarData to isCalendarLoading
         },
-        stopwatchRepository.state,
-        editor,
-        message,
-    ) { base, calendarData, stopwatch, modifyWork, stateMessage ->
+        combine(stopwatchRepository.state, editor, message) { stopwatch, modifyWork, stateMessage ->
+            HomeTransient(stopwatch, modifyWork, stateMessage)
+        },
+    ) { base, calendarState, transient ->
+        val (calendarData, isCalendarLoading) = calendarState
         HomeUiState(
             isLoading = false,
-            messageResId = stateMessage,
-            counting = stopwatch.isRunning,
-            elapsedSeconds = stopwatch.elapsedSeconds,
-            dayPerMonth = calendarData.first,
+            isCalendarLoading = isCalendarLoading,
+            errorMessage = null,
+            messageResId = transient.message,
+            counting = transient.stopwatch.isRunning,
+            elapsedSeconds = transient.stopwatch.elapsedSeconds,
+            dayPerMonth = calendarData.days,
             selectedDay = base.date.dayOfMonth,
-            selectedProject = stopwatch.selectedProject,
-            selectedWork = modifyWork,
+            selectedProject = transient.stopwatch.selectedProject,
+            selectedWork = transient.modifyWork,
             projects = base.projects,
             workQueries = base.works,
             today = base.date.toToday(),
-            calendarMonth = base.month,
-            calendarDays = calendarData.first,
-            calendarSelectedProjects = base.selectedProjects,
-            calendarProjectHours = calendarData.second,
+            calendarMonth = calendarData.month,
+            calendarDays = calendarData.days,
+            calendarTotalHours = calendarData.totalHours,
+            calendarSelectedProjects = calendarData.selectedProjects,
+            calendarProjectHours = calendarData.projectHours,
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
 
@@ -136,12 +146,23 @@ class HomeViewModel(
                 if (event.delete) projectRepository.delete(event.project)
                 else projectRepository.upsert(event.project)
             }
-            is HomeIntent.ChangeCalendarMonth -> calendarMonth.value = event.month
+            is HomeIntent.ChangeCalendarMonth -> requestCalendarMonth(event.month)
             is HomeIntent.ToggleCalendarProject -> selectedCalendarProjects.update { selected ->
                 if (event.project in selected) selected - event.project else selected + event.project
             }
             is HomeIntent.SetCalendarProjects -> selectedCalendarProjects.value = event.projects
             HomeIntent.ClearCalendarProjects -> selectedCalendarProjects.value = emptyList()
+        }
+    }
+
+    private fun requestCalendarMonth(month: YearMonth) {
+        if (calendarIsLoading.value || month == calendarMonth.value) return
+
+        calendarIsLoading.value = true
+        calendarMonth.value = month
+        viewModelScope.launch {
+            calendarSnapshot.filter { snapshot -> snapshot.month == month }.first()
+            calendarIsLoading.value = false
         }
     }
 
@@ -186,10 +207,15 @@ class HomeViewModel(
 
 private data class HomeBase(
     val date: LocalDate,
-    val month: YearMonth,
     val selectedProjects: List<Project>,
     val projects: List<Project>,
     val works: List<Work>,
+)
+
+private data class HomeTransient(
+    val stopwatch: StopwatchSnapshot,
+    val modifyWork: ModifyWork,
+    val message: Int?,
 )
 
 private fun YearMonth.toDayModels(works: List<Work>): List<DayModel> {
@@ -198,6 +224,24 @@ private fun YearMonth.toDayModels(works: List<Work>): List<DayModel> {
         val date = atDay(day)
         DayModel(date.dayOfWeek.name, date, hours[date] ?: 0)
     }
+}
+
+internal fun buildCalendarSnapshot(
+    month: YearMonth,
+    selectedProjects: List<Project>,
+    filteredWorks: List<Work>,
+    allWorks: List<Work>,
+): CalendarSnapshot {
+    val monthRange = month.atDay(1)..month.atEndOfMonth()
+    val monthFilteredWorks = filteredWorks.filter { it.date.toLocalDate() in monthRange }
+    val monthWorks = allWorks.filter { it.date.toLocalDate() in monthRange }
+    return CalendarSnapshot(
+        month = month,
+        selectedProjects = selectedProjects,
+        days = month.toDayModels(monthFilteredWorks),
+        totalHours = monthFilteredWorks.sumOf { it.time } / 3600.0,
+        projectHours = projectHoursById(monthWorks),
+    )
 }
 
 private fun LocalDate.toToday() = Today(
