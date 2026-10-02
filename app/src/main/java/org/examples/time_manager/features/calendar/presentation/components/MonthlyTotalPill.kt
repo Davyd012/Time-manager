@@ -14,7 +14,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
 import org.examples.time_manager.R
-import java.util.Locale
+import kotlin.math.roundToLong
 
 @Composable
 fun MonthlyTotalPill(
@@ -22,9 +22,13 @@ fun MonthlyTotalPill(
     modifier: Modifier = Modifier,
     monthColors: MonthViewColors,
 ) {
-    val locale = Locale.Builder().setLanguage("nb").setRegion("NO").build()
-    val formattedLabel = stringResource(R.string.total_month_prefix, totalHours)
-    val value = String.format(locale, "%.0f", totalHours)
+    val totalMinutes = (totalHours * 60).roundToLong()
+    val value = stringResource(
+        R.string.duration_hours_minutes,
+        totalMinutes / 60,
+        totalMinutes % 60,
+    )
+    val formattedLabel = stringResource(R.string.total_month_prefix, value)
     val valueStart = formattedLabel.indexOf(value)
     val label =
         buildAnnotatedString {
