@@ -10,11 +10,10 @@ import no.timnor.app.core.database.work.WorkDao
 
 @Database(
     entities = [Work::class, Project::class],
-    version = 1
+    version = 1,
 )
 @TypeConverters(Converters::class)
-abstract class Database: RoomDatabase() {
-
+abstract class Database : RoomDatabase() {
     abstract fun workDao(): WorkDao
 
     abstract fun projectDao(): ProjectDao

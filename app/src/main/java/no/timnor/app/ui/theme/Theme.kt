@@ -4,7 +4,6 @@ import android.app.Activity
 import android.graphics.Color
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.platform.LocalView
@@ -12,6 +11,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import no.timnor.app.App
+import no.timnor.app.shared.ui.theme.TimnorTheme
 
 @Composable
 fun TimeMangerTheme(
@@ -44,9 +44,5 @@ fun TimeMangerTheme(
         }
     }
 
-    MaterialTheme(
-        colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme,
-        typography = Typography,
-        content = content,
-    )
+    TimnorTheme(darkTheme = darkTheme, content = content)
 }

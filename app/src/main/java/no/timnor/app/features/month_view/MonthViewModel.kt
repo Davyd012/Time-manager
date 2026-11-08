@@ -27,6 +27,10 @@ import java.time.LocalDate
 import java.time.YearMonth
 import java.time.format.TextStyle
 import java.util.Locale
+import kotlinx.datetime.toKotlinLocalDate
+import kotlinx.datetime.toJavaLocalDate
+import no.timnor.app.shared.domain.work.plannedWeekdayWork
+import no.timnor.app.shared.domain.calendar.workSecondsByDay
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class MonthViewModel(
@@ -47,11 +51,16 @@ class MonthViewModel(
         workRepository.observeForDay(monthValue.atDay(day))
     }
     private val days = workRepository.observeForMonth(monthValue).map { entries ->
-        val hours = entries.groupBy { it.date.toLocalDate() }
-            .mapValues { (_, values) -> values.sumOf(Work::time) }
+        val secondsByDay = workSecondsByDay(
+            entries = entries,
+            year = monthValue.year,
+            month = monthValue.monthValue,
+            dateOf = { it.date.toLocalDate().toKotlinLocalDate() },
+            secondsOf = Work::time,
+        )
         (1..monthValue.lengthOfMonth()).map { day ->
             val date = monthValue.atDay(day)
-            DayModel(date.dayOfWeek.name, date, hours[date] ?: 0)
+            DayModel(date.dayOfWeek.name, date, secondsByDay[day] ?: 0)
         }
     }
 
@@ -94,9 +103,15 @@ class MonthViewModel(
                 }
             }
             is MonthViewIntent.WriteRangeWork -> viewModelScope.launch(Dispatchers.IO) {
-                event.dates.filter { it.dayOfWeek.value < 6 }.forEach { date ->
-                    val seconds = if (date.dayOfWeek.value == 5) (5.5 * 3600).toInt() else 8 * 3600
-                    workRepository.upsert(Work(event.notes, date.withHour(7), event.project, time = seconds))
+                plannedWeekdayWork(event.dates.map { it.toLocalDate().toKotlinLocalDate() }).forEach { plannedDay ->
+                    workRepository.upsert(
+                        Work(
+                            event.notes,
+                            plannedDay.date.toJavaLocalDate().atTime(7, 0),
+                            event.project,
+                            time = plannedDay.timeSeconds,
+                        ),
+                    )
                 }
             }
             is MonthViewIntent.NewProject -> viewModelScope.launch(Dispatchers.IO) {

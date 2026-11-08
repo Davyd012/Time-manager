@@ -21,8 +21,6 @@ import no.timnor.app.core.dates.models.DayModel
 import no.timnor.app.core.dates.models.Today
 import no.timnor.app.core.repository.ProjectRepository
 import no.timnor.app.core.repository.SpreadsheetExporter
-import no.timnor.app.core.repository.StopwatchRepository
-import no.timnor.app.core.repository.StopwatchSnapshot
 import no.timnor.app.core.repository.WorkRepository
 import no.timnor.app.features.root.data.HomeUiState
 import no.timnor.app.features.root.data.CalendarSnapshot
@@ -30,6 +28,14 @@ import no.timnor.app.features.root.data.ModifyWork
 import no.timnor.app.features.root.data.HomeIntent
 import no.timnor.app.features.root.data.TimerStates
 import no.timnor.app.features.calendar.presentation.components.projectHoursById
+import no.timnor.app.shared.platform.stopwatch.StopwatchPlatform
+import no.timnor.app.shared.platform.stopwatch.StopwatchSnapshot
+import no.timnor.app.shared.domain.work.plannedWeekdayWork
+import no.timnor.app.shared.domain.calendar.workSecondsByDay
+import no.timnor.app.shared.domain.calendar.totalWorkHours
+import no.timnor.app.shared.domain.project.toggleProjectSelection
+import kotlinx.datetime.toKotlinLocalDate
+import kotlinx.datetime.toJavaLocalDate
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.YearMonth
@@ -40,7 +46,7 @@ import java.util.Locale
 class HomeViewModel(
     private val workRepository: WorkRepository,
     private val projectRepository: ProjectRepository,
-    private val stopwatchRepository: StopwatchRepository,
+    private val stopwatchRepository: StopwatchPlatform,
     private val spreadsheetExporter: SpreadsheetExporter,
 ) : ViewModel() {
     private val selectedDate = MutableStateFlow(LocalDate.now())
@@ -147,8 +153,19 @@ class HomeViewModel(
                 else projectRepository.upsert(event.project)
             }
             is HomeIntent.ChangeCalendarMonth -> requestCalendarMonth(event.month)
-            is HomeIntent.ToggleCalendarProject -> selectedCalendarProjects.update { selected ->
-                if (event.project in selected) selected - event.project else selected + event.project
+            is HomeIntent.ToggleCalendarProject -> {
+                val allProjectIds = projects.value.mapTo(mutableSetOf(), Project::id)
+                val selectedIds = selectedCalendarProjects.value
+                    .mapTo(mutableSetOf(), Project::id)
+                    .takeUnless { it.isEmpty() }
+                val nextSelection = toggleProjectSelection(
+                    selectedIds = selectedIds,
+                    projectId = event.project.id,
+                    allProjectIds = allProjectIds,
+                )
+                selectedCalendarProjects.value = nextSelection
+                    ?.let { ids -> projects.value.filter { it.id in ids } }
+                    .orEmpty()
             }
             is HomeIntent.SetCalendarProjects -> selectedCalendarProjects.value = event.projects
             HomeIntent.ClearCalendarProjects -> selectedCalendarProjects.value = emptyList()
@@ -214,10 +231,14 @@ class HomeViewModel(
 
     private fun writeRange(event: HomeIntent.WriteRangeWork) {
         viewModelScope.launch(Dispatchers.IO) {
-            event.dates.filter { it.dayOfWeek.value < 6 }.forEach { date ->
-                val seconds = if (date.dayOfWeek.value == 5) (5.5 * 3600).toInt() else 8 * 3600
+            plannedWeekdayWork(event.dates.map { it.toLocalDate().toKotlinLocalDate() }).forEach { plannedDay ->
                 workRepository.upsert(
-                    Work(description = event.notes, date = date.withHour(7), project = event.project, time = seconds),
+                    Work(
+                        description = event.notes,
+                        date = plannedDay.date.toJavaLocalDate().atTime(7, 0),
+                        project = event.project,
+                        time = plannedDay.timeSeconds,
+                    ),
                 )
             }
         }
@@ -242,10 +263,16 @@ private data class HomeTransient(
 )
 
 private fun YearMonth.toDayModels(works: List<Work>): List<DayModel> {
-    val hours = works.groupBy { it.date.toLocalDate() }.mapValues { (_, entries) -> entries.sumOf { it.time } }
+    val secondsByDay = workSecondsByDay(
+        entries = works,
+        year = year,
+        month = monthValue,
+        dateOf = { it.date.toLocalDate().toKotlinLocalDate() },
+        secondsOf = Work::time,
+    )
     return (1..lengthOfMonth()).map { day ->
         val date = atDay(day)
-        DayModel(date.dayOfWeek.name, date, hours[date] ?: 0)
+        DayModel(date.dayOfWeek.name, date, secondsByDay[day] ?: 0)
     }
 }
 
@@ -262,7 +289,7 @@ internal fun buildCalendarSnapshot(
         month = month,
         selectedProjects = selectedProjects,
         days = month.toDayModels(monthFilteredWorks),
-        totalHours = monthFilteredWorks.sumOf { it.time } / 3600.0,
+        totalHours = totalWorkHours(monthFilteredWorks, Work::time),
         projectHours = projectHoursById(monthWorks),
     )
 }

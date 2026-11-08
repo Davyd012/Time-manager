@@ -10,7 +10,7 @@ import kotlinx.coroutines.launch
 import no.timnor.app.core.repository.BackupRepository
 import no.timnor.app.core.repository.BackupResult
 import no.timnor.app.core.repository.RestorePreview
-import no.timnor.app.core.repository.StopwatchRepository
+import no.timnor.app.shared.platform.stopwatch.StopwatchPlatform
 
 data class SettingsUiState(
     val busy: Boolean = false,
@@ -24,7 +24,7 @@ enum class Progress { CreatingBackup, CheckingBackup, RestoringBackup }
 
 class SettingsViewModel(
     private val backupRepository: BackupRepository,
-    private val stopwatchRepository: StopwatchRepository,
+    private val stopwatchRepository: StopwatchPlatform,
 ) : ViewModel() {
     private val _state = MutableStateFlow(SettingsUiState())
     val state = _state.asStateFlow()

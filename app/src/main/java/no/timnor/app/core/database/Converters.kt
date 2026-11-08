@@ -1,17 +1,18 @@
 package no.timnor.app.core.database
 
 import androidx.room.TypeConverter
+import kotlinx.datetime.toJavaLocalDateTime
+import kotlinx.datetime.toKotlinLocalDateTime
+import no.timnor.app.shared.domain.time.utcEpochSecondsFromLocalDateTime
+import no.timnor.app.shared.domain.time.utcLocalDateTimeFromEpochSeconds
 import java.time.LocalDateTime
-import java.time.ZoneOffset
 
 class Converters {
     @TypeConverter
-    fun fromTimestamp(value: Long?): LocalDateTime? {
-        return value?.let { LocalDateTime.ofEpochSecond(it, 0, ZoneOffset.UTC) }
-    }
+    fun fromTimestamp(value: Long?): LocalDateTime? =
+        value?.let(::utcLocalDateTimeFromEpochSeconds)?.toJavaLocalDateTime()
 
     @TypeConverter
-    fun dateToTimestamp(date: LocalDateTime?): Long? {
-        return date?.toEpochSecond(ZoneOffset.UTC)
-    }
+    fun dateToTimestamp(date: LocalDateTime?): Long? =
+        date?.toKotlinLocalDateTime()?.let(::utcEpochSecondsFromLocalDateTime)
 }

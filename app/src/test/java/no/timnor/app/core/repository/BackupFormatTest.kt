@@ -46,7 +46,7 @@ class BackupFormatTest {
         assertThrows(IllegalArgumentException::class.java) {
             validateBackupV1(valid.copy(projects = listOf(BackupProject(2, "", "a"), BackupProject(2, "", "b"))))
         }
-        assertThrows(java.time.format.DateTimeParseException::class.java) {
+        assertThrows(IllegalArgumentException::class.java) {
             validateBackupV1(valid.copy(works = listOf(BackupWork(1, "", "not-a-date", 88, 1, 15))))
         }
     }

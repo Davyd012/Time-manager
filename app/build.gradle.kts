@@ -27,7 +27,7 @@ android {
     experimentalProperties["android.experimental.enableScreenshotTest"] = true
 
     defaultConfig {
-        applicationId = "org.examples.time_manager"
+        applicationId = "no.timnor.app"
         minSdk = 26
         targetSdk = 34
         versionCode = Version.versionCode
@@ -71,11 +71,8 @@ android {
     }
 }
 
-room {
-    schemaDirectory("$projectDir/schemas")
-}
-
 dependencies {
+    implementation(project(":shared"))
     implementation(libs.core.ktx)
     implementation(libs.lifecycle.runtime.ktx)
     implementation(libs.lifecycle.runtime.compose)
@@ -98,17 +95,22 @@ dependencies {
     screenshotTestImplementation(libs.screenshot.validation.api)
     screenshotTestImplementation(libs.ui.tooling)
 
-    implementation(libs.room.runtime)
-    implementation(libs.sqlite.bundled)
 
     implementation(libs.lottie.compose)
     implementation(libs.kotlinx.serialization.json)
+
+    implementation(libs.room.runtime)
+    implementation(libs.sqlite.bundled)
 
 
     implementation(libs.poi)
     implementation(libs.poi.ooxml)
 
     ksp(libs.room.compiler)
+}
+
+room {
+    schemaDirectory("$projectDir/schemas")
 }
 
 tasks.register<Exec>("exportUiCatalog") {

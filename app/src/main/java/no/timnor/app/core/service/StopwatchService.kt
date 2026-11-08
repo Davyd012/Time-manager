@@ -13,8 +13,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import no.timnor.app.R
-import no.timnor.app.core.repository.StopwatchSnapshot
-import no.timnor.app.core.repository.StopwatchRepository
 import no.timnor.app.core.repository.AppMutationCoordinator
 import no.timnor.app.core.service.util.Constants.ACTION_SERVICE_CANCEL
 import no.timnor.app.core.service.util.Constants.ACTION_SERVICE_START
@@ -25,6 +23,8 @@ import no.timnor.app.core.service.util.Constants.NOTIFICATION_ID
 import no.timnor.app.core.service.util.formatTime
 import no.timnor.app.core.service.util.pad
 import no.timnor.app.di.NotificationModule
+import no.timnor.app.shared.platform.stopwatch.StopwatchPlatform
+import no.timnor.app.shared.platform.stopwatch.StopwatchSnapshot
 import java.util.Timer
 import kotlin.concurrent.fixedRateTimer
 
@@ -34,7 +34,7 @@ class StopwatchService : Service() {
     private val binder = StopwatchBinder()
     private var timer: Timer? = null
     private var seconds = 0
-    private var observer: ((no.timnor.app.core.repository.StopwatchSnapshot) -> Unit)? = null
+    private var observer: ((StopwatchSnapshot) -> Unit)? = null
 
     private val notificationManager by lazy { NotificationModule.provideNotificationManager(this) }
     private val notificationBuilder by lazy { NotificationModule.provideNotificationBuilder(this) }
@@ -54,7 +54,7 @@ class StopwatchService : Service() {
         publish(_snapshot.value.copy(selectedProject = projectId))
     }
 
-    fun observe(observer: (no.timnor.app.core.repository.StopwatchSnapshot) -> Unit) {
+    fun observe(observer: (StopwatchSnapshot) -> Unit) {
         this.observer = observer
         observer(_snapshot.value)
     }
@@ -123,7 +123,7 @@ class StopwatchService : Service() {
         )
     }
 
-    private fun publish(value: no.timnor.app.core.repository.StopwatchSnapshot) {
+    private fun publish(value: StopwatchSnapshot) {
         _snapshot.value = value
         observer?.invoke(value)
     }
@@ -159,7 +159,7 @@ class StopwatchService : Service() {
 class StopwatchGateway(
     private val context: android.content.Context,
     private val coordinator: no.timnor.app.core.repository.DataMutationCoordinator,
-) : StopwatchRepository,
+) : StopwatchPlatform,
     android.content.ServiceConnection {
     private val _state = MutableStateFlow(StopwatchSnapshot())
     override val state: StateFlow<StopwatchSnapshot> = _state.asStateFlow()

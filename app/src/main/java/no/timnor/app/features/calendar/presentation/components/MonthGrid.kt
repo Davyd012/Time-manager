@@ -34,6 +34,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import no.timnor.app.R
+import no.timnor.app.shared.domain.calendar.monthGridLayout
 import no.timnor.app.ui.theme.shareIcon
 import java.math.RoundingMode
 import java.text.NumberFormat
@@ -268,19 +269,14 @@ private fun DayCell(
 }
 
 private fun buildMonthGrid(monthYear: YearMonth): List<LocalDate?> {
-    val firstOfMonth = monthYear.atDay(1)
-    val firstWeekday = firstOfMonth.dayOfWeek
-    val startOffset = (firstWeekday.value + 6) % 7
-    val daysInMonth = monthYear.lengthOfMonth()
+    val layout = monthGridLayout(monthYear.year, monthYear.monthValue)
     val cells = mutableListOf<LocalDate?>()
 
-    repeat(startOffset) { cells.add(null) }
-    for (day in 1..daysInMonth) {
+    repeat(layout.leadingEmptyDays) { cells.add(null) }
+    for (day in 1..layout.daysInMonth) {
         cells.add(monthYear.atDay(day))
     }
-    while (cells.size % 7 != 0) {
-        cells.add(null)
-    }
+    repeat(layout.trailingEmptyDays) { cells.add(null) }
     return cells
 }
 

@@ -3,40 +3,32 @@ package no.timnor.app.core.repository
 import android.content.ContentResolver
 import android.net.Uri
 import androidx.room.withTransaction
-import kotlinx.serialization.Serializable
 import kotlinx.serialization.SerializationException
-import kotlinx.serialization.json.Json
 import kotlinx.coroutines.CancellationException
 import java.nio.ByteBuffer
 import java.nio.charset.CharacterCodingException
 import java.nio.charset.CodingErrorAction
 import no.timnor.app.core.database.Database
-import no.timnor.app.core.database.project.Project
-import no.timnor.app.core.database.work.Work
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
+import kotlinx.datetime.toKotlinLocalDateTime
+import no.timnor.app.shared.data.backup.TIMNOR_BACKUP_FORMAT
+import no.timnor.app.shared.data.backup.TIMNOR_BACKUP_MAX_BYTES
+import no.timnor.app.shared.data.backup.TIMNOR_BACKUP_VERSION
+import no.timnor.app.shared.data.backup.TimnorBackupProject
+import no.timnor.app.shared.data.backup.TimnorBackupV1
+import no.timnor.app.shared.data.backup.TimnorBackupWork
+import no.timnor.app.shared.data.backup.UnsupportedTimnorBackupVersionException
+import no.timnor.app.shared.data.backup.decodeTimnorBackupV1
+import no.timnor.app.shared.data.backup.encodeTimnorBackupV1
+import no.timnor.app.shared.data.backup.toStoredProjects
+import no.timnor.app.shared.data.backup.toStoredWorks
+import no.timnor.app.shared.data.persistence.StoredProject
+import no.timnor.app.shared.data.persistence.StoredWork
+import no.timnor.app.shared.data.persistence.TimnorPersistence
+import no.timnor.app.shared.domain.time.utcEpochSecondsFromLocalDateTime
 
-@Serializable
-data class BackupFile(
-    val format: String,
-    val version: Int,
-    val createdAt: String,
-    val projects: List<BackupProject>,
-    val works: List<BackupWork>,
-)
-
-@Serializable
-data class BackupProject(val id: Int, val description: String, val name: String)
-
-@Serializable
-data class BackupWork(
-    val id: Int,
-    val description: String,
-    val date: String,
-    val project: Int,
-    val task: Int,
-    val time: Int,
-)
+typealias BackupFile = TimnorBackupV1
+typealias BackupProject = TimnorBackupProject
+typealias BackupWork = TimnorBackupWork
 
 data class RestorePreview(
     val token: String,
@@ -65,28 +57,33 @@ interface BackupRepository {
 /** Android document I/O and strict format handling live outside presentation. */
 class RoomBackupRepository(
     private val database: Database,
+    private val persistence: TimnorPersistence,
     private val resolver: ContentResolver,
     private val coordinator: DataMutationCoordinator,
 ) : BackupRepository {
-    private val json = Json { ignoreUnknownKeys = false; isLenient = false }
     private val staged = mutableMapOf<String, BackupFile>()
 
     override suspend fun export(uri: Uri): BackupResult = try {
         val contents = coordinator.snapshot {
             database.withTransaction {
-                BackupFile(
-                    format = FORMAT,
-                    version = VERSION,
-                    createdAt = java.time.Instant.now().toString(),
-                    projects = database.projectDao().getAll().map { BackupProject(it.id, it.description, it.name) },
+                encodeTimnorBackupV1(
+                    projects = database.projectDao().getAll().map { StoredProject(it.description, it.name, it.id) },
                     works = database.workDao().getAll().map {
-                        BackupWork(it.id, it.description, it.date.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME), it.project, it.task, it.time)
+                        StoredWork(
+                            description = it.description,
+                            dateEpochSeconds = utcEpochSecondsFromLocalDateTime(it.date.toKotlinLocalDateTime()),
+                            project = it.project,
+                            task = it.task,
+                            time = it.time,
+                            id = it.id,
+                        )
                     },
+                    createdAt = java.time.Instant.now().toString(),
                 )
             }
         }
         val output = resolver.openOutputStream(uri) ?: return BackupResult.Failure
-        output.use { it.write(json.encodeToString(BackupFile.serializer(), contents).toByteArray(Charsets.UTF_8)) }
+        output.use { it.write(contents.toByteArray(Charsets.UTF_8)) }
         BackupResult.Success
     } catch (cancelled: CancellationException) { throw cancelled }
     catch (_: Exception) { BackupResult.Failure }
@@ -94,14 +91,14 @@ class RoomBackupRepository(
     override suspend fun stage(uri: Uri): Pair<RestorePreview, BackupResult?> = try {
         val input = resolver.openInputStream(uri) ?: return RestorePreview("", 0, 0) to BackupResult.Unreadable
         val bytes = input.use { stream ->
-            val buffer = ByteArray(MAX_BYTES + 1)
+            val buffer = ByteArray(TIMNOR_BACKUP_MAX_BYTES + 1)
             var total = 0
             while (total < buffer.size) {
                 val read = stream.read(buffer, total, buffer.size - total)
                 if (read < 0) break
                 total += read
             }
-            if (total > MAX_BYTES) return RestorePreview("", 0, 0) to BackupResult.Invalid
+            if (total > TIMNOR_BACKUP_MAX_BYTES) return RestorePreview("", 0, 0) to BackupResult.Invalid
             buffer.copyOf(total)
         }
         val decodedText = try {
@@ -113,15 +110,10 @@ class RoomBackupRepository(
         } catch (_: CharacterCodingException) {
             return RestorePreview("", 0, 0) to BackupResult.Invalid
         }
-        val root = json.parseToJsonElement(decodedText)
-        val version = root as? kotlinx.serialization.json.JsonObject
-        val versionNumber = version?.get("version")?.toString()?.toIntOrNull()
-            ?: return RestorePreview("", 0, 0) to BackupResult.Invalid
-        if (versionNumber > VERSION) return RestorePreview("", 0, 0) to BackupResult.UnsupportedVersion
-        if (versionNumber != VERSION) return RestorePreview("", 0, 0) to BackupResult.Invalid
-        val parsed = json.decodeFromString(BackupFile.serializer(), root.toString())
-        try {
-            validateBackupV1(parsed)
+        val parsed = try {
+            decodeTimnorBackupV1(decodedText)
+        } catch (_: UnsupportedTimnorBackupVersionException) {
+            return RestorePreview("", 0, 0) to BackupResult.UnsupportedVersion
         } catch (_: Exception) {
             return RestorePreview("", 0, 0) to BackupResult.Invalid
         }
@@ -139,14 +131,10 @@ class RoomBackupRepository(
     override suspend fun restore(token: String): BackupResult = try {
         val backup = synchronized(staged) { staged[token] } ?: return BackupResult.Invalid
         val restored = coordinator.restoreIfTimerClear {
-            database.withTransaction {
-                database.workDao().deleteAll()
-                database.projectDao().deleteAll()
-                database.projectDao().upsertAll(backup.projects.map { Project(it.description, it.name, it.id) })
-                database.workDao().upsertAll(backup.works.map {
-                    Work(it.description, LocalDateTime.parse(it.date, DateTimeFormatter.ISO_LOCAL_DATE_TIME), it.project, it.task, it.time, it.id)
-                })
-            }
+            persistence.replaceAll(
+                projects = backup.toStoredProjects(),
+                works = backup.toStoredWorks(),
+            )
         }
         if (restored == null) return BackupResult.TimerActive
         discard(token)
@@ -158,17 +146,10 @@ class RoomBackupRepository(
     override fun discard(token: String) { synchronized(staged) { staged.remove(token) } }
 
     companion object {
-        const val FORMAT = "org.examples.time_manager.backup"
-        const val VERSION = 1
-        private const val MAX_BYTES = 25 * 1024 * 1024
+        const val FORMAT = TIMNOR_BACKUP_FORMAT
+        const val VERSION = TIMNOR_BACKUP_VERSION
     }
 }
 
-internal fun validateBackupV1(value: BackupFile) {
-    require(value.format == RoomBackupRepository.FORMAT && value.version == RoomBackupRepository.VERSION)
-    require(value.projects.size <= 100_000 && value.works.size <= 100_000)
-    require(value.projects.map { it.id }.toSet().size == value.projects.size)
-    require(value.works.map { it.id }.toSet().size == value.works.size)
-    value.works.forEach { LocalDateTime.parse(it.date, DateTimeFormatter.ISO_LOCAL_DATE_TIME) }
-    java.time.Instant.parse(value.createdAt)
-}
+internal fun validateBackupV1(value: BackupFile) =
+    no.timnor.app.shared.data.backup.validateTimnorBackupV1(value)

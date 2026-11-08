@@ -3,6 +3,7 @@ package no.timnor.app.core.repository
 import android.content.Context
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import org.apache.poi.ss.usermodel.HorizontalAlignment
 import org.apache.poi.xssf.usermodel.XSSFWorkbook
@@ -11,38 +12,65 @@ import no.timnor.app.core.database.project.Project
 import no.timnor.app.core.database.project.ProjectDao
 import no.timnor.app.core.database.work.Work
 import no.timnor.app.core.database.work.WorkDao
+import no.timnor.app.shared.data.persistence.StoredProject
+import no.timnor.app.shared.data.persistence.StoredWork
+import no.timnor.app.shared.data.persistence.TimnorPersistence
+import no.timnor.app.shared.domain.time.utcEpochSecondsFromLocalDateTime
+import no.timnor.app.shared.domain.time.utcLocalDateTimeFromEpochSeconds
+import kotlinx.datetime.toJavaLocalDateTime
+import kotlinx.datetime.toKotlinLocalDateTime
 import java.time.LocalDate
 import java.time.YearMonth
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
-class RoomWorkRepository(private val dao: WorkDao, private val coordinator: DataMutationCoordinator) : WorkRepository {
+class RoomWorkRepository(private val store: TimnorPersistence, private val coordinator: DataMutationCoordinator) : WorkRepository {
     override fun observeForDay(date: LocalDate): Flow<List<Work>> {
         val (start, end) = date.boundaries()
-        return dao.getAllWorks(start, end)
+        return store.observeWorks(start, end).map { works -> works.map(StoredWork::toWork) }
     }
 
     override fun observeForMonth(month: YearMonth, projectIds: List<Int>): Flow<List<Work>> {
         val (start, end) = month.atDay(1).boundaries().first to month.atEndOfMonth().boundaries().second
-        return if (projectIds.isEmpty()) dao.getAllWorks(start, end)
-        else dao.getAllWorksForProjects(start, end, projectIds)
+        return store.observeWorks(start, end, projectIds).map { works -> works.map(StoredWork::toWork) }
     }
 
     override suspend fun hoursForDay(date: LocalDate, projectIds: List<Int>): Int = withContext(Dispatchers.IO) {
         val (start, end) = date.boundaries()
-        if (projectIds.isEmpty()) dao.getHoursByDay(start, end)
-        else dao.getHoursByDayAndProject(start, end, projectIds)
+        store.hoursForRange(start, end, projectIds)
     }
 
-    override suspend fun upsert(work: Work) = coordinator.mutate { dao.upsert(work) }
-    override suspend fun delete(work: Work) = coordinator.mutate { dao.delete(work) }
+    override suspend fun upsert(work: Work) = coordinator.mutate { store.upsertWork(work.toStored()) }
+    override suspend fun delete(work: Work) = coordinator.mutate { store.deleteWork(work.toStored()) }
 }
 
-class RoomProjectRepository(private val dao: ProjectDao, private val coordinator: DataMutationCoordinator) : ProjectRepository {
-    override fun observeAll(): Flow<List<Project>> = dao.getAllProjects()
-    override suspend fun upsert(project: Project) = coordinator.mutate { dao.upsert(project) }
-    override suspend fun delete(project: Project) = coordinator.mutate { dao.delete(project) }
+class RoomProjectRepository(private val store: TimnorPersistence, private val coordinator: DataMutationCoordinator) : ProjectRepository {
+    override fun observeAll(): Flow<List<Project>> = store.observeProjects().map { projects -> projects.map(StoredProject::toProject) }
+    override suspend fun upsert(project: Project) = coordinator.mutate { store.upsertProject(project.toStored()) }
+    override suspend fun delete(project: Project) = coordinator.mutate { store.deleteProject(project.toStored()) }
 }
+
+private fun StoredWork.toWork() = Work(
+    description = description,
+    date = utcLocalDateTimeFromEpochSeconds(dateEpochSeconds).toJavaLocalDateTime(),
+    project = project,
+    task = task,
+    time = time,
+    id = id,
+)
+
+private fun Work.toStored() = StoredWork(
+    description = description,
+    dateEpochSeconds = utcEpochSecondsFromLocalDateTime(date.toKotlinLocalDateTime()),
+    project = project,
+    task = task,
+    time = time,
+    id = id,
+)
+
+private fun StoredProject.toProject() = Project(description, name, id)
+
+private fun Project.toStored() = StoredProject(description, name, id)
 
 class PoiSpreadsheetExporter(private val context: Context) : SpreadsheetExporter {
     override suspend fun export(uri: String, days: List<no.timnor.app.core.dates.models.DayModel>) {

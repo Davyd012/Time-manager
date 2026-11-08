@@ -12,7 +12,7 @@ import no.timnor.app.core.database.project.Project
 import no.timnor.app.R
 import no.timnor.app.core.database.work.Work
 import no.timnor.app.core.repository.ProjectRepository
-import no.timnor.app.core.repository.StopwatchRepository
+import no.timnor.app.shared.platform.stopwatch.StopwatchPlatform
 import no.timnor.app.core.repository.WorkRepository
 import no.timnor.app.features.root.data.StopwatchIntent
 import no.timnor.app.features.root.data.StopwatchUiState
@@ -22,7 +22,7 @@ import java.time.LocalDateTime
 class StopwatchViewModel(
     private val projectRepository: ProjectRepository,
     private val workRepository: WorkRepository,
-    private val stopwatchRepository: StopwatchRepository,
+    private val stopwatchRepository: StopwatchPlatform,
 ) : ViewModel() {
     private val message = MutableStateFlow<Int?>(null)
     private val projects = projectRepository.observeAll()

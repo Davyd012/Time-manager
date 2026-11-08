@@ -21,3 +21,4 @@ dependencyResolutionManagement {
 
 rootProject.name = "Time manager"
 include(":app")
+include(":shared")
