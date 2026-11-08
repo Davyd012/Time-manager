@@ -1,0 +1,139 @@
+package no.timnor.app.features.root.presentation.home
+
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.AnchoredDraggableState
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.dp
+import no.timnor.app.features.root.HomeViewModel
+import no.timnor.app.features.root.data.HomeIntent
+import no.timnor.app.features.root.data.HomeUiState
+import no.timnor.app.features.root.data.HomeIntent.ModifyWorkState
+import no.timnor.app.features.root.presentation.home.components.HeaderWidget
+import no.timnor.app.features.root.presentation.home.components.ListOfWorks
+import no.timnor.app.navigation.Navigator
+import java.time.LocalDate
+import java.time.LocalDateTime
+
+enum class CalendarExpansion {
+    Collapsed,
+    Expanded,
+}
+
+@Composable
+fun MainPage(
+    vm: HomeViewModel,
+    state: HomeUiState,
+    modifier: Modifier,
+    navigator: Navigator,
+    expansionState: AnchoredDraggableState<CalendarExpansion>,
+    onSetCalendarExpansion: (CalendarExpansion) -> Unit,
+    initialDateTime: LocalDateTime? = null,
+) {
+    MainPageContent(
+        state = state,
+        onIntent = vm::onIntent,
+        modifier = modifier,
+        navigator = navigator,
+        expansionState = expansionState,
+        onSetCalendarExpansion = onSetCalendarExpansion,
+        initialDateTime = initialDateTime,
+    )
+}
+
+@Composable
+fun MainPageContent(
+    state: HomeUiState,
+    onIntent: (HomeIntent) -> Unit,
+    modifier: Modifier,
+    navigator: Navigator,
+    expansionState: AnchoredDraggableState<CalendarExpansion>,
+    onSetCalendarExpansion: (CalendarExpansion) -> Unit,
+    initialDateTime: LocalDateTime? = null,
+) {
+    val works = state.workQueries
+    val projects = state.projects
+    val density = LocalDensity.current
+    var selectedCalendarDateText by rememberSaveable { mutableStateOf<String?>(null) }
+
+    val progress = run {
+        val distance = expansionState.anchors.positionOf(CalendarExpansion.Expanded)
+        val offset = expansionState.offset.takeUnless { it.isNaN() } ?: 0f
+        if (distance.isNaN() || distance <= 0f) {
+            if (expansionState.currentValue == CalendarExpansion.Expanded) 1f else 0f
+        } else {
+            (offset / distance).coerceIn(0f, 1f)
+        }
+    }
+
+    fun toggleCalendar() {
+        val target = when {
+            expansionState.targetValue == CalendarExpansion.Expanded ->
+                CalendarExpansion.Collapsed
+            expansionState.currentValue == CalendarExpansion.Expanded ->
+                CalendarExpansion.Collapsed
+            else -> CalendarExpansion.Expanded
+        }
+        onSetCalendarExpansion(target)
+    }
+
+    BackHandler(enabled = progress > 0.001f) {
+        onSetCalendarExpansion(CalendarExpansion.Collapsed)
+    }
+
+    if (state.selectedWork.showModal) {
+        val index = state.selectedWork.selectedWork
+        NewWorkInput(
+            onDismiss = { onIntent(ModifyWorkState(show = false)) },
+            onIntent = onIntent,
+            projects = projects,
+            day = state.selectedDay,
+            work = works.takeIf { index >= 0 }?.elementAt(index),
+            initialDateTime = initialDateTime,
+        )
+    }
+
+    BoxWithConstraints(
+        modifier = modifier
+            .background(androidx.compose.material3.MaterialTheme.colorScheme.surface)
+            .fillMaxSize(),
+    ) {
+        val availableHeightPx = with(density) { maxHeight.roundToPx() }
+        Column(modifier = Modifier.fillMaxSize()) {
+            HeaderWidget(
+                state = state,
+                onIntent = onIntent,
+                navigator = navigator,
+                expansionState = expansionState,
+                availableHeightPx = availableHeightPx,
+                selectedCalendarDate = selectedCalendarDateText?.let(LocalDate::parse),
+                onCalendarDateSelected = { selectedCalendarDateText = it.toString() },
+                onToggleCalendar = ::toggleCalendar,
+                onCloseCalendar = {
+                    onSetCalendarExpansion(CalendarExpansion.Collapsed)
+                },
+                onAddWork = { onIntent(ModifyWorkState(show = true)) },
+            )
+
+            ListOfWorks(
+                modifier = Modifier
+                    .weight(1f),
+                calendarProgress = progress,
+                showWork = { i -> onIntent(ModifyWorkState(selected = i, show = true)) },
+                addWork = { onIntent(ModifyWorkState(show = true)) },
+                works = works,
+                projects = projects,
+            )
+        }
+    }
+}

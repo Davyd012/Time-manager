@@ -22,7 +22,7 @@ object Version {
 }
 
 android {
-    namespace = "org.examples.time_manager"
+    namespace = "no.timnor.app"
     compileSdk = 37
     experimentalProperties["android.experimental.enableScreenshotTest"] = true
 
