@@ -23,6 +23,8 @@ import org.examples.time_manager.features.month_view.MonthViewScreen
 import org.examples.time_manager.features.root.HomeViewModel
 import org.examples.time_manager.features.root.HomeScreen
 import org.examples.time_manager.features.root.StopwatchViewModel
+import org.examples.time_manager.features.settings.SettingsViewModel
+import org.examples.time_manager.features.settings.SettingsScreen
 import org.examples.time_manager.features.root.presentation.components.BottomBar
 import org.examples.time_manager.features.root.presentation.components.BottomBarItem
 import org.examples.time_manager.features.root.presentation.stopwatch.Stopwatch
@@ -79,6 +81,15 @@ fun AppNavHost(
                     navigator = navigator,
                 )
             }
+            entry<AppRoute.Settings> {
+                val settingsViewModel = viewModel<SettingsViewModel>(factory = getSettingsViewModelFactory(diContainer))
+                SettingsScreen(
+                    viewModel = settingsViewModel,
+                    onBack = { navigator.goBack() },
+                    onGoToTimer = { navigator.select(AppRoute.Stopwatch) },
+                    onRestored = homeViewModel::onBackupRestored,
+                )
+            }
         },
     )
 
@@ -118,7 +129,7 @@ fun AppNavHost(
         NavDisplay(
             entries = entries,
             onBack = { if (!navigator.goBack()) onExit() },
-            modifier = Modifier,
+            modifier = Modifier.padding(bottom = paddingValues.calculateBottomPadding()),
         )
     }
 }

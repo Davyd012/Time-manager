@@ -8,6 +8,15 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ProjectDao {
+    @Query("SELECT * FROM project ORDER BY id")
+    suspend fun getAll(): List<Project>
+
+    @Query("DELETE FROM project")
+    suspend fun deleteAll()
+
+    @Upsert
+    suspend fun upsertAll(projects: List<Project>)
+
     @Upsert
     suspend fun upsert(project: Project)
 

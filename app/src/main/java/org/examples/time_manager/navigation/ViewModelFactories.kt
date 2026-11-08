@@ -6,6 +6,7 @@ import org.examples.time_manager.di.DIContainer
 import org.examples.time_manager.features.month_view.MonthViewModel
 import org.examples.time_manager.features.root.HomeViewModel
 import org.examples.time_manager.features.root.StopwatchViewModel
+import org.examples.time_manager.features.settings.SettingsViewModel
 import java.time.LocalDate
 
 fun getHomeViewModelFactory(diContainer: DIContainer): ViewModelProvider.Factory =
@@ -47,5 +48,13 @@ fun getStopwatchViewModelFactory(diContainer: DIContainer): ViewModelProvider.Fa
                 workRepository = diContainer.workRepository,
                 stopwatchRepository = diContainer.stopwatchRepository,
             ) as T
+        }
+    }
+
+fun getSettingsViewModelFactory(diContainer: DIContainer): ViewModelProvider.Factory =
+    object : ViewModelProvider.Factory {
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            @Suppress("UNCHECKED_CAST")
+            return SettingsViewModel(diContainer.backupRepository, diContainer.stopwatchRepository) as T
         }
     }

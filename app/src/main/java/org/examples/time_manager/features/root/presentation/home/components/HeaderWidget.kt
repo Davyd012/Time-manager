@@ -16,8 +16,8 @@ import androidx.compose.animation.core.AnimationSpec
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.AnchoredDraggableDefaults
 import androidx.compose.foundation.gestures.AnchoredDraggableState
@@ -57,6 +57,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.layout.SubcomposeLayout
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -235,6 +237,7 @@ fun HeaderWidget(
                 onToggleCalendar = onToggleCalendar,
                 onCloseCalendar = onCloseCalendar,
                 onExport = { showMonthPicker = true },
+                onSettings = navigator::openSettings,
                 onAddWork = onAddWork,
                 monthColors = monthColors,
                 dayWorks = dayWorks,
@@ -286,6 +289,7 @@ fun HeaderWidget(
                 onToggleCalendar = onToggleCalendar,
                 onCloseCalendar = onCloseCalendar,
                 onExport = { showMonthPicker = true },
+                onSettings = navigator::openSettings,
                 onAddWork = onAddWork,
                 monthColors = monthColors,
                 dayWorks = dayWorks,
@@ -332,6 +336,7 @@ private fun HomeHeaderSurface(
     onToggleCalendar: () -> Unit,
     onCloseCalendar: () -> Unit,
     onExport: () -> Unit,
+    onSettings: () -> Unit,
     onAddWork: () -> Unit,
     monthColors: MonthViewColors,
     dayWorks: List<DayWork>,
@@ -390,6 +395,7 @@ private fun HomeHeaderSurface(
                 progress = progress,
                 onToggleCalendar = onToggleCalendar,
                 onExport = onExport,
+                onSettings = onSettings,
                 onAddWork = onAddWork,
                 onSelectDay = onSelectDay,
             )
@@ -425,6 +431,7 @@ private fun HomeHeaderBase(
     progress: Float,
     onToggleCalendar: () -> Unit,
     onExport: () -> Unit,
+    onSettings: () -> Unit,
     onAddWork: () -> Unit,
     onSelectDay: (Int) -> Unit,
 ) {
@@ -465,6 +472,7 @@ private fun HomeHeaderBase(
                 dayLabel = selectedDayLabel,
                 onToggleCalendar = onToggleCalendar,
                 onExport = onExport,
+                onSettings = onSettings,
                 onAddWork = onAddWork,
                 enabled = true,
                 modifier = Modifier
@@ -531,6 +539,7 @@ private fun HomeHeaderBar(
     dayLabel: String,
     onToggleCalendar: () -> Unit,
     onExport: () -> Unit,
+    onSettings: () -> Unit,
     onAddWork: () -> Unit,
     enabled: Boolean,
     modifier: Modifier = Modifier,
@@ -583,6 +592,19 @@ private fun HomeHeaderBar(
         }
 
         IconButton(
+            onClick = onSettings,
+            enabled = enabled,
+            modifier = Modifier.size(48.dp),
+        ) {
+            Icon(
+                imageVector = ImageVector.vectorResource(id = R.drawable.outline_settings_24),
+                contentDescription = stringResource(R.string.settings_title),
+                tint = colors.onSurface,
+                modifier = Modifier.size(24.dp),
+            )
+        }
+
+        IconButton(
             onClick = onExport,
             enabled = enabled,
             modifier = Modifier.size(48.dp),
@@ -597,7 +619,7 @@ private fun HomeHeaderBar(
 
         Spacer(Modifier.width(4.dp))
 
-        IconButton(
+        FilledIconButton(
             onClick = onAddWork,
             enabled = enabled,
             modifier = Modifier.size(42.dp),
@@ -692,23 +714,28 @@ private fun CalendarHeaderIconButton(
     testTag: String,
 ) {
     val colors = MaterialTheme.colorScheme
+    val shape = MaterialTheme.shapes.medium
     Box(modifier = Modifier.size(48.dp)) {
-        IconButton(
+        Surface(
             onClick = onClick,
             enabled = enabled,
-            modifier = Modifier
-                .fillMaxSize()
-                .clip(MaterialTheme.shapes.medium)
-                .background(colors.surfaceContainerHigh)
-                .border(1.dp, colors.outlineVariant, MaterialTheme.shapes.medium)
-                .testTag(testTag),
+            modifier = Modifier.fillMaxSize().testTag(testTag),
+            shape = shape,
+            color = colors.surfaceContainerHigh,
+            contentColor = colors.onSurface,
+            border = BorderStroke(1.dp, colors.outlineVariant),
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = contentDescription,
-                tint = colors.onSurface,
-                modifier = Modifier.size(24.dp),
-            )
+            Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = contentDescription,
+                    tint = colors.onSurface,
+                    modifier = Modifier.size(24.dp),
+                )
+            }
         }
         if (active) {
             Box(

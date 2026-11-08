@@ -155,6 +155,18 @@ class HomeViewModel(
         }
     }
 
+    fun onBackupRestored() {
+        selectedCalendarProjects.value = emptyList()
+        editor.value = ModifyWork()
+        viewModelScope.launch(Dispatchers.IO) {
+            val currentProjects = projectRepository.observeAll().first()
+            val selectedId = stopwatchRepository.state.value.selectedProject
+            if (currentProjects.none { it.id == selectedId }) {
+                stopwatchRepository.selectProject(currentProjects.firstOrNull()?.id ?: 0)
+            }
+        }
+    }
+
     private fun requestCalendarMonth(month: YearMonth) {
         if (calendarIsLoading.value || month == calendarMonth.value) return
 
@@ -169,22 +181,33 @@ class HomeViewModel(
     private fun saveStopwatch() {
         val snapshot = stopwatchRepository.state.value
         if (snapshot.elapsedSeconds == 0) return
-        stopwatchRepository.cancel()
+        stopwatchRepository.pause()
         writeWork(
             project = snapshot.selectedProject,
             hours = snapshot.elapsedSeconds,
             date = LocalDateTime.now().minusSeconds(snapshot.elapsedSeconds.toLong()),
             notes = "",
+            onSaved = {
+                stopwatchRepository.cancel()
+                stopwatchRepository.timerSaved()
+            },
         )
     }
 
-    private fun writeWork(project: Int, hours: Int, date: LocalDateTime, notes: String) {
+    private fun writeWork(
+        project: Int,
+        hours: Int,
+        date: LocalDateTime,
+        notes: String,
+        onSaved: (() -> Unit)? = null,
+    ) {
         if (state.value.projects.isEmpty() || hours == 0) {
             showMessage(R.string.create_project_and_register_msg)
             return
         }
         viewModelScope.launch(Dispatchers.IO) {
             workRepository.upsert(Work(description = notes, date = date, project = project, time = hours))
+            onSaved?.invoke()
             editor.value = ModifyWork()
         }
     }

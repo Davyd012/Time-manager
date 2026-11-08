@@ -20,6 +20,12 @@ class Navigator(private val state: NavigationState) {
         state.select(AppRoute.Home)
     }
 
+    fun openSettings() {
+        val stack = state.homeStack
+        if (stack.lastOrNull() != AppRoute.Settings) stack.add(AppRoute.Settings)
+        state.select(AppRoute.Home)
+    }
+
     fun goBack(): Boolean {
         return when (state.selectedTopLevelRoute) {
             AppRoute.Home -> {

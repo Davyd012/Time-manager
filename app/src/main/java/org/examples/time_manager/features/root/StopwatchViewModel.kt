@@ -64,7 +64,7 @@ class StopwatchViewModel(
     private fun saveResult() {
         val snapshot = stopwatchRepository.state.value
         if (snapshot.elapsedSeconds == 0) return
-        stopwatchRepository.cancel()
+        stopwatchRepository.pause()
         viewModelScope.launch(Dispatchers.IO) {
             workRepository.upsert(
                 Work(
@@ -73,6 +73,8 @@ class StopwatchViewModel(
                     time = snapshot.elapsedSeconds,
                 ),
             )
+            stopwatchRepository.cancel()
+            stopwatchRepository.timerSaved()
         }
     }
 }

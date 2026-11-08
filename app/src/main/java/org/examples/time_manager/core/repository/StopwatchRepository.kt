@@ -13,5 +13,6 @@ interface StopwatchRepository {
     fun start()
     fun pause()
     fun cancel()
+    fun timerSaved()
     fun selectProject(projectId: Int)
 }

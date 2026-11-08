@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import org.examples.time_manager.R
 import org.examples.time_manager.core.repository.StopwatchSnapshot
 import org.examples.time_manager.core.repository.StopwatchRepository
+import org.examples.time_manager.core.repository.AppMutationCoordinator
 import org.examples.time_manager.core.service.util.Constants.ACTION_SERVICE_CANCEL
 import org.examples.time_manager.core.service.util.Constants.ACTION_SERVICE_START
 import org.examples.time_manager.core.service.util.Constants.ACTION_SERVICE_STOP
@@ -42,7 +43,7 @@ class StopwatchService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
-            ACTION_SERVICE_START -> startStopwatch()
+            ACTION_SERVICE_START -> if (AppMutationCoordinator.instance.timerStarted()) startStopwatch()
             ACTION_SERVICE_STOP -> pauseStopwatch()
             ACTION_SERVICE_CANCEL -> cancelStopwatch()
         }
@@ -80,6 +81,7 @@ class StopwatchService : Service() {
         timer?.cancel()
         timer = null
         seconds = 0
+        AppMutationCoordinator.instance.timerCleared()
         publish(_snapshot.value.copy(elapsedSeconds = 0, isRunning = false))
         notificationManager.cancel(NOTIFICATION_ID)
         stopForeground(STOP_FOREGROUND_REMOVE)
@@ -154,7 +156,10 @@ class StopwatchService : Service() {
     }
 }
 
-class StopwatchGateway(private val context: android.content.Context) : StopwatchRepository,
+class StopwatchGateway(
+    private val context: android.content.Context,
+    private val coordinator: org.examples.time_manager.core.repository.DataMutationCoordinator,
+) : StopwatchRepository,
     android.content.ServiceConnection {
     private val _state = MutableStateFlow(StopwatchSnapshot())
     override val state: StateFlow<StopwatchSnapshot> = _state.asStateFlow()
@@ -170,7 +175,10 @@ class StopwatchGateway(private val context: android.content.Context) : Stopwatch
 
     override fun onServiceConnected(name: android.content.ComponentName?, binder: IBinder?) {
         service = (binder as StopwatchService.StopwatchBinder).getService()
-        service?.observe { snapshot -> _state.value = snapshot }
+        service?.observe { snapshot ->
+            _state.value = snapshot
+            coordinator.timerObserved(snapshot.isRunning || snapshot.elapsedSeconds > 0)
+        }
     }
 
     override fun onServiceDisconnected(name: android.content.ComponentName?) {
@@ -178,9 +186,14 @@ class StopwatchGateway(private val context: android.content.Context) : Stopwatch
         _state.value = _state.value.copy(isRunning = false)
     }
 
-    override fun start() = ServiceHelper.triggerForegroundService(context, ACTION_SERVICE_START)
+    override fun start() {
+        if (coordinator.timerStarted()) ServiceHelper.triggerForegroundService(context, ACTION_SERVICE_START)
+    }
     override fun pause() = ServiceHelper.triggerForegroundService(context, ACTION_SERVICE_STOP)
-    override fun cancel() = ServiceHelper.triggerForegroundService(context, ACTION_SERVICE_CANCEL)
+    override fun cancel() {
+        ServiceHelper.triggerForegroundService(context, ACTION_SERVICE_CANCEL)
+    }
+    override fun timerSaved() = coordinator.timerCleared()
     override fun selectProject(projectId: Int) {
         service?.setProject(projectId)
         _state.value = _state.value.copy(selectedProject = projectId)

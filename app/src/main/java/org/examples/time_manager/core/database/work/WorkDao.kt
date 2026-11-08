@@ -8,6 +8,15 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface WorkDao {
+    @Query("SELECT * FROM work ORDER BY id")
+    suspend fun getAll(): List<Work>
+
+    @Query("DELETE FROM work")
+    suspend fun deleteAll()
+
+    @Upsert
+    suspend fun upsertAll(works: List<Work>)
+
     @Upsert
     suspend fun upsert(work: Work)
 

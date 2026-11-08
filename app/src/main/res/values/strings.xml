@@ -102,4 +102,35 @@ Ny måned, nye muligheter.</string>
     <string name="project_hours">%1$s t</string>
     <string name="input_tape_text_title">Skriv inn tekst</string>
     <string name="tape_text_hint">Tekst</string>
+    <string name="settings_title">Innstillinger</string>
+    <string name="backup_restore_section">Sikkerhetskopi og gjenoppretting</string>
+    <string name="backup_restore_description">Lagre prosjekter og timer i en fil, eller erstatt dataene på denne enheten fra en sikkerhetskopi.</string>
+    <string name="create_backup">Opprett sikkerhetskopi</string>
+    <string name="restore_backup">Gjenopprett sikkerhetskopi</string>
+    <string name="backup_storage_note">Sikkerhetskopifiler inneholder prosjekter og timer i klartekst. Oppbevar dem et trygt sted.</string>
+    <string name="backup_creating">Oppretter sikkerhetskopi…</string>
+    <string name="backup_checking">Kontrollerer sikkerhetskopi…</string>
+    <string name="backup_restoring">Gjenoppretter sikkerhetskopi…</string>
+    <string name="backup_success">Sikkerhetskopien er lagret.</string>
+    <string name="backup_invalid">Filen er ikke en gyldig sikkerhetskopi. Dataene dine er ikke endret.</string>
+    <string name="backup_unsupported">Sikkerhetskopien er laget med en nyere appversjon. Oppdater appen og prøv igjen.</string>
+    <string name="backup_unreadable">Kunne ikke lese filen. Velg en annen fil og prøv igjen.</string>
+    <string name="backup_failure">Kunne ikke fullføre. Velg en plassering og prøv igjen.</string>
+    <string name="restore_failure">Kunne ikke gjenopprette sikkerhetskopien. Eksisterende data er uendret.</string>
+    <string name="restore_confirm_title">Erstatt gjeldende data?</string>
+    <string name="restore_confirm_message">Dette erstatter alle prosjekter og timer på denne enheten med sikkerhetskopien. Dette kan ikke angres. Lag en sikkerhetskopi av gjeldende data først hvis du vil beholde dem.</string>
+    <string name="restore_count">Sikkerhetskopien inneholder %1$s og %2$s.</string>
+    <string name="backup_created_at">Opprettet %1$s</string>
+    <string name="replace_data">Erstatt data</string>
+    <string name="timer_restore_block_title">Stoppeklokken er aktiv</string>
+    <string name="timer_restore_block_message">Lagre eller forkast gjeldende tidtaking før du gjenoppretter.</string>
+    <string name="go_to_timer">Gå til stoppeklokken</string>
+    <plurals name="backup_projects_count">
+        <item quantity="one">%d prosjekt</item>
+        <item quantity="other">%d prosjekter</item>
+    </plurals>
+    <plurals name="backup_works_count">
+        <item quantity="one">%d arbeidsoppføring</item>
+        <item quantity="other">%d arbeidsoppføringer</item>
+    </plurals>
 </resources>

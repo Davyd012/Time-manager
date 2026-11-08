@@ -32,6 +32,9 @@ sealed interface AppRoute : NavKey {
         val month: Int,
         val selectedDay: Int,
     ) : AppRoute
+
+    @Serializable
+    data object Settings : AppRoute
 }
 
 sealed interface TopLevelRoute : NavKey

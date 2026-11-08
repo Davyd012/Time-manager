@@ -16,7 +16,7 @@ import java.time.YearMonth
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 
-class RoomWorkRepository(private val dao: WorkDao) : WorkRepository {
+class RoomWorkRepository(private val dao: WorkDao, private val coordinator: DataMutationCoordinator) : WorkRepository {
     override fun observeForDay(date: LocalDate): Flow<List<Work>> {
         val (start, end) = date.boundaries()
         return dao.getAllWorks(start, end)
@@ -34,14 +34,14 @@ class RoomWorkRepository(private val dao: WorkDao) : WorkRepository {
         else dao.getHoursByDayAndProject(start, end, projectIds)
     }
 
-    override suspend fun upsert(work: Work) = dao.upsert(work)
-    override suspend fun delete(work: Work) = dao.delete(work)
+    override suspend fun upsert(work: Work) = coordinator.mutate { dao.upsert(work) }
+    override suspend fun delete(work: Work) = coordinator.mutate { dao.delete(work) }
 }
 
-class RoomProjectRepository(private val dao: ProjectDao) : ProjectRepository {
+class RoomProjectRepository(private val dao: ProjectDao, private val coordinator: DataMutationCoordinator) : ProjectRepository {
     override fun observeAll(): Flow<List<Project>> = dao.getAllProjects()
-    override suspend fun upsert(project: Project) = dao.upsert(project)
-    override suspend fun delete(project: Project) = dao.delete(project)
+    override suspend fun upsert(project: Project) = coordinator.mutate { dao.upsert(project) }
+    override suspend fun delete(project: Project) = coordinator.mutate { dao.delete(project) }
 }
 
 class PoiSpreadsheetExporter(private val context: Context) : SpreadsheetExporter {
