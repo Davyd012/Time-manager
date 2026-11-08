@@ -34,7 +34,7 @@ fun MonthlyTotalPill(
         buildAnnotatedString {
             if (valueStart >= 0) {
                 append(formattedLabel.substring(0, valueStart))
-                withStyle(SpanStyle(color = monthColors.accent, fontWeight = FontWeight.SemiBold)) {
+                withStyle(SpanStyle(color = MaterialTheme.colorScheme.onSurface, fontWeight = FontWeight.SemiBold)) {
                     append(value)
                 }
                 append(formattedLabel.substring(valueStart + value.length))
@@ -55,6 +55,7 @@ fun MonthlyTotalPill(
             text = label,
             modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp),
             style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurface,
             fontWeight = FontWeight.Medium,
         )
     }

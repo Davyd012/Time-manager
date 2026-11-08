@@ -86,7 +86,7 @@ fun CalendarSelectorRow(
                     Icon(
                         imageVector = arrowLeftIcon(),
                         contentDescription = stringResource(R.string.previous_month_cd),
-                        tint = colors.onSurface,
+                        tint = colors.onPrimary,
                     )
                 }
 
@@ -126,7 +126,7 @@ fun CalendarSelectorRow(
                     Icon(
                         imageVector = arrowRightIcon(),
                         contentDescription = stringResource(R.string.next_month_cd),
-                        tint = colors.onSurface,
+                        tint = colors.onPrimary,
                     )
                 }
             }

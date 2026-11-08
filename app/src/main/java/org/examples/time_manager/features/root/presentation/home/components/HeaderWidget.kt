@@ -944,8 +944,8 @@ private fun WeekDayChip(
     val colors = MaterialTheme.colorScheme
     val content = when {
         isSelected -> colors.onPrimaryContainer
-        enabled -> colors.onPrimary
-        else -> colors.onPrimary.copy(alpha = 0.42f)
+        enabled -> colors.onSurface
+        else -> colors.onSurfaceVariant
     }
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,

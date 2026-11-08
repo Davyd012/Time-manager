@@ -189,7 +189,7 @@ private fun ShareMonthButton(
             Icon(
                 imageVector = shareIcon(),
                 contentDescription = stringResource(R.string.share_month_cd),
-                tint = monthColors.text,
+                tint = MaterialTheme.colorScheme.onSurface,
             )
         }
     }
@@ -259,11 +259,7 @@ private fun DayCell(
                 Text(
                     text = hoursCountText,
                     style = texts.labelMedium,
-                    color = if (hours == 0.0) {
-                        colors.onSurfaceVariant.copy(alpha = .6f)
-                    } else {
-                        colors.secondary
-                    },
+                    color = colors.onPrimary,
                     fontWeight = FontWeight.Medium,
                 )
             }

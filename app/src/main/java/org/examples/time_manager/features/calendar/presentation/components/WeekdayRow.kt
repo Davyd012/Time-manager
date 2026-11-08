@@ -35,7 +35,7 @@ fun WeekdayRow(
                 modifier = Modifier.weight(1f),
                 textAlign = TextAlign.Center,
                 style = texts.labelLarge.copy(
-                    color = colors.onSurface.copy(alpha = 0.65f),
+                    color = colors.onPrimary,
                     fontWeight = FontWeight.Medium,
                 )
             )
