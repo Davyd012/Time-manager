@@ -3,11 +3,12 @@
 ## Project layout
 
 - `:app` is the Android application. The release application ID and namespace are `no.timnor.app`; the debug application ID is `no.timnor.app.debug`.
-- `:shared` is a Kotlin Multiplatform library containing common domain/date logic, a Home ViewModel, selected Compose UI, persistence and stopwatch contracts, and backup/XLSX generation. It targets Android, iOS arm64, and iOS simulator arm64.
-- `iosApp/Timnor.xcodeproj` is the SwiftUI iOS host. Its current prototype lists/creates/edits/deletes projects, creates/edits/deletes manual work, provides a month grid with day selection and project filtering, runs a stopwatch with persisted elapsed/start state, and offers version-1 backup import/export and monthly `.xlsx` save flows through shared/native UI. Notifications are not implemented. Its bundle identifier is `no.timnor.ios`.
+- `:shared` is a Kotlin Multiplatform library containing common domain/date logic, Home and Settings ViewModels, shared Compose Home/Stopwatch/Month View/Settings screens, persistence and stopwatch contracts, and backup/XLSX generation. It targets Android, iOS arm64, and iOS simulator arm64.
+- Android's existing typed Navigation3 host renders the common Compose feature screens and retains the Android Room, foreground stopwatch service, and document-picker integrations.
+- `iosApp/Timnor.xcodeproj` is the SwiftUI iOS host. Its Compose root renders the common Home, Stopwatch, Month View, and Settings screens; SwiftUI still provides the native file import/export and share UI through the shared Settings document-effect bridge. The legacy backup/export menu remains during migration. Notifications are not implemented. Its bundle identifier is `no.timnor.ios`.
 - The Xcode project declares iOS 15 as its minimum target. The SwiftUI shell selects `NavigationStack` on iOS 16+ and retains a stack-style `NavigationView` path for iOS 15; this source has not been checked by Xcode.
 
-Android Room remains in `:app`, using `work.db` and schema version 1. The iOS app stores records in a separate JSON file in its app Documents directory. A shared strict version-1 backup codec and iOS store import/export methods preserve the Android JSON envelope; the SwiftUI host provides JSON file save/open flows with a restore count confirmation. The iOS app does not import Android SQLite directly. Backup interchange and all iOS paths remain uncompiled and unverified.
+Android Room remains in `:app`, using `work.db` and schema version 1. The iOS app stores records in a separate JSON file in its app Documents directory. A shared strict version-1 backup codec and iOS store import/export methods preserve the Android JSON envelope. The common Settings screen owns backup validation, restore preview/confirmation, and replacement state; SwiftUI supplies the native document and share presenters. The iOS app does not import Android SQLite directly. Backup interchange and all iOS paths remain uncompiled and unverified.
 
 ## Android on Windows
 
@@ -25,7 +26,7 @@ Windows cannot build Kotlin/Native iOS targets or run Xcode. Android build succe
 
 Use a Mac with the Xcode version required by the current Kotlin Multiplatform compatibility decision (currently Xcode 26.4) and an iOS simulator runtime. Open `iosApp/Timnor.xcodeproj` in Xcode, select the `Timnor` scheme and an iOS simulator, then choose **Product → Build** and **Product → Run**. Its build phase invokes Gradle and embeds the static `TimnorShared` framework.
 
-Also compile the `shared` module for iOS arm64 and simulator arm64 and run common tests on that Mac. Record exact tool versions and outcomes. Exercise project CRUD, manual work CRUD, persistence across relaunch, calendar navigation/filtering/day selection, stopwatch pause/relaunch behavior, backup/restore interchange, XLSX opening and contents, accessibility, and light/dark appearance. Decide the notification behavior and test it before claiming feature parity.
+Also compile the `shared` module for iOS arm64 and simulator arm64 and run common tests on that Mac. Record exact tool versions and outcomes. Exercise project CRUD, manual work CRUD, persistence across relaunch, calendar navigation/filtering/day selection, stopwatch pause/relaunch behavior, the shared Settings document-effect bridge, backup/restore interchange, XLSX opening and contents, accessibility, and light/dark appearance. Decide the notification behavior and test it before claiming feature parity.
 
 The current iOS host has no app icon or production signing configuration and is not release-ready. Its Xcode project and Kotlin/Native source are not yet build-verified.
 

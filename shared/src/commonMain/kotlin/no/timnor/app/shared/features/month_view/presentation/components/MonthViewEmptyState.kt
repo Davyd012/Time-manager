@@ -1,0 +1,86 @@
+package no.timnor.app.shared.features.month_view.presentation.components
+
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import io.github.alexzhirkevich.compottie.LottieCompositionSpec
+import io.github.alexzhirkevich.compottie.animateLottieCompositionAsState
+import io.github.alexzhirkevich.compottie.rememberLottiePainter
+import io.github.alexzhirkevich.compottie.rememberLottieComposition
+import no.timnor.app.shared.generated.resources.Res
+import no.timnor.app.shared.generated.resources.month_add_hours
+import no.timnor.app.shared.generated.resources.month_empty_description
+import no.timnor.app.shared.generated.resources.month_empty_title
+import no.timnor.app.shared.generated.resources.icon_add
+import no.timnor.app.shared.platform.motion.rememberSystemAnimationsEnabled
+import no.timnor.app.shared.ui.theme.timnorSpacing
+import org.jetbrains.compose.resources.stringResource
+import org.jetbrains.compose.resources.painterResource
+
+@Composable
+internal fun MonthViewEmptyState(
+    canAddWork: Boolean,
+    onAddWork: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val animationsEnabled = rememberSystemAnimationsEnabled()
+    val composition by rememberLottieComposition {
+        LottieCompositionSpec.JsonString(Res.readBytes("files/empty.json").decodeToString())
+    }
+    val progress = if (animationsEnabled) {
+        animateLottieCompositionAsState(composition, iterations = 1).value
+    } else {
+        1f
+    }
+
+    Box(modifier = modifier, contentAlignment = Alignment.Center) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = MaterialTheme.timnorSpacing.large),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.spacedBy(MaterialTheme.timnorSpacing.medium),
+        ) {
+            Image(
+                painter = rememberLottiePainter(composition = composition, progress = { progress }),
+                contentDescription = null,
+                modifier = Modifier.size(MaterialTheme.timnorSpacing.extraLarge * 9),
+            )
+            Text(stringResource(Res.string.month_empty_title), style = MaterialTheme.typography.headlineSmall)
+            Text(stringResource(Res.string.month_empty_description), style = MaterialTheme.typography.bodyLarge)
+            Button(
+                onClick = onAddWork,
+                enabled = canAddWork,
+                modifier = Modifier.fillMaxWidth().heightIn(min = MaterialTheme.timnorSpacing.extraLarge * 2),
+                shape = MaterialTheme.shapes.large,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.secondary,
+                    contentColor = MaterialTheme.colorScheme.onSecondary,
+                ),
+            ) {
+                Icon(painterResource(Res.drawable.icon_add), contentDescription = null)
+                Spacer(Modifier.width(MaterialTheme.timnorSpacing.small))
+                Text(stringResource(Res.string.month_add_hours), style = MaterialTheme.typography.titleMedium)
+            }
+        }
+    }
+}

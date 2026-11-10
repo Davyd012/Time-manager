@@ -7,7 +7,10 @@ import no.timnor.app.features.month_view.MonthViewModel
 import no.timnor.app.features.root.HomeViewModel
 import no.timnor.app.features.root.StopwatchViewModel
 import no.timnor.app.features.settings.SettingsViewModel
+import no.timnor.app.shared.features.settings.domain.TimnorSettingsViewModel
+import no.timnor.app.shared.features.root.domain.TimnorHomeViewModel
 import java.time.LocalDate
+import kotlinx.datetime.toLocalDateTime
 
 fun getHomeViewModelFactory(diContainer: DIContainer): ViewModelProvider.Factory =
     object : ViewModelProvider.Factory {
@@ -21,6 +24,21 @@ fun getHomeViewModelFactory(diContainer: DIContainer): ViewModelProvider.Factory
             ) as T
         }
     }
+
+fun getSharedHomeViewModelFactory(
+    diContainer: DIContainer,
+    initialDate: kotlinx.datetime.LocalDate = kotlin.time.Clock.System.now()
+        .toLocalDateTime(kotlinx.datetime.TimeZone.currentSystemDefault()).date,
+): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
+    override fun <T : ViewModel> create(modelClass: Class<T>): T {
+        @Suppress("UNCHECKED_CAST")
+        return TimnorHomeViewModel(
+            persistence = diContainer.sharedPersistence,
+            stopwatch = diContainer.stopwatchRepository,
+            initialDate = initialDate,
+        ) as T
+    }
+}
 
 fun getMonthViewModelFactory(
     diContainer: DIContainer,
@@ -56,5 +74,16 @@ fun getSettingsViewModelFactory(diContainer: DIContainer): ViewModelProvider.Fac
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             @Suppress("UNCHECKED_CAST")
             return SettingsViewModel(diContainer.backupRepository, diContainer.stopwatchRepository) as T
+        }
+    }
+
+fun getSharedSettingsViewModelFactory(diContainer: DIContainer): ViewModelProvider.Factory =
+    object : ViewModelProvider.Factory {
+        override fun <T : ViewModel> create(modelClass: Class<T>): T {
+            @Suppress("UNCHECKED_CAST")
+            return TimnorSettingsViewModel(
+                persistence = diContainer.sharedPersistence,
+                restoreGate = diContainer.mutationCoordinator,
+            ) as T
         }
     }

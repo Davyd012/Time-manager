@@ -15,6 +15,7 @@ activity-compose = "1.13.0"
 compose-bom = "2026.06.01"
 compose-multiplatform = "1.12.2"
 lottie-compose = "6.7.1"
+compottie = "2.3.3"
 org-jetbrains-kotlin-jvm = "2.4.21"
 poi = "5.5.1"
 room = "2.8.4"
@@ -40,6 +41,7 @@ lifecycle-viewmodel = { group = "androidx.lifecycle", name = "lifecycle-viewmode
 activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activity-compose" }
 compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "compose-bom" }
 lottie-compose = { module = "com.airbnb.android:lottie-compose", version.ref = "lottie-compose" }
+compottie = { module = "io.github.alexzhirkevich:compottie", version.ref = "compottie" }
 poi = { module = "org.apache.poi:poi", version.ref = "poi" }
 poi-ooxml = { module = "org.apache.poi:poi-ooxml", version.ref = "poi" }
 ui = { group = "androidx.compose.ui", name = "ui" }

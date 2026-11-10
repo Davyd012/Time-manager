@@ -4,6 +4,7 @@ import android.content.Context
 import no.timnor.app.core.database.Database
 import no.timnor.app.core.database.getDatabase
 import no.timnor.app.core.database.RoomPersistenceStore
+import no.timnor.app.core.database.CoordinatedTimnorPersistence
 import no.timnor.app.core.repository.PoiSpreadsheetExporter
 import no.timnor.app.core.repository.ProjectRepository
 import no.timnor.app.core.repository.RoomProjectRepository
@@ -22,6 +23,9 @@ class DIContainer(context: Context) {
 
     val database: Database by lazy { getDatabase(applicationContext) }
     val persistence: RoomPersistenceStore by lazy { RoomPersistenceStore(database) }
+    val sharedPersistence: CoordinatedTimnorPersistence by lazy {
+        CoordinatedTimnorPersistence(persistence, mutationCoordinator)
+    }
     val mutationCoordinator: DataMutationCoordinator = AppMutationCoordinator.instance
     val workRepository: WorkRepository by lazy { RoomWorkRepository(persistence, mutationCoordinator) }
     val projectRepository: ProjectRepository by lazy { RoomProjectRepository(persistence, mutationCoordinator) }

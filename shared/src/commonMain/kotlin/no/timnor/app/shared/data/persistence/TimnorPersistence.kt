@@ -22,11 +22,19 @@ data class StoredWork(
     val id: Int,
 )
 
+data class TimnorDataSnapshot(
+    val projects: List<StoredProject>,
+    val works: List<StoredWork>,
+)
+
 /**
  * Platform storage boundary. Implementations must keep `replaceAll` atomic and preserve IDs.
  * The date range is inclusive and uses the database's UTC epoch-seconds representation.
  */
 interface TimnorPersistence {
+    /** Returns projects and works from one consistent platform snapshot. */
+    suspend fun snapshotAll(): TimnorDataSnapshot
+
     fun observeProjects(): Flow<List<StoredProject>>
 
     fun observeWorks(
@@ -46,6 +54,9 @@ interface TimnorPersistence {
     suspend fun deleteProject(project: StoredProject)
 
     suspend fun upsertWork(work: StoredWork)
+
+    /** Inserts or updates a related set of work entries as one atomic storage mutation. */
+    suspend fun upsertWorks(works: List<StoredWork>)
 
     suspend fun deleteWork(work: StoredWork)
 

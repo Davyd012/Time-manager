@@ -1,0 +1,90 @@
+package no.timnor.app.shared.features.root.presentation.home.components
+
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.hideFromAccessibility
+import androidx.compose.material3.MaterialTheme
+import kotlinx.datetime.LocalDate
+import no.timnor.app.shared.data.persistence.StoredProject
+import no.timnor.app.shared.data.persistence.StoredWork
+import no.timnor.app.shared.features.month_view.presentation.components.MonthViewEmptyState
+import no.timnor.app.shared.features.month_view.presentation.components.MonthViewTimeline
+import no.timnor.app.shared.features.month_view.presentation.components.monthViewWorksForDate
+import no.timnor.app.shared.platform.motion.rememberSystemAnimationsEnabled
+import no.timnor.app.shared.ui.theme.timnorSpacing
+
+@Composable
+internal fun HomeDailyWorkList(
+    selectedDate: LocalDate,
+    works: List<StoredWork>,
+    projects: List<StoredProject>,
+    canAddWork: Boolean,
+    expansionProgress: Float,
+    modifier: Modifier = Modifier,
+    onEditWork: (StoredWork) -> Unit,
+    onAddWork: () -> Unit,
+) {
+    val selectedWorks = remember(works, selectedDate) { monthViewWorksForDate(works, selectedDate) }
+    val animationsEnabled = rememberSystemAnimationsEnabled()
+    val expansionTranslationPx = with(LocalDensity.current) { MaterialTheme.timnorSpacing.medium.toPx() }
+    AnimatedContent(
+        targetState = selectedWorks.isEmpty(),
+        modifier = modifier
+            .fillMaxSize()
+            .graphicsLayer {
+                alpha = 1f - (expansionProgress / 0.25f).coerceIn(0f, 1f)
+                translationY = expansionProgress * expansionTranslationPx
+            }
+            .then(
+                if (expansionProgress >= 0.25f) {
+                    Modifier
+                        .clearAndSetSemantics { hideFromAccessibility() }
+                        .pointerInput(expansionProgress >= 0.25f) {
+                            awaitPointerEventScope {
+                                while (true) awaitPointerEvent().changes.forEach { it.consume() }
+                            }
+                        }
+                } else Modifier,
+            ),
+        label = "homeWorkListEmptyTransition",
+        transitionSpec = {
+            if (!animationsEnabled) {
+                (EnterTransition.None togetherWith ExitTransition.None).using(SizeTransform(clip = false))
+            } else {
+                val initialOffset: (Int) -> Int = { height -> if (targetState) height / 12 else -height / 12 }
+                (fadeIn(tween(180)) + slideInVertically(tween(220), initialOffsetY = initialOffset))
+                    .togetherWith(ExitTransition.None)
+                    .using(SizeTransform(clip = false))
+            }
+        },
+    ) { empty ->
+        if (empty) {
+            MonthViewEmptyState(
+                canAddWork = canAddWork,
+                onAddWork = onAddWork,
+                modifier = Modifier.fillMaxSize(),
+            )
+        } else {
+            MonthViewTimeline(
+                works = selectedWorks,
+                projects = projects,
+                modifier = Modifier.fillMaxSize(),
+                onSelectWork = onEditWork,
+            )
+        }
+    }
+}

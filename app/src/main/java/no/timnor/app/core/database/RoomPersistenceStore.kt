@@ -8,12 +8,20 @@ import no.timnor.app.core.database.project.Project
 import no.timnor.app.core.database.work.Work
 import no.timnor.app.shared.data.persistence.StoredProject
 import no.timnor.app.shared.data.persistence.StoredWork
+import no.timnor.app.shared.data.persistence.TimnorDataSnapshot
 import no.timnor.app.shared.data.persistence.TimnorPersistence
 import no.timnor.app.shared.domain.time.utcEpochSecondsFromLocalDateTime
 import no.timnor.app.shared.domain.time.utcLocalDateTimeFromEpochSeconds
 import kotlinx.datetime.toJavaLocalDateTime
 
 class RoomPersistenceStore(private val database: Database) : TimnorPersistence {
+    override suspend fun snapshotAll(): TimnorDataSnapshot = database.withTransaction {
+        TimnorDataSnapshot(
+            projects = database.projectDao().getAll().map(Project::toStored),
+            works = database.workDao().getAll().map(Work::toStored),
+        )
+    }
+
     override fun observeProjects(): Flow<List<StoredProject>> =
         database.projectDao().getAllProjects().map { it.map(Project::toStored) }
 
@@ -50,6 +58,12 @@ class RoomPersistenceStore(private val database: Database) : TimnorPersistence {
 
     override suspend fun upsertWork(work: StoredWork) {
         database.workDao().upsert(work.toEntity())
+    }
+
+    override suspend fun upsertWorks(works: List<StoredWork>) {
+        database.withTransaction {
+            database.workDao().upsertAll(works.map(StoredWork::toEntity))
+        }
     }
 
     override suspend fun deleteWork(work: StoredWork) {

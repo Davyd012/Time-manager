@@ -10,7 +10,7 @@ fun toggleProjectSelection(
 ): Set<Int>? {
     val next = (selectedIds ?: allProjectIds).toMutableSet()
     if (!next.add(projectId)) next.remove(projectId)
-    return next.takeUnless { it.isEmpty() || it == allProjectIds }
+    return next.takeUnless { it == allProjectIds }
 }
 
 /**
@@ -30,5 +30,5 @@ fun toggleVisibleProjectSelection(
     } else {
         next.addAll(visibleProjectIds)
     }
-    return next.takeUnless { it.isEmpty() || it == allProjectIds }
+    return next.takeUnless { it == allProjectIds }
 }

@@ -1,4 +1,5 @@
 import Foundation
+import Combine
 import SwiftUI
 import UniformTypeIdentifiers
 import UIKit
@@ -13,13 +14,20 @@ struct TimnorContentView: View {
     @State private var backupDocument = TimnorBackupDocument(contents: "")
     @State private var xlsxDocument = TimnorXlsxDocument(data: Data())
     @State private var shareURL: URL?
+    @State private var shareTextItemSource: TimnorShareTextItemSource?
     @State private var pendingBackupContents: String?
     @State private var restoreSummary = ""
     @State private var statusMessage: String?
+    @State private var sharedDocumentAction: SharedDocumentAction?
+    @State private var sharedRestoreRequested = false
+    @State private var sharedSharePending = false
+    @State private var backupFileName = "timnor-backup"
+    @State private var spreadsheetFileName = "Timer"
+    @State private var documentEffectHandler = TimnorIosDocumentEffectHandler()
 
     var body: some View {
         PlatformNavigation {
-            TimnorComposeHost()
+            TimnorComposeHost(documentHandler: documentEffectHandler)
                 .navigationTitle("Timnor")
                 .toolbar {
                     ToolbarItem(placement: .navigationBarTrailing) {
@@ -55,34 +63,70 @@ struct TimnorContentView: View {
             isPresented: $isExportPresented,
             document: backupDocument,
             contentType: .json,
-            defaultFilename: "timnor-backup",
+            defaultFilename: backupFileName,
         ) { result in
+            let sharedAction = sharedDocumentAction
+            sharedDocumentAction = nil
             switch result {
             case .success:
                 statusMessage = "Sikkerhetskopi lagret"
-            case .failure:
+                if sharedAction == .backup {
+                    IosTimnorSettingsBridge.shared.reportBackupSaveResult(succeeded: true)
+                }
+            case .failure(let error):
                 statusMessage = "Kunne ikke lagre sikkerhetskopien"
+                if sharedAction == .backup {
+                    if (error as NSError).code == NSUserCancelledError {
+                        IosTimnorSettingsBridge.shared.backupSaveCancelled()
+                    } else {
+                        IosTimnorSettingsBridge.shared.reportBackupSaveResult(succeeded: false)
+                    }
+                }
             }
         }
         .fileExporter(
             isPresented: $isXlsxExportPresented,
             document: xlsxDocument,
             contentType: TimnorXlsxDocument.xlsxType,
-            defaultFilename: "Timer",
+            defaultFilename: spreadsheetFileName,
         ) { result in
+            let sharedAction = sharedDocumentAction
+            sharedDocumentAction = nil
             switch result {
             case .success:
                 statusMessage = "Excel-fil lagret"
-            case .failure:
+                if sharedAction == .spreadsheet {
+                    IosTimnorSettingsBridge.shared.reportSpreadsheetSaveResult(succeeded: true)
+                }
+            case .failure(let error):
                 statusMessage = "Kunne ikke lagre Excel-filen"
+                if sharedAction == .spreadsheet {
+                    if (error as NSError).code == NSUserCancelledError {
+                        IosTimnorSettingsBridge.shared.spreadsheetSaveCancelled()
+                    } else {
+                        IosTimnorSettingsBridge.shared.reportSpreadsheetSaveResult(succeeded: false)
+                    }
+                }
             }
         }
         .fileImporter(isPresented: $isImportPresented, allowedContentTypes: [.json]) { result in
+            let sharedRequest = sharedRestoreRequested
+            sharedRestoreRequested = false
             switch result {
             case .success(let url):
-                restoreBackup(from: url)
-            case .failure:
-                statusMessage = "Kunne ikke åpne sikkerhetskopien"
+                if sharedRequest {
+                    openSharedBackup(from: url)
+                } else {
+                    restoreBackup(from: url)
+                }
+            case .failure(let error):
+                if sharedRequest {
+                    if (error as NSError).code != NSUserCancelledError {
+                        IosTimnorSettingsBridge.shared.backupReadFailed()
+                    }
+                } else {
+                    statusMessage = "Kunne ikke åpne sikkerhetskopien"
+                }
             }
         }
         .alert("Gjenopprette sikkerhetskopi?", isPresented: $isRestoreConfirmationPresented) {
@@ -96,7 +140,88 @@ struct TimnorContentView: View {
             Text("Sikkerhetskopien inneholder \(restoreSummary). Nåværende prosjekter og registreringer erstattes.")
         }
         .sheet(isPresented: $isSharePresented) {
-            if let shareURL { TimnorActivityView(activityItems: [shareURL]) }
+            if let shareTextItemSource {
+                TimnorActivityView(activityItems: [shareTextItemSource]) { completed, error in
+                    if sharedSharePending {
+                        sharedSharePending = false
+                        if completed {
+                            IosTimnorSettingsBridge.shared.reportShareResult(succeeded: true)
+                        } else if error == nil {
+                            IosTimnorSettingsBridge.shared.shareCancelled()
+                        } else {
+                            IosTimnorSettingsBridge.shared.reportShareResult(succeeded: false)
+                        }
+                    }
+                }
+            } else if let shareURL {
+                TimnorActivityView(activityItems: [shareURL]) { completed, error in
+                    if sharedSharePending {
+                        sharedSharePending = false
+                        if completed {
+                            IosTimnorSettingsBridge.shared.reportShareResult(succeeded: true)
+                        } else if error == nil {
+                            IosTimnorSettingsBridge.shared.shareCancelled()
+                        } else {
+                            IosTimnorSettingsBridge.shared.reportShareResult(succeeded: false)
+                        }
+                    }
+                }
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .timnorSaveBackupRequested)) { notification in
+            guard let contents = notification.userInfo?["contents"] as? String else {
+                IosTimnorSettingsBridge.shared.reportBackupSaveResult(succeeded: false)
+                return
+            }
+            backupDocument = TimnorBackupDocument(contents: contents)
+            backupFileName = (notification.userInfo?["fileName"] as? String ?? "timnor-backup.json")
+                .replacingOccurrences(of: ".json", with: "")
+            sharedDocumentAction = .backup
+            isExportPresented = true
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .timnorShareBackupRequested)) { notification in
+            guard let contents = notification.userInfo?["contents"] as? String else {
+                IosTimnorSettingsBridge.shared.reportShareResult(succeeded: false)
+                return
+            }
+            let fileName = notification.userInfo?["fileName"] as? String ?? "timnor-backup.json"
+            do {
+                let url = FileManager.default.temporaryDirectory.appendingPathComponent(fileName)
+                try Data(contents.utf8).write(to: url, options: .atomic)
+                shareTextItemSource = nil
+                shareURL = url
+                sharedSharePending = true
+                isSharePresented = true
+            } catch {
+                IosTimnorSettingsBridge.shared.reportShareResult(succeeded: false)
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .timnorShareTextRequested)) { notification in
+            guard let subject = notification.userInfo?["subject"] as? String,
+                  let contents = notification.userInfo?["contents"] as? String else {
+                IosTimnorSettingsBridge.shared.reportShareResult(succeeded: false)
+                return
+            }
+            shareURL = nil
+            shareTextItemSource = TimnorShareTextItemSource(subject: subject, contents: contents)
+            sharedSharePending = true
+            isSharePresented = true
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .timnorOpenBackupRequested)) { _ in
+            sharedRestoreRequested = true
+            isImportPresented = true
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .timnorSaveSpreadsheetRequested)) { notification in
+            guard let contents = notification.userInfo?["contentsBase64"] as? String,
+                  let data = Data(base64Encoded: contents) else {
+                IosTimnorSettingsBridge.shared.reportSpreadsheetSaveResult(succeeded: false)
+                return
+            }
+            xlsxDocument = TimnorXlsxDocument(data: data)
+            spreadsheetFileName = (notification.userInfo?["fileName"] as? String ?? "Timer.xlsx")
+                .replacingOccurrences(of: ".xlsx", with: "")
+            sharedDocumentAction = .spreadsheet
+            isXlsxExportPresented = true
         }
     }
 
@@ -142,6 +267,19 @@ struct TimnorContentView: View {
             isSharePresented = true
         } catch {
             statusMessage = "Kunne ikke opprette sikkerhetskopien"
+        }
+    }
+
+    private func openSharedBackup(from url: URL) {
+        let didAccess = url.startAccessingSecurityScopedResource()
+        defer {
+            if didAccess { url.stopAccessingSecurityScopedResource() }
+        }
+        do {
+            let contents = try String(contentsOf: url, encoding: .utf8)
+            IosTimnorSettingsBridge.shared.backupContentsSelected(contents: contents)
+        } catch {
+            IosTimnorSettingsBridge.shared.backupReadFailed()
         }
     }
 
@@ -197,8 +335,10 @@ private struct PlatformNavigation<Content: View>: View {
 }
 
 private struct TimnorComposeHost: UIViewControllerRepresentable {
+    let documentHandler: TimnorIosDocumentEffectHandler
+
     func makeUIViewController(context: Context) -> UIViewController {
-        MainViewControllerKt.MainViewController()
+        MainViewControllerKt.MainViewController(documentHandler: documentHandler)
     }
 
     func updateUIViewController(_ uiViewController: UIViewController, context: Context) {}
@@ -206,12 +346,94 @@ private struct TimnorComposeHost: UIViewControllerRepresentable {
 
 private struct TimnorActivityView: UIViewControllerRepresentable {
     let activityItems: [Any]
+    let onCompletion: (Bool, Error?) -> Void
 
     func makeUIViewController(context: Context) -> UIActivityViewController {
-        UIActivityViewController(activityItems: activityItems, applicationActivities: nil)
+        let controller = UIActivityViewController(activityItems: activityItems, applicationActivities: nil)
+        controller.completionWithItemsHandler = { _, completed, _, error in onCompletion(completed, error) }
+        return controller
     }
 
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}
+}
+
+private final class TimnorShareTextItemSource: NSObject, UIActivityItemSource {
+    private let subject: String
+    private let contents: String
+
+    init(subject: String, contents: String) {
+        self.subject = subject
+        self.contents = contents
+    }
+
+    func activityViewControllerPlaceholderItem(_ activityViewController: UIActivityViewController) -> Any {
+        contents
+    }
+
+    func activityViewController(
+        _ activityViewController: UIActivityViewController,
+        itemForActivityType activityType: UIActivity.ActivityType?
+    ) -> Any? {
+        contents
+    }
+
+    func activityViewController(
+        _ activityViewController: UIActivityViewController,
+        subjectForActivityType activityType: UIActivity.ActivityType?
+    ) -> String {
+        subject
+    }
+}
+
+private enum SharedDocumentAction: Equatable {
+    case backup
+    case spreadsheet
+}
+
+private final class TimnorIosDocumentEffectHandler: NSObject, IosTimnorDocumentEffectHandler {
+    func saveBackup(contents: String, fileName: String) {
+        NotificationCenter.default.post(
+            name: .timnorSaveBackupRequested,
+            object: nil,
+            userInfo: ["contents": contents, "fileName": fileName],
+        )
+    }
+
+    func shareBackup(contents: String, fileName: String) {
+        NotificationCenter.default.post(
+            name: .timnorShareBackupRequested,
+            object: nil,
+            userInfo: ["contents": contents, "fileName": fileName],
+        )
+    }
+
+    func shareText(subject: String, contents: String) {
+        NotificationCenter.default.post(
+            name: .timnorShareTextRequested,
+            object: nil,
+            userInfo: ["subject": subject, "contents": contents],
+        )
+    }
+
+    func openBackup() {
+        NotificationCenter.default.post(name: .timnorOpenBackupRequested, object: nil)
+    }
+
+    func saveSpreadsheetBase64(contentsBase64: String, fileName: String) {
+        NotificationCenter.default.post(
+            name: .timnorSaveSpreadsheetRequested,
+            object: nil,
+            userInfo: ["contentsBase64": contentsBase64, "fileName": fileName],
+        )
+    }
+}
+
+private extension Notification.Name {
+    static let timnorSaveBackupRequested = Notification.Name("timnor.saveBackupRequested")
+    static let timnorShareBackupRequested = Notification.Name("timnor.shareBackupRequested")
+    static let timnorShareTextRequested = Notification.Name("timnor.shareTextRequested")
+    static let timnorOpenBackupRequested = Notification.Name("timnor.openBackupRequested")
+    static let timnorSaveSpreadsheetRequested = Notification.Name("timnor.saveSpreadsheetRequested")
 }
 
 private struct TimnorBackupDocument: FileDocument {

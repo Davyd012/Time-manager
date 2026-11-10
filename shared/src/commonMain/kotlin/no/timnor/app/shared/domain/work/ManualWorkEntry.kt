@@ -13,13 +13,15 @@ fun createManualWork(
     hours: Int?,
     minutes: Int?,
     description: String,
+    startTime: String = "07:00",
 ): StoredWork? {
     val id = projectId ?: return null
     val entryDate = runCatching { LocalDate.parse(date) }.getOrNull() ?: return null
     val duration = manualWorkDurationSeconds(hours, minutes) ?: return null
+    val entryTime = runCatching { LocalTime.parse(startTime) }.getOrNull() ?: return null
     return StoredWork(
         description = description.trim(),
-        dateEpochSeconds = utcEpochSecondsFromLocalDateTime(LocalDateTime(entryDate, LocalTime(7, 0))),
+        dateEpochSeconds = utcEpochSecondsFromLocalDateTime(LocalDateTime(entryDate, entryTime)),
         project = id,
         task = 0,
         time = duration,

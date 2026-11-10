@@ -11,6 +11,7 @@ kotlin {
         namespace = "no.timnor.app.shared"
         compileSdk = 37
         minSdk = 26
+        androidResources.enable = true
         withHostTestBuilder {}
     }
 
@@ -31,6 +32,7 @@ kotlin {
             implementation("org.jetbrains.compose.ui:ui:1.12.2")
             implementation("org.jetbrains.compose.material3:material3:1.12.0-alpha03")
             implementation("org.jetbrains.compose.components:components-resources:1.12.2")
+            implementation(libs.compottie)
             implementation(libs.kotlinx.serialization.json)
         }
 

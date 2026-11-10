@@ -42,7 +42,7 @@ import no.timnor.app.shared.domain.project.toggleVisibleProjectSelection
 import no.timnor.app.ui.theme.arrowLeftIcon
 import java.text.NumberFormat
 import java.util.Locale
-import no.timnor.app.shared.ui.components.ProjectFilterRow
+import no.timnor.app.shared.features.calendar.presentation.components.ProjectFilterRow
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

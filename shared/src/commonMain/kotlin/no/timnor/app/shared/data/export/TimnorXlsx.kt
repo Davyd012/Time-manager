@@ -3,6 +3,10 @@ package no.timnor.app.shared.data.export
 import no.timnor.app.shared.data.persistence.StoredWork
 import no.timnor.app.shared.domain.calendar.workSecondsByDay
 import no.timnor.app.shared.domain.time.utcLocalDateTimeFromEpochSeconds
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.LocalDate
+import kotlinx.datetime.minus
+import kotlinx.datetime.plus
 
 /** Creates the existing workbook contract: a Timer sheet with date and decimal-hour columns. */
 fun createTimnorXlsx(works: List<StoredWork>, year: Int, month: Int): ByteArray {
@@ -13,7 +17,10 @@ fun createTimnorXlsx(works: List<StoredWork>, year: Int, month: Int): ByteArray 
         dateOf = { utcLocalDateTimeFromEpochSeconds(it.dateEpochSeconds).date },
         secondsOf = StoredWork::time,
     )
-    val rows = secondsByDay.toSortedMap().map { (day, seconds) ->
+    val daysInMonth = LocalDate(year, month, 1).plus(1, DateTimeUnit.MONTH)
+        .minus(1, DateTimeUnit.DAY).day
+    val rows = (1..daysInMonth).map { day ->
+        val seconds = secondsByDay[day] ?: 0
         val dateText = "${day.toString().padStart(2, '0')}.${month.toString().padStart(2, '0')}.$year"
         dateText to (seconds / 3600.0).toString()
     }

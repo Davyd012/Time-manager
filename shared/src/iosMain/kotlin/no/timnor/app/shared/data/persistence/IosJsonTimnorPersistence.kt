@@ -26,6 +26,8 @@ import platform.Foundation.NSString
 import platform.Foundation.NSURL
 import platform.Foundation.NSUTF8StringEncoding
 import platform.Foundation.NSUserDomainMask
+import platform.Foundation.stringWithContentsOfFile
+import platform.Foundation.writeToFile
 
 /** iOS file-backed implementation of the common persistence contract. */
 @OptIn(ExperimentalForeignApi::class)
@@ -38,6 +40,10 @@ class IosJsonTimnorPersistence : TimnorPersistence {
     private val works = MutableStateFlow(initialData.works)
 
     override fun observeProjects(): Flow<List<StoredProject>> = projects
+
+    override suspend fun snapshotAll(): TimnorDataSnapshot = mutex.withLock {
+        TimnorDataSnapshot(projects.value.toList(), works.value.toList())
+    }
 
     override fun observeWorks(
         startEpochSeconds: Long,
@@ -75,6 +81,15 @@ class IosJsonTimnorPersistence : TimnorPersistence {
         persist(projects.value, updated)
     }
 
+    override suspend fun upsertWorks(works: List<StoredWork>) = mutex.withLock {
+        var nextId = this.works.value.maxOfOrNull(StoredWork::id) ?: 0
+        val updated = works.fold(this.works.value) { current, work ->
+            val id = work.id.takeIf { it != 0 } ?: ++nextId
+            current.filterNot { it.id == id } + work.copy(id = id)
+        }
+        persist(projects.value, updated)
+    }
+
     override suspend fun deleteWork(work: StoredWork) = mutex.withLock {
         persist(projects.value, works.value.filterNot { it.id == work.id })
     }
@@ -98,11 +113,13 @@ class IosJsonTimnorPersistence : TimnorPersistence {
 
     private fun persist(projectValues: List<StoredProject>, workValues: List<StoredWork>) {
         val data = TimnorStoreFile(projectValues.sortedBy(StoredProject::id), workValues.sortedBy(StoredWork::id))
-        val written = NSString.create(string = json.encodeToString(data)).writeToFile(
-            filePath = filePath,
-            atomically = true,
-            encoding = NSUTF8StringEncoding,
-            error = null,
+        @Suppress("CAST_NEVER_SUCCEEDS")
+        val nativeContents = json.encodeToString(data) as NSString
+        val written = nativeContents.writeToFile(
+            filePath,
+            true,
+            NSUTF8StringEncoding,
+            null,
         )
         check(written) { "Unable to save Timnor data file" }
         projects.value = data.projects
@@ -114,7 +131,7 @@ class IosJsonTimnorPersistence : TimnorPersistence {
             path = filePath,
             encoding = NSUTF8StringEncoding,
             error = null,
-        )?.toString() ?: return TimnorStoreFile()
+        ) ?: return TimnorStoreFile()
         return json.decodeFromString(contents)
     }
 

@@ -3,9 +3,10 @@ package no.timnor.app.core.repository
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.CancellationException
+import no.timnor.app.shared.platform.documents.TimnorRestoreGate
 
 /** Serializes every persisted-data mutation with backup replacement. */
-class DataMutationCoordinator {
+class DataMutationCoordinator : TimnorRestoreGate {
     private val mutex = Mutex()
     private val timerLock = Any()
     private var timerHasUnsavedTime = false
@@ -42,6 +43,12 @@ class DataMutationCoordinator {
             synchronized(timerLock) { restoreInProgress = false }
         }
     }
+
+    override suspend fun withTimerClear(restore: suspend () -> Unit): Boolean =
+        restoreIfTimerClear {
+            restore()
+            true
+        } ?: false
 }
 
 object AppMutationCoordinator {

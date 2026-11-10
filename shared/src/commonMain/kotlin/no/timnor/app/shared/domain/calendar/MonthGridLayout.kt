@@ -13,6 +13,10 @@ data class MonthGridLayout(
     val trailingEmptyDays: Int,
 )
 
+/** Returns whether both civil dates belong to the same calendar month. */
+fun isSameMonth(date: LocalDate, month: LocalDate): Boolean =
+    date.year == month.year && date.month == month.month
+
 /**
  * Returns the month grid dimensions using ISO weekdays (Monday first).
  * This operates on civil dates and does not convert them to instants or time zones.

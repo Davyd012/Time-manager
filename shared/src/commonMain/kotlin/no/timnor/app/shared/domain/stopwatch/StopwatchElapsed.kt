@@ -1,5 +1,8 @@
 package no.timnor.app.shared.domain.stopwatch
 
+/** Matches the Android project-card rule: lock selection after elapsed time is recorded. */
+fun canChangeStopwatchProject(elapsedSeconds: Int): Boolean = elapsedSeconds <= 0
+
 /** Derives a displayed stopwatch value from persisted start/pause instants. */
 fun stopwatchElapsedSeconds(
     accumulatedSeconds: Long,

@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import no.timnor.app.shared.domain.stopwatch.stopwatchElapsedSeconds
+import no.timnor.app.shared.platform.documents.TimnorRestoreGate
 import platform.Foundation.NSUserDefaults
 import kotlin.time.Clock
 
@@ -21,7 +22,7 @@ import kotlin.time.Clock
  * the background, so this implementation does not promise continuous background work.
  */
 @OptIn(ExperimentalForeignApi::class)
-class IosStopwatchPlatform : StopwatchPlatform {
+class IosStopwatchPlatform : StopwatchPlatform, TimnorRestoreGate {
     private val defaults = NSUserDefaults.standardUserDefaults
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var accumulatedSeconds = defaults.doubleForKey(ELAPSED_KEY).toLong().coerceAtLeast(0)
@@ -32,6 +33,7 @@ class IosStopwatchPlatform : StopwatchPlatform {
     }
     private val mutableState = MutableStateFlow(snapshot())
     private var ticker: Job? = null
+    private var restoreInProgress = false
 
     override val state: StateFlow<StopwatchSnapshot> = mutableState.asStateFlow()
 
@@ -40,7 +42,7 @@ class IosStopwatchPlatform : StopwatchPlatform {
     }
 
     override fun start() {
-        if (startedAtEpochSeconds != null) return
+        if (restoreInProgress || startedAtEpochSeconds != null) return
         startedAtEpochSeconds = Clock.System.now().epochSeconds
         defaults.setDouble(startedAtEpochSeconds!!.toDouble(), STARTED_AT_KEY)
         defaults.setBool(true, RUNNING_KEY)
@@ -79,6 +81,18 @@ class IosStopwatchPlatform : StopwatchPlatform {
     override fun selectProject(projectId: Int) {
         defaults.setInteger(projectId.toLong(), PROJECT_KEY)
         publish()
+    }
+
+    /** Main-thread serialization prevents a new timer from starting during data replacement. */
+    override suspend fun withTimerClear(restore: suspend () -> Unit): Boolean {
+        if (restoreInProgress || mutableState.value.isRunning || mutableState.value.elapsedSeconds > 0) return false
+        restoreInProgress = true
+        return try {
+            restore()
+            true
+        } finally {
+            restoreInProgress = false
+        }
     }
 
     private fun startTicker() {

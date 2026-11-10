@@ -31,9 +31,33 @@ class ProjectSelectionTest {
     }
 
     @Test
-    fun togglingAllVisibleProjectsPreservesImplicitSelectAll() {
+    fun togglingTheLastSelectedProjectLeavesAnExplicitEmptySelection() {
         assertEquals(
-            null,
+            emptySet(),
+            toggleProjectSelection(
+                selectedIds = setOf(1),
+                projectId = 1,
+                allProjectIds = allProjectIds,
+            ),
+        )
+    }
+
+    @Test
+    fun selectingAllVisibleProjectsWithSearchActivePreservesHiddenSelection() {
+        assertEquals(
+            setOf(1, 3),
+            toggleVisibleProjectSelection(
+                selectedIds = emptySet(),
+                visibleProjectIds = setOf(1, 3),
+                allProjectIds = allProjectIds,
+            ),
+        )
+    }
+
+    @Test
+    fun deselectingAllProjectsCanLeaveNoneSelected() {
+        assertEquals(
+            emptySet(),
             toggleVisibleProjectSelection(
                 selectedIds = null,
                 visibleProjectIds = allProjectIds,

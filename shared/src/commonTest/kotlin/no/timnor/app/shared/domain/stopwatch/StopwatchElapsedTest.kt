@@ -5,6 +5,13 @@ import kotlin.test.assertEquals
 
 class StopwatchElapsedTest {
     @Test
+    fun projectSelectionLocksOnceElapsedTimeHasBeenRecorded() {
+        assertEquals(true, canChangeStopwatchProject(0))
+        assertEquals(false, canChangeStopwatchProject(1))
+        assertEquals(false, canChangeStopwatchProject(3_600))
+    }
+
+    @Test
     fun derivesElapsedTimeFromPersistedStartInstantAfterResume() {
         assertEquals(135, stopwatchElapsedSeconds(45, startedAtEpochSeconds = 1_000, nowEpochSeconds = 1_090))
     }
