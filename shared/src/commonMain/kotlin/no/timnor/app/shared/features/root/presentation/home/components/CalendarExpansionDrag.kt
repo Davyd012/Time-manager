@@ -29,8 +29,8 @@ internal fun emptyListExpansionTarget(
 ): Boolean {
     val threshold = maxOf(0.3f, minOf(0.4f, positionalThreshold / distance.coerceAtLeast(1f)))
     return when {
-        velocity <= -abs(velocityThreshold) -> true
-        velocity >= abs(velocityThreshold) -> false
+        velocity >= abs(velocityThreshold) -> true
+        velocity <= -abs(velocityThreshold) -> false
         startExpanded -> progress > 1f - threshold
         else -> progress >= threshold
     }

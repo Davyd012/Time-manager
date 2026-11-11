@@ -19,7 +19,7 @@ class EmptyListExpansionTargetTest {
 
     @Test
     fun flingDirectionOverridesDistance() {
-        assertTrue(emptyListExpansionTarget(0.01f, false, -600f, 500f, 800f, 56f))
-        assertFalse(emptyListExpansionTarget(0.99f, true, 600f, 500f, 800f, 56f))
+        assertTrue(emptyListExpansionTarget(0.01f, false, 600f, 500f, 800f, 56f))
+        assertFalse(emptyListExpansionTarget(0.99f, true, -600f, 500f, 800f, 56f))
     }
 }

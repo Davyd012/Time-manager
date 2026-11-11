@@ -46,7 +46,7 @@ class SharedCalendarGestureTest {
     val composeRule = createAndroidComposeRule<ComponentActivity>()
 
     @Test
-    fun draggingEmptyHoursOpensCalendarAndDraggingMonthUpClosesIt() {
+    fun draggingEmptyHoursDownOpensCalendarAndDraggingMonthUpClosesIt() {
         val viewModel = TimnorHomeViewModel(EmptyPersistence(), IdleStopwatch(), LocalDate(2026, 11, 10))
         var expanded by mutableStateOf(false)
         composeRule.setContent {

@@ -14,7 +14,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.animation.core.Animatable
@@ -23,9 +22,12 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.snap
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.unit.dp
+import kotlin.math.roundToInt
 import no.timnor.app.shared.features.calendar.presentation.components.TimnorMonthExportDialog
 import no.timnor.app.shared.features.root.domain.TimnorHomeError
 import no.timnor.app.shared.features.root.domain.TimnorHomeUiState
@@ -72,8 +74,6 @@ fun TimnorHomeScreen(
     var dragProgress by androidx.compose.runtime.remember { mutableFloatStateOf(expansionAnimation.value) }
     var isDraggingCalendar by androidx.compose.runtime.remember { mutableStateOf(false) }
     var expansionJob by androidx.compose.runtime.remember { mutableStateOf<Job?>(null) }
-    var collapsedHeaderHeight by rememberSaveable { mutableIntStateOf(0) }
-    var collapsedCalendarHeight by rememberSaveable { mutableIntStateOf(0) }
     val calendarProgress = if (isDraggingCalendar) dragProgress else expansionAnimation.value
     val calendarExpanded = calendarProgress >= 0.5f
     val calendarBackEnabled = calendarProgress > 0.001f
@@ -123,15 +123,14 @@ fun TimnorHomeScreen(
         color = MaterialTheme.colorScheme.surface,
         contentColor = MaterialTheme.colorScheme.onSurface,
     ) {
-        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-            val dragDistance = (constraints.maxHeight - collapsedHeaderHeight - collapsedCalendarHeight)
-                .coerceAtLeast(1).toFloat()
+        BoxWithConstraints(modifier = Modifier.fillMaxSize().clipToBounds()) {
+            val dragDistance = constraints.maxHeight.coerceAtLeast(1).toFloat()
             val velocityThreshold = with(LocalDensity.current) { 1000.dp.toPx() }
             val positionalThreshold = with(LocalDensity.current) {
                 (MaterialTheme.timnorSpacing.extraLarge + MaterialTheme.timnorSpacing.medium + MaterialTheme.timnorSpacing.small).toPx()
             }
             val emptyListDragState = rememberDraggableState { delta ->
-                updateCalendarExpansionProgress((dragProgress - delta / dragDistance).coerceIn(0f, 1f))
+                updateCalendarExpansionProgress((dragProgress + delta / dragDistance).coerceIn(0f, 1f))
             }
             fun startEmptyListDrag() {
                 expansionJob?.cancel()
@@ -149,10 +148,13 @@ fun TimnorHomeScreen(
                 )
                 settleCalendarExpansion(expanded)
             }
-            Column(modifier = Modifier.fillMaxSize()) {
+            Column(modifier = Modifier.fillMaxSize().then(
+                if (calendarProgress >= 0.999f) Modifier.clearAndSetSemantics {} else Modifier,
+            )) {
             HomeHeaderBar(
                 selectedDate = state.selectedCalendarDate,
-                expansionProgress = calendarProgress,
+                expansionProgress = 0f,
+                gestureProgress = calendarProgress,
                 canAddWork = projects.isNotEmpty(),
                 onToggleCalendar = { settleCalendarExpansion(calendarProgress < 0.5f) },
                 onSetExpanded = ::settleCalendarExpansion,
@@ -164,9 +166,6 @@ fun TimnorHomeScreen(
                 onAddWork = {
                     viewModel.beginManualWork()
                     showWorkEditor = true
-                },
-                modifier = Modifier.onSizeChanged {
-                    if (calendarProgress <= 0.001f) collapsedHeaderHeight = it.height
                 },
             )
             state.error?.let { error ->
@@ -198,12 +197,10 @@ fun TimnorHomeScreen(
                 onExpansionProgressChange = ::updateCalendarExpansionProgress,
                 expansionDragDistancePx = dragDistance,
                 expansionVelocityThresholdPx = velocityThreshold,
-                modifier = (if (calendarProgress > 0f) {
-                    Modifier.fillMaxWidth().weight(0.25f + calendarProgress * 0.75f)
-                } else Modifier.fillMaxWidth()).padding(horizontal = MaterialTheme.timnorSpacing.medium)
-                    .onSizeChanged { if (calendarProgress <= 0.001f) collapsedCalendarHeight = it.height },
-                expanded = calendarExpanded,
-                expansionProgress = calendarProgress,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = MaterialTheme.timnorSpacing.medium),
+                expanded = false,
+                expansionProgress = 0f,
+                gestureProgress = calendarProgress,
                 onToggleExpanded = { settleCalendarExpansion(calendarProgress < 0.5f) },
             )
             HomeDailyWorkList(
@@ -214,16 +211,49 @@ fun TimnorHomeScreen(
                 expansionDragState = emptyListDragState,
                 onExpansionDragStarted = ::startEmptyListDrag,
                 onExpansionDragStopped = ::stopEmptyListDrag,
-                onExpansionProgressChange = ::updateCalendarExpansionProgress,
-                expansionDragDistancePx = dragDistance,
                 isDraggingCalendar = isDraggingCalendar,
-                modifier = Modifier.fillMaxWidth().weight((1f - calendarProgress).coerceAtLeast(0.01f)),
+                modifier = Modifier.fillMaxWidth().weight(1f),
                 onEditWork = viewModel::editWork,
                 onAddWork = {
                     viewModel.beginManualWork()
                     showWorkEditor = true
                 },
             )
+            }
+            Surface(
+                modifier = Modifier.fillMaxWidth()
+                    .clipToBounds()
+                    .layout { measurable, constraints ->
+                        val panel = measurable.measure(constraints.copy(minHeight = constraints.maxHeight))
+                        val visibleHeight = calendarPanelVisibleHeight(calendarProgress, panel.height)
+                        layout(panel.width, visibleHeight) { panel.place(0, 0) }
+                    }
+                    .then(if (calendarProgress <= 0.001f) Modifier.clearAndSetSemantics {} else Modifier),
+                color = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.onSurface,
+            ) {
+                CalendarSection(
+                    month = state.calendarMonth,
+                    selectedDate = state.selectedCalendarDate,
+                    projects = projects,
+                    selectedProjectIds = state.selectedCalendarProjectIds,
+                    works = works,
+                    onMonthChange = viewModel::updateCalendarMonth,
+                    onSelectDate = viewModel::selectCalendarDate,
+                    onApplyProjectFilter = viewModel::setCalendarProjectSelection,
+                    onMonthView = onMonthView,
+                    onShareMonth = onShareMonth,
+                    onSetExpanded = ::settleCalendarExpansion,
+                    onExpansionProgressChange = ::updateCalendarExpansionProgress,
+                    expansionDragDistancePx = dragDistance,
+                    expansionVelocityThresholdPx = velocityThreshold,
+                    modifier = Modifier.fillMaxSize().padding(horizontal = MaterialTheme.timnorSpacing.medium),
+                    expanded = true,
+                    expansionProgress = 1f,
+                    gestureProgress = calendarProgress,
+                    contentInteractive = calendarProgress >= 0.999f && !isDraggingCalendar,
+                    onToggleExpanded = { settleCalendarExpansion(false) },
+                )
             }
         }
     }
@@ -284,3 +314,6 @@ internal fun homeCalendarCollapseStartProgress(
     dragProgress: Float,
     animationProgress: Float,
 ): Float = (if (isDragging) dragProgress else animationProgress).coerceIn(0f, 1f)
+
+internal fun calendarPanelVisibleHeight(progress: Float, height: Int): Int =
+    (progress.coerceIn(0f, 1f) * height.coerceAtLeast(0)).roundToInt()

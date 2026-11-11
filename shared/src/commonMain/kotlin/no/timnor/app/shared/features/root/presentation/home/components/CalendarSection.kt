@@ -18,6 +18,11 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
@@ -69,10 +74,12 @@ internal fun CalendarSection(
     modifier: Modifier = Modifier,
     expanded: Boolean = true,
     expansionProgress: Float = if (expanded) 1f else 0f,
+    gestureProgress: Float = expansionProgress,
+    contentInteractive: Boolean = expansionProgress >= 0.999f,
     onToggleExpanded: (() -> Unit)? = null,
 ) {
     val systemAnimationsEnabled = rememberSystemAnimationsEnabled()
-    val expandedContentEnabled = expansionProgress >= 0.5f
+    val expandedContentEnabled = contentInteractive
     val toggleExpanded = onToggleExpanded
     val calendarStateDescription = toggleExpanded?.let {
         stringResource(if (expanded) Res.string.calendar_open_state else Res.string.calendar_closed_state)
@@ -100,17 +107,45 @@ internal fun CalendarSection(
         stringResource(Res.string.calendar_weekday_saturday),
         stringResource(Res.string.calendar_weekday_sunday),
     )
-    val latestExpansionProgress = rememberUpdatedState(expansionProgress)
+    val latestExpansionProgress = rememberUpdatedState(gestureProgress)
     val latestOnSetExpanded = rememberUpdatedState(onSetExpanded)
     val latestOnExpansionProgressChange = rememberUpdatedState(onExpansionProgressChange)
     val latestExpansionDragDistance = rememberUpdatedState(expansionDragDistancePx)
     val latestVelocityThreshold = rememberUpdatedState(expansionVelocityThresholdPx)
     var dragProgress by remember { mutableFloatStateOf(expansionProgress) }
     val expansionDragState = rememberDraggableState { delta ->
-        dragProgress = (dragProgress - delta / latestExpansionDragDistance.value).coerceIn(0f, 1f)
+        dragProgress = (dragProgress + delta / latestExpansionDragDistance.value).coerceIn(0f, 1f)
         latestOnExpansionProgressChange.value(dragProgress)
     }
     val calendarScrollState = rememberScrollState()
+    val calendarScrollHandoff = remember(calendarScrollState) {
+        object : NestedScrollConnection {
+            var handingOff = false
+
+            override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
+                if (source != NestedScrollSource.UserInput || available.y >= 0f || calendarScrollState.value != calendarScrollState.maxValue) {
+                    return Offset.Zero
+                }
+                if (!handingOff) {
+                    dragProgress = latestExpansionProgress.value
+                    handingOff = true
+                }
+                dragProgress = (dragProgress + available.y / latestExpansionDragDistance.value.coerceAtLeast(1f))
+                    .coerceIn(0f, 1f)
+                latestOnExpansionProgressChange.value(dragProgress)
+                return Offset(0f, available.y)
+            }
+
+            override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
+                if (!handingOff) return Velocity.Zero
+                handingOff = false
+                latestOnSetExpanded.value(
+                    calendarExpansionTarget(dragProgress, available.y, latestVelocityThreshold.value),
+                )
+                return available
+            }
+        }
+    }
     val weekStart = remember(selectedDate) {
         selectedDate.minus(selectedDate.dayOfWeek.ordinal, DateTimeUnit.DAY)
     }
@@ -166,7 +201,8 @@ internal fun CalendarSection(
             )
             .then(
                 if (expansionProgress > 0f) {
-                    Modifier.verticalScroll(calendarScrollState, enabled = calendarScrollState.maxValue > 0)
+                    Modifier.nestedScroll(calendarScrollHandoff)
+                        .verticalScroll(calendarScrollState, enabled = calendarScrollState.maxValue > 0)
                 } else Modifier,
             ),
         verticalArrangement = Arrangement.spacedBy(MaterialTheme.timnorSpacing.small),
@@ -197,7 +233,7 @@ internal fun CalendarSection(
             weekSeconds = weekSeconds,
             expansionProgress = expansionProgress,
             expanded = expanded,
-                expandedContentEnabled = expansionProgress >= 0.999f && !monthTransitioning,
+            expandedContentEnabled = contentInteractive && !monthTransitioning,
             animationsEnabled = systemAnimationsEnabled,
             onMonthChange = ::requestMonthChange,
             onSelectDate = onSelectDate,
