@@ -10,14 +10,14 @@ class HomeCalendarToggleTest {
         assertTrue(
             calendarExpansionTarget(
                 progress = 0.2f,
-                velocityPxPerSecond = 600f,
+                velocityPxPerSecond = -600f,
                 velocityThresholdPxPerSecond = 500f,
             ),
         )
         assertFalse(
             calendarExpansionTarget(
                 progress = 0.8f,
-                velocityPxPerSecond = -600f,
+                velocityPxPerSecond = 600f,
                 velocityThresholdPxPerSecond = 500f,
             ),
         )

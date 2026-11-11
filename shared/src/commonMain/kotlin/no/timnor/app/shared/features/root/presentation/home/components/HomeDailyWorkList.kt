@@ -10,11 +10,20 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.gestures.DraggableState
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.unit.Velocity
 import androidx.compose.foundation.shape.CornerSize
 import androidx.compose.foundation.shape.CornerBasedShape
 import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
@@ -43,6 +52,8 @@ internal fun HomeDailyWorkList(
     expansionDragState: DraggableState,
     onExpansionDragStarted: () -> Unit,
     onExpansionDragStopped: (Float) -> Unit,
+    onExpansionProgressChange: (Float) -> Unit,
+    expansionDragDistancePx: Float,
     isDraggingCalendar: Boolean,
     onEditWork: (StoredWork) -> Unit,
     onAddWork: () -> Unit,
@@ -50,6 +61,43 @@ internal fun HomeDailyWorkList(
     val selectedWorks = remember(works, selectedDate) { monthViewWorksForDate(works, selectedDate) }
     val animationsEnabled = rememberSystemAnimationsEnabled()
     val expansionTranslationPx = with(LocalDensity.current) { MaterialTheme.timnorSpacing.medium.toPx() }
+    var handingOffScroll by remember { mutableStateOf(false) }
+    var scrollDragProgress by remember { mutableFloatStateOf(expansionProgress) }
+    val latestExpansionProgress = androidx.compose.runtime.rememberUpdatedState(expansionProgress)
+    val latestOnDragStarted = androidx.compose.runtime.rememberUpdatedState(onExpansionDragStarted)
+    val latestOnDragStopped = androidx.compose.runtime.rememberUpdatedState(onExpansionDragStopped)
+    val latestOnProgressChange = androidx.compose.runtime.rememberUpdatedState(onExpansionProgressChange)
+    val latestDragDistance = androidx.compose.runtime.rememberUpdatedState(expansionDragDistancePx)
+    val scrollHandoff = remember(expansionDragState) {
+        object : NestedScrollConnection {
+            override fun onPostScroll(
+                consumed: Offset,
+                available: Offset,
+                source: NestedScrollSource,
+            ): Offset {
+                if (latestExpansionProgress.value > 0.8f) return Offset.Zero
+                if (kotlin.math.abs(available.y) < 1f) return Offset.Zero
+                if (!handingOffScroll) {
+                    latestOnDragStarted.value()
+                    scrollDragProgress = latestExpansionProgress.value
+                    handingOffScroll = true
+                }
+                scrollDragProgress = (scrollDragProgress - available.y / latestDragDistance.value.coerceAtLeast(1f))
+                    .coerceIn(0f, 1f)
+                latestOnProgressChange.value(scrollDragProgress)
+                return Offset(0f, available.y)
+            }
+
+            override suspend fun onPostFling(consumed: Velocity, available: Velocity): Velocity {
+                if (handingOffScroll) {
+                    latestOnDragStopped.value(available.y)
+                    handingOffScroll = false
+                    return available
+                }
+                return Velocity.Zero
+            }
+        }
+    }
     AnimatedContent(
         targetState = selectedWorks.isEmpty(),
         modifier = modifier
@@ -102,6 +150,7 @@ internal fun HomeDailyWorkList(
                 shape = homeDailyTimelineShape(MaterialTheme.shapes.large),
                 showDuration = true,
                 showProjectMarker = true,
+                nestedScrollConnection = scrollHandoff,
                 onSelectWork = onEditWork,
             )
         }

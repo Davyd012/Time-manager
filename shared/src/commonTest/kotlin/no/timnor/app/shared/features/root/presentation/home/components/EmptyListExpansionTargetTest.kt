@@ -11,15 +11,15 @@ class EmptyListExpansionTargetTest {
             progress, expanded, velocity = 0f, velocityThreshold = 500f,
             distance = 800f, positionalThreshold = 56f,
         )
-        assertFalse(target(0.06f, false))
-        assertTrue(target(0.08f, false))
-        assertTrue(target(0.94f, true))
-        assertFalse(target(0.92f, true))
+        assertFalse(target(0.29f, false))
+        assertTrue(target(0.30f, false))
+        assertTrue(target(0.71f, true))
+        assertFalse(target(0.70f, true))
     }
 
     @Test
     fun flingDirectionOverridesDistance() {
-        assertTrue(emptyListExpansionTarget(0.01f, false, 600f, 500f, 800f, 56f))
-        assertFalse(emptyListExpansionTarget(0.99f, true, -600f, 500f, 800f, 56f))
+        assertTrue(emptyListExpansionTarget(0.01f, false, -600f, 500f, 800f, 56f))
+        assertFalse(emptyListExpansionTarget(0.99f, true, 600f, 500f, 800f, 56f))
     }
 }

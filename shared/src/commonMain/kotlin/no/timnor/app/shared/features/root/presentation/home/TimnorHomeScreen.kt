@@ -25,6 +25,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.dp
 import no.timnor.app.shared.features.calendar.presentation.components.TimnorMonthExportDialog
 import no.timnor.app.shared.features.root.domain.TimnorHomeError
 import no.timnor.app.shared.features.root.domain.TimnorHomeUiState
@@ -92,7 +93,7 @@ fun TimnorHomeScreen(
             isDraggingCalendar = false
             expansionAnimation.animateTo(
                 if (expanded) 1f else 0f,
-                if (animationsEnabled) spring(stiffness = Spring.StiffnessMedium) else snap(),
+                if (animationsEnabled) spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium) else snap(),
             )
         }
     }
@@ -111,7 +112,7 @@ fun TimnorHomeScreen(
             savedCalendarExpanded = false
             expansionAnimation.snapTo(collapseStartProgress)
             isDraggingCalendar = false
-            expansionAnimation.animateTo(0f, if (animationsEnabled) spring(stiffness = Spring.StiffnessMedium) else snap())
+            expansionAnimation.animateTo(0f, if (animationsEnabled) spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium) else snap())
         }
     }
     LaunchedEffect(calendarExpanded) { onCalendarExpansionChange(calendarExpanded) }
@@ -125,12 +126,12 @@ fun TimnorHomeScreen(
         BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
             val dragDistance = (constraints.maxHeight - collapsedHeaderHeight - collapsedCalendarHeight)
                 .coerceAtLeast(1).toFloat()
-            val velocityThreshold = with(LocalDensity.current) { (MaterialTheme.timnorSpacing.extraLarge * 4).toPx() }
+            val velocityThreshold = with(LocalDensity.current) { 1000.dp.toPx() }
             val positionalThreshold = with(LocalDensity.current) {
                 (MaterialTheme.timnorSpacing.extraLarge + MaterialTheme.timnorSpacing.medium + MaterialTheme.timnorSpacing.small).toPx()
             }
             val emptyListDragState = rememberDraggableState { delta ->
-                updateCalendarExpansionProgress((dragProgress + delta / dragDistance).coerceIn(0f, 1f))
+                updateCalendarExpansionProgress((dragProgress - delta / dragDistance).coerceIn(0f, 1f))
             }
             fun startEmptyListDrag() {
                 expansionJob?.cancel()
@@ -205,24 +206,24 @@ fun TimnorHomeScreen(
                 expansionProgress = calendarProgress,
                 onToggleExpanded = { settleCalendarExpansion(calendarProgress < 0.5f) },
             )
-            if (calendarProgress < 1f || isDraggingCalendar) {
-                HomeDailyWorkList(
-                    selectedDate = state.selectedCalendarDate,
-                    works = works,
-                    projects = projects,
-                    expansionProgress = calendarProgress,
-                    expansionDragState = emptyListDragState,
-                    onExpansionDragStarted = ::startEmptyListDrag,
-                    onExpansionDragStopped = ::stopEmptyListDrag,
-                    isDraggingCalendar = isDraggingCalendar,
-                    modifier = Modifier.fillMaxWidth().weight((1f - calendarProgress).coerceAtLeast(0.01f)),
-                    onEditWork = viewModel::editWork,
-                    onAddWork = {
-                        viewModel.beginManualWork()
-                        showWorkEditor = true
-                    },
-                )
-            }
+            HomeDailyWorkList(
+                selectedDate = state.selectedCalendarDate,
+                works = works,
+                projects = projects,
+                expansionProgress = calendarProgress,
+                expansionDragState = emptyListDragState,
+                onExpansionDragStarted = ::startEmptyListDrag,
+                onExpansionDragStopped = ::stopEmptyListDrag,
+                onExpansionProgressChange = ::updateCalendarExpansionProgress,
+                expansionDragDistancePx = dragDistance,
+                isDraggingCalendar = isDraggingCalendar,
+                modifier = Modifier.fillMaxWidth().weight((1f - calendarProgress).coerceAtLeast(0.01f)),
+                onEditWork = viewModel::editWork,
+                onAddWork = {
+                    viewModel.beginManualWork()
+                    showWorkEditor = true
+                },
+            )
             }
         }
     }

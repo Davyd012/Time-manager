@@ -1,8 +1,5 @@
 package no.timnor.app.shared.features.root.presentation.home.components
 
-import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.snap
-import androidx.compose.animation.core.spring
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
@@ -110,7 +107,7 @@ internal fun CalendarSection(
     val latestVelocityThreshold = rememberUpdatedState(expansionVelocityThresholdPx)
     var dragProgress by remember { mutableFloatStateOf(expansionProgress) }
     val expansionDragState = rememberDraggableState { delta ->
-        dragProgress = (dragProgress + delta / latestExpansionDragDistance.value).coerceIn(0f, 1f)
+        dragProgress = (dragProgress - delta / latestExpansionDragDistance.value).coerceIn(0f, 1f)
         latestOnExpansionProgressChange.value(dragProgress)
     }
     val calendarScrollState = rememberScrollState()
@@ -153,13 +150,6 @@ internal fun CalendarSection(
                     )
                 },
             )
-            .animateContentSize(
-                animationSpec = if (systemAnimationsEnabled) {
-                    spring(dampingRatio = 0.82f, stiffness = 420f)
-                } else {
-                    snap()
-                },
-            )
             .draggable(
                 state = expansionDragState,
                 orientation = Orientation.Vertical,
@@ -193,17 +183,6 @@ internal fun CalendarSection(
                 onToggleExpanded = onToggleExpanded,
                 onMonthView = onMonthView,
                 onShowFilter = { showFilterSheet = true },
-                dragState = expansionDragState,
-                onDragStarted = { dragProgress = latestExpansionProgress.value },
-                onDragStopped = { velocity ->
-                    latestOnSetExpanded.value(
-                        calendarExpansionTarget(
-                            progress = dragProgress,
-                            velocityPxPerSecond = velocity,
-                            velocityThresholdPxPerSecond = latestVelocityThreshold.value,
-                        ),
-                    )
-                },
             )
         }
         CalendarProgressContent(

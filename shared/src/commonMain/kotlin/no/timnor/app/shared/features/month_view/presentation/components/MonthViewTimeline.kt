@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.background
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.HorizontalDivider
@@ -44,6 +46,7 @@ internal fun MonthViewTimeline(
     shape: Shape? = null,
     showDuration: Boolean = true,
     showProjectMarker: Boolean = false,
+    nestedScrollConnection: NestedScrollConnection? = null,
     onSelectWork: (StoredWork) -> Unit,
 ) {
     val unknownProject = stringResource(Res.string.unknown_project)
@@ -56,7 +59,8 @@ internal fun MonthViewTimeline(
         shape = shape ?: MaterialTheme.shapes.large,
     ) {
         LazyColumn(
-            modifier = Modifier.fillMaxWidth().padding(
+            modifier = (if (nestedScrollConnection == null) Modifier else Modifier.nestedScroll(nestedScrollConnection))
+                .fillMaxWidth().padding(
                 if (showProjectMarker) {
                     MaterialTheme.timnorSpacing.small + MaterialTheme.timnorSpacing.extraSmall / 2
                 } else MaterialTheme.timnorSpacing.small,

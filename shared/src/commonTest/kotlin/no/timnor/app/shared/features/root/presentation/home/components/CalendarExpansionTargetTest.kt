@@ -28,14 +28,14 @@ class CalendarExpansionTargetTest {
         assertTrue(
             calendarExpansionTarget(
                 progress = 0.1f,
-                velocityPxPerSecond = 1_000f,
+                velocityPxPerSecond = -1_000f,
                 velocityThresholdPxPerSecond = 1_000f,
             ),
         )
         assertFalse(
             calendarExpansionTarget(
                 progress = 0.9f,
-                velocityPxPerSecond = -1_000f,
+                velocityPxPerSecond = 1_000f,
                 velocityThresholdPxPerSecond = 1_000f,
             ),
         )

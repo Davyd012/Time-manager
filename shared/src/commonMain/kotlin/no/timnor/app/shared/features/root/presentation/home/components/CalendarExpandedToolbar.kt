@@ -1,8 +1,5 @@
 package no.timnor.app.shared.features.root.presentation.home.components
 
-import androidx.compose.foundation.gestures.DraggableState
-import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -47,9 +44,6 @@ internal fun CalendarExpandedToolbar(
     onToggleExpanded: (() -> Unit)?,
     onMonthView: (LocalDate) -> Unit,
     onShowFilter: () -> Unit,
-    dragState: DraggableState,
-    onDragStarted: () -> Unit,
-    onDragStopped: (Float) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Box(
@@ -57,13 +51,7 @@ internal fun CalendarExpandedToolbar(
             .height(MaterialTheme.timnorSpacing.extraLarge * 2)
             .testTag("calendar-expanded-toolbar")
             .alpha(expansionProgress)
-            .then(if (expandedContentEnabled) Modifier else Modifier.clearAndSetSemantics {})
-            .draggable(
-                state = dragState,
-                orientation = Orientation.Vertical,
-                onDragStarted = { onDragStarted() },
-                onDragStopped = { onDragStopped(it) },
-            ),
+            .then(if (expandedContentEnabled) Modifier else Modifier.clearAndSetSemantics {}),
         contentAlignment = Alignment.Center,
     ) {
         onToggleExpanded?.let { close ->

@@ -69,7 +69,7 @@ internal fun HomeHeaderBar(
     val latestVelocityThreshold = rememberUpdatedState(expansionVelocityThresholdPx)
     var dragProgress by remember { mutableFloatStateOf(expansionProgress) }
     val dragState = rememberDraggableState { delta ->
-        dragProgress = (dragProgress + delta / latestDragDistance.value).coerceIn(0f, 1f)
+        dragProgress = (dragProgress - delta / latestDragDistance.value).coerceIn(0f, 1f)
         latestOnProgressChange.value(dragProgress)
     }
     val weekday = formatLocalizedWeekday(selectedDate)
@@ -151,8 +151,8 @@ internal fun calendarExpansionTarget(
     velocityPxPerSecond: Float,
     velocityThresholdPxPerSecond: Float,
 ): Boolean = when {
-    velocityPxPerSecond <= -abs(velocityThresholdPxPerSecond) -> false
-    velocityPxPerSecond >= abs(velocityThresholdPxPerSecond) -> true
+    velocityPxPerSecond <= -abs(velocityThresholdPxPerSecond) -> true
+    velocityPxPerSecond >= abs(velocityThresholdPxPerSecond) -> false
     else -> progress >= 0.5f
 }
 
