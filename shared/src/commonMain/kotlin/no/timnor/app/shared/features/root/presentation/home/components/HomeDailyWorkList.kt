@@ -9,6 +9,7 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.gestures.DraggableState
 import androidx.compose.foundation.shape.CornerSize
 import androidx.compose.foundation.shape.CornerBasedShape
 import androidx.compose.ui.unit.dp
@@ -19,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.hideFromAccessibility
 import androidx.compose.material3.MaterialTheme
@@ -38,6 +40,10 @@ internal fun HomeDailyWorkList(
     projects: List<StoredProject>,
     expansionProgress: Float,
     modifier: Modifier = Modifier,
+    expansionDragState: DraggableState,
+    onExpansionDragStarted: () -> Unit,
+    onExpansionDragStopped: (Float) -> Unit,
+    isDraggingCalendar: Boolean,
     onEditWork: (StoredWork) -> Unit,
     onAddWork: () -> Unit,
 ) {
@@ -54,7 +60,7 @@ internal fun HomeDailyWorkList(
                 translationY = expansionProgress * expansionTranslationPx
             }
             .then(
-                if (shouldBlockHomeWorkListInput(expansionProgress)) {
+                if (shouldBlockHomeWorkListInput(expansionProgress) && !isDraggingCalendar) {
                     Modifier
                         .clearAndSetSemantics { hideFromAccessibility() }
                         .pointerInput(shouldBlockHomeWorkListInput(expansionProgress)) {
@@ -79,7 +85,13 @@ internal fun HomeDailyWorkList(
         if (empty) {
             MonthViewEmptyState(
                 onAddWork = onAddWork,
-                modifier = Modifier.fillMaxSize(),
+                modifier = Modifier.fillMaxSize()
+                    .testTag("home-empty-work-drag-surface")
+                    .calendarExpansionDrag(
+                        state = expansionDragState,
+                        onStarted = onExpansionDragStarted,
+                        onStopped = onExpansionDragStopped,
+                    ),
                 loopAnimation = true,
             )
         } else {

@@ -12,7 +12,6 @@ import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
@@ -55,7 +54,6 @@ internal fun WorkEntrySheet(
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(),
         dragHandle = if (showDragHandle) {
             { BottomSheetDefaults.DragHandle(modifier = Modifier.testTag(WORK_ENTRY_DRAG_HANDLE_TAG)) }
         } else {

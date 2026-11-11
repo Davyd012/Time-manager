@@ -113,6 +113,7 @@ internal fun CalendarSection(
         dragProgress = (dragProgress + delta / latestExpansionDragDistance.value).coerceIn(0f, 1f)
         latestOnExpansionProgressChange.value(dragProgress)
     }
+    val calendarScrollState = rememberScrollState()
     val weekStart = remember(selectedDate) {
         selectedDate.minus(selectedDate.dayOfWeek.ordinal, DateTimeUnit.DAY)
     }
@@ -173,7 +174,11 @@ internal fun CalendarSection(
                     )
                 },
             )
-            .then(if (expansionProgress > 0f) Modifier.verticalScroll(rememberScrollState()) else Modifier),
+            .then(
+                if (expansionProgress > 0f) {
+                    Modifier.verticalScroll(calendarScrollState, enabled = calendarScrollState.maxValue > 0)
+                } else Modifier,
+            ),
         verticalArrangement = Arrangement.spacedBy(MaterialTheme.timnorSpacing.small),
     ) {
         if (expansionProgress > 0.01f) {

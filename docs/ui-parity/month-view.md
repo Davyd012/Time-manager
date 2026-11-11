@@ -25,7 +25,7 @@ Paths are under `shared/src/commonMain/kotlin/no/timnor/app/shared/features/mont
 ### `TimnorMonthViewScreen`
 
 - The month comes from `state.calendarMonth`; `monthGridLayout` supplies its day count. It filters all `state.works` by stored UTC year/month and computes `secondsByDay`. Independently, it selects work by `state.selectedCalendarDate` for the timeline. Project filter IDs are not passed into either calculation in this screen.
-- The header receives selected date and `viewModel::selectCalendarDate` and has no add action, matching the legacy populated-day path. The empty state provides the add button when no work exists; it calls `beginManualWork()` and opens the editor, disabled when there are no projects. Work selection calls `editWork`; `editingWorkId` opens the sheet.
+- The header receives selected date and `viewModel::selectCalendarDate` and has no add action, matching the legacy populated-day path. The empty state provides the add button when no work exists; it calls `beginManualWork()` and opens the editor even when there are no projects, matching legacy. Save remains disabled until a valid project is selected. Work selection calls `editWork`; `editingWorkId` opens the sheet.
 - Editor save/period-save dismisses only on successful callback; cancel/dismiss clears edit state. Delete looks up the edited ID and invokes the ViewModel, treating an already-missing item as successfully gone. Back is an injected callback. Verify parent routing updates selected month/date before this screen calculates its grid.
 - Compare to legacy `MonthViewContent`: legacy has separate screen state and a day selector initialized near selected day. Trace existing state before attempting to merge/rewrite ViewModels. Test the month displayed after opening via a calendar day and after switching tabs or returning from editor.
 
@@ -43,7 +43,7 @@ Paths are under `shared/src/commonMain/kotlin/no/timnor/app/shared/features/mont
 ### `MonthViewTimeline`, `MonthViewTimelineGroup`
 
 - `monthViewWorksForDate` compares stored UTC dates and sorts by epoch seconds. `monthViewWorkGroups` sorts again then groups by UTC hour. Timeline shows a keyed lazy item per hour; the group renders an hour label, divider and cards for that hour. Project IDs map to names with a localized unknown-project fallback.
-- Each card calls `onSelectWork(work)`, shows the project, optional nonblank description and formatted duration. `formatMonthViewDuration` shows rounded tenths of hours for ≥ 3600 seconds, rounded tenths of minutes for ≥ 60, otherwise seconds. Preserve this exact observed behavior until legacy formatting has been checked; do not assume it is exact hour/minute output.
+- Each card calls `onSelectWork(work)`, shows the project, optional nonblank description and formatted duration. `formatMonthViewDuration` matches the legacy rounded tenth-hour/minute and seconds thresholds; its decimal mark comes from the host locale (`2.3h` in English, `2,3h` in Norwegian).
 - Verify entries at 00:00 and 23:59, multiple records in the same hour, equal timestamps, missing projects, long descriptions and duration rounding boundaries. A group composes all its cards together, so evaluate real list sizes before changing lazy-list granularity. If semantics are improved, include enough information to distinguish cards without repeating decorative divider content.
 
 ## 2026-11-10 implementation and verification

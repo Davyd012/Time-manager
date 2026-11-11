@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -31,6 +32,7 @@ import no.timnor.app.shared.features.root.domain.TimnorHomeViewModel
 import no.timnor.app.shared.features.root.presentation.home.components.CalendarSection
 import no.timnor.app.shared.features.root.presentation.home.components.HomeDailyWorkList
 import no.timnor.app.shared.features.root.presentation.home.components.HomeHeaderBar
+import no.timnor.app.shared.features.root.presentation.home.components.emptyListExpansionTarget
 import no.timnor.app.shared.features.root.presentation.home.new_work.WorkEntrySheet
 import no.timnor.app.shared.features.settings.presentation.TimnorSettingsSection
 import no.timnor.app.shared.generated.resources.Res
@@ -41,6 +43,7 @@ import no.timnor.app.shared.generated.resources.stopwatch_project_locked
 import no.timnor.app.shared.ui.theme.timnorSpacing
 import no.timnor.app.shared.platform.motion.rememberSystemAnimationsEnabled
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
 import kotlinx.datetime.LocalDate
 import org.jetbrains.compose.resources.stringResource
 
@@ -67,6 +70,7 @@ fun TimnorHomeScreen(
     val animationsEnabled = rememberSystemAnimationsEnabled()
     var dragProgress by androidx.compose.runtime.remember { mutableFloatStateOf(expansionAnimation.value) }
     var isDraggingCalendar by androidx.compose.runtime.remember { mutableStateOf(false) }
+    var expansionJob by androidx.compose.runtime.remember { mutableStateOf<Job?>(null) }
     var collapsedHeaderHeight by rememberSaveable { mutableIntStateOf(0) }
     var collapsedCalendarHeight by rememberSaveable { mutableIntStateOf(0) }
     val calendarProgress = if (isDraggingCalendar) dragProgress else expansionAnimation.value
@@ -74,14 +78,16 @@ fun TimnorHomeScreen(
     val calendarBackEnabled = calendarProgress > 0.001f
 
     fun updateCalendarExpansionProgress(progress: Float) {
+        if (!isDraggingCalendar) expansionJob?.cancel()
         isDraggingCalendar = true
-        dragProgress = progress
+        dragProgress = progress.coerceIn(0f, 1f)
     }
 
     fun settleCalendarExpansion(expanded: Boolean) {
         val start = if (isDraggingCalendar) dragProgress else expansionAnimation.value
         savedCalendarExpanded = expanded
-        scope.launch {
+        expansionJob?.cancel()
+        expansionJob = scope.launch {
             expansionAnimation.snapTo(start)
             isDraggingCalendar = false
             expansionAnimation.animateTo(
@@ -96,6 +102,7 @@ fun TimnorHomeScreen(
     }
     LaunchedEffect(homeReselectionCount) {
         if (homeReselectionCount > 0) {
+            expansionJob?.cancel()
             val collapseStartProgress = homeCalendarCollapseStartProgress(
                 isDragging = isDraggingCalendar,
                 dragProgress = dragProgress,
@@ -119,6 +126,28 @@ fun TimnorHomeScreen(
             val dragDistance = (constraints.maxHeight - collapsedHeaderHeight - collapsedCalendarHeight)
                 .coerceAtLeast(1).toFloat()
             val velocityThreshold = with(LocalDensity.current) { (MaterialTheme.timnorSpacing.extraLarge * 4).toPx() }
+            val positionalThreshold = with(LocalDensity.current) {
+                (MaterialTheme.timnorSpacing.extraLarge + MaterialTheme.timnorSpacing.medium + MaterialTheme.timnorSpacing.small).toPx()
+            }
+            val emptyListDragState = rememberDraggableState { delta ->
+                updateCalendarExpansionProgress((dragProgress + delta / dragDistance).coerceIn(0f, 1f))
+            }
+            fun startEmptyListDrag() {
+                expansionJob?.cancel()
+                dragProgress = calendarProgress
+                isDraggingCalendar = true
+            }
+            fun stopEmptyListDrag(velocity: Float) {
+                val expanded = emptyListExpansionTarget(
+                    progress = dragProgress,
+                    startExpanded = savedCalendarExpanded,
+                    velocity = velocity,
+                    velocityThreshold = velocityThreshold,
+                    distance = dragDistance,
+                    positionalThreshold = positionalThreshold,
+                )
+                settleCalendarExpansion(expanded)
+            }
             Column(modifier = Modifier.fillMaxSize()) {
             HomeHeaderBar(
                 selectedDate = state.selectedCalendarDate,
@@ -176,12 +205,16 @@ fun TimnorHomeScreen(
                 expansionProgress = calendarProgress,
                 onToggleExpanded = { settleCalendarExpansion(calendarProgress < 0.5f) },
             )
-            if (calendarProgress < 1f) {
+            if (calendarProgress < 1f || isDraggingCalendar) {
                 HomeDailyWorkList(
                     selectedDate = state.selectedCalendarDate,
                     works = works,
                     projects = projects,
                     expansionProgress = calendarProgress,
+                    expansionDragState = emptyListDragState,
+                    onExpansionDragStarted = ::startEmptyListDrag,
+                    onExpansionDragStopped = ::stopEmptyListDrag,
+                    isDraggingCalendar = isDraggingCalendar,
                     modifier = Modifier.fillMaxWidth().weight((1f - calendarProgress).coerceAtLeast(0.01f)),
                     onEditWork = viewModel::editWork,
                     onAddWork = {

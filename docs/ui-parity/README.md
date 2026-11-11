@@ -21,7 +21,7 @@ These files record observable source behavior, known differences, implementation
 
 ## Acceptance for every screen
 
-1. Capture the legacy reference and shared screen with the same data, device size, locale, font scale and light/dark theme. The active Android host uses shared UI, so a separate reference build or reviewed historical screenshots are needed; do not label a screenshot of the active host as legacy.
+1. Capture the legacy reference and shared screen with the same data, device size, locale, font scale and light/dark theme. A visually close match is acceptable; pixel identity is not required. Focus on meaningful layout, hierarchy, behavior and accessibility differences. The active Android host uses shared UI, so a separate reference build or reviewed historical screenshots are needed; do not label a screenshot of the active host as legacy.
 2. Compare empty, populated, loading, error, disabled, keyboard, sheet and dialog states. Exercise tap, long press where applicable, directional drags, interrupted gestures, cancellation, navigation and process recreation.
 3. Test TalkBack/VoiceOver labels, focus order, 48dp targets, large text, narrow screens, system insets and reduced motion. Check horizontal gesture direction in RTL.
 4. Run the relevant shared unit tests and Android Compose interaction tests. Run connected tests and review screenshots on an Android device; build and exercise iOS on a Mac. Record device, OS, build, results and intentional differences. Compilation alone is not visual or gesture parity.
@@ -39,6 +39,12 @@ These files record observable source behavior, known differences, implementation
 - Expanded Home `MonthGrid` source comparison found shared day-cell totals had a one-decimal `h` suffix while legacy uses up to two decimals and Norwegian `t`. Shared now reproduces the legacy rounding/zero/suffix rule through a localized string resource; tests cover 30-second, 90-second, half-hour and whole-hour values. Shared host tests, Android unit tests, Android source compilation and both iOS Kotlin target compiles passed after this change. Visual comparison remains unverified.
 
 ## Verification follow-up, 2026-11-11
+
+### Current host rerun, 2026-11-11
+
+- The Gradle daemon was idle before the rerun; no active build remained to collect output from. `:shared:testAndroidHostTest`, `:app:testDebugUnitTest`, and `:app:compileDebugAndroidTestKotlin` passed with `--rerun-tasks` (59 tasks executed). Android main compilation and both configured iOS Kotlin target compiles also passed in the combined check; those tasks were up to date. This is compile/test evidence only.
+- `:app:assembleDebug` failed at `:app:mergeExtDexDebug`: POI 6.0.0 `poi-ooxml-lite` reports `STTLTriggerEvent$Enum` missing its nest host. Dependencies were left unchanged. `:app:validateDebugScreenshotTest` again rendered all eight catalog previews and failed all eight comparisons against stored references; no baselines were refreshed. Report: `app/build/reports/screenshotTest/preview/debug/index.html`.
+- `adb devices -l` listed no devices; no `emulator`, `xcodebuild` or `xcrun` executable is available. Connected interaction tests, device screenshot capture, and iOS runtime checks could not run. The project-selector assertion compiled but was not executed. `git diff --check` passed.
 
 - `gradlew.bat :app:validateDebugScreenshotTest --console=plain` rendered all eight catalog previews and failed all eight with `ImageComparisonAssertionError`. The report is at `app/build/reports/screenshotTest/preview/debug/index.html`; rendered and diff PNGs are under `app/build/outputs/screenshotTest-results/preview/debug/`. No references were refreshed.
 - The generated Home expanded preview now shows the legacy `3.5t` in-cell total. Its legacy reference still displays `4 t` in the monthly pill, but `MonthlyTotalPill` formats hours and minutes; with this preview's `3.5` hours the current source yields `3 t 30 m`. That baseline is stale against the legacy source and was left untouched.

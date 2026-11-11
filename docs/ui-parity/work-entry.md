@@ -55,12 +55,12 @@ All paths below are under `shared/src/commonMain/kotlin/no/timnor/app/shared/fea
 ### `WorkPeriodRegistrationSwitch`, `WorkPeriodRegistration`
 
 - Whole switch row is toggleable with switch role; the inner switch delegates to the row. Range button is visible in period mode and animates only when motion is enabled. Its label is a prompt, a single date, or first–last dates.
-- Picker shares `DateRangePickerState` with the form. Done is enabled only when both endpoints exist. Current Cancel merely closes the dialog and does not restore a prior range; changes already made to the shared picker state can therefore remain. Compare legacy before deciding whether Cancel should roll back. If rollback is desired, explicitly stage a temporary selection and test both cancel and outside dismissal.
+- Picker shares `DateRangePickerState` with the form. Done is enabled only when both endpoints exist. Cancel and outside dismissal close the dialog without resetting the shared picker state. This matches both legacy `NewWorkInput` call sites, whose Cancel and dismiss callbacks only hide the picker; the selected range remains visible and is retained on reopen.
 - `periodDatesFromMillis` interprets endpoints in UTC; `inclusivePeriodDates` returns every date including endpoints, or an empty list for missing/reversed endpoints. The action's weekday planning is a separate operation. Test a one-day weekend, Friday–Monday, leap day and ranges crossing year end. Verify generated persisted records, not just the range label.
 
 ### `ProjectSelector` (`newProject/components/ProjectSelector.kt`)
 
-- Horizontally scrollable filter chips show project names, selected by ID; selecting calls back with that ID. Long names are ellipsized. The component itself has no empty-state message or create action. Confirm what the parent should show when no projects exist; preserve selected IDs on reorder and expose selection through semantics.
+- Horizontally scrollable project chips show project names, selected by ID; selecting calls back with that ID. Long names are ellipsized. The component itself has no empty-state message or create action. Preserve selected IDs on reorder and expose selection through semantics.
 
 ## 2026-11-10 implementation and verification
 
@@ -91,3 +91,10 @@ All paths below are under `shared/src/commonMain/kotlin/no/timnor/app/shared/fea
 - Legacy `NewWorkInput` owns one `rememberDateRangePickerState()` for the editor lifetime. `DatePickerWidget`'s Cancel button and outside-dismiss callback both only set `showDatePicker = false`; the state is not reset or copied on confirmation.
 - Shared `WorkEntrySection` likewise owns one remembered `DateRangePickerState`; `WorkPeriodRegistration`'s Cancel, Done, and outside-dismiss callbacks only close the dialog. Selection remains visible in the period button/header after closing and is retained if the picker is reopened.
 - Result: canceling the period picker preserves the currently selected range in both implementations. This matches for both Home and Month View editor flows; no code change was needed. This is source-trace evidence, not a device gesture check. Existing host and app checks from the verification above remain the latest executable results; no additional test was needed for this no-change audit.
+
+### 2026-11-11 project selector parity follow-up
+
+- Compared legacy Home and Month View `NewWorkInput` → `ListOfProjects` against shared `WorkEntrySection` → `ProjectSelector`. Both use a horizontally scrolling row, `small` shape, `titleMedium` labels, 18 dp horizontal and 12 dp vertical chip padding, and the same selected `primaryContainer`/`onPrimaryContainer` and unselected `primary`/`onSurface` roles. The legacy row uses 4 dp vertical padding; the shared theme spacing resolves to the same 4 dp. The shared outline uses `outlineVariant` in place of legacy's translucent `onSurface` border, consistent with the design-system token rule.
+- Shared had used compact default `FilterChip`s. It now matches the legacy chip geometry and theme roles, adds selected semantics, and snaps color changes when system animations are disabled. No project ordering or selection callback behavior changed.
+- `SharedWorkEntryTest.projectChoicesMatchLegacyChipHeightAndExposeSelection` asserts 48 dp chip heights, initial selected/unselected state, and selection change. The test source was included in the Android instrumentation compile; it has not run because `adb devices -l` is empty and no emulator is installed. Source comparison and compile do not verify rendered colors or touch behavior; runtime visual and gesture comparison remains open.
+- Verification rerun on 2026-11-11: `:shared:testAndroidHostTest`, `:app:testDebugUnitTest` (both with `--rerun-tasks`), and `:app:compileDebugAndroidTestKotlin` passed. The selector assertion was compiled, not device-executed. See the parity README for packaging and screenshot results.

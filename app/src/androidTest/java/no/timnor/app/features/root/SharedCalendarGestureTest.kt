@@ -46,6 +46,34 @@ class SharedCalendarGestureTest {
     val composeRule = createAndroidComposeRule<ComponentActivity>()
 
     @Test
+    fun draggingEmptyHoursOpensCalendarAndDraggingMonthUpClosesIt() {
+        val viewModel = TimnorHomeViewModel(EmptyPersistence(), IdleStopwatch(), LocalDate(2026, 11, 10))
+        var expanded by mutableStateOf(false)
+        composeRule.setContent {
+            val state by viewModel.state.collectAsState()
+            TimnorTheme(darkTheme = false) {
+                TimnorHomeScreen(
+                    state = state,
+                    viewModel = viewModel,
+                    homeReselectionCount = 0,
+                    onMonthView = {},
+                    onCalendarExpansionChange = { expanded = it },
+                )
+            }
+        }
+
+        composeRule.onNodeWithTag("home-empty-work-drag-surface").performTouchInput {
+            swipe(Offset(width * 0.1f, height * 0.1f), Offset(width * 0.1f, height * 0.8f), 350)
+        }
+        composeRule.waitUntil(5_000) { expanded }
+        composeRule.onNodeWithTag("calendar-month-content").performTouchInput {
+            swipe(Offset(width * 0.5f, height * 0.9f), Offset(width * 0.5f, height * 0.1f), 150)
+        }
+        composeRule.waitUntil(5_000) { !expanded }
+        composeRule.onNodeWithTag("home-empty-work-drag-surface").assertExists()
+    }
+
+    @Test
     fun collapsedHomeHeaderIncludesLegacyVerticalInsets() {
         val viewModel = TimnorHomeViewModel(EmptyPersistence(), IdleStopwatch(), LocalDate(2026, 11, 10))
         composeRule.setContent {
