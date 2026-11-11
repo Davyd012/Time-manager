@@ -26,39 +26,7 @@ struct TimnorContentView: View {
     @State private var documentEffectHandler = TimnorIosDocumentEffectHandler()
 
     var body: some View {
-        PlatformNavigation {
-            TimnorComposeHost(documentHandler: documentEffectHandler)
-                .navigationTitle("Timnor")
-                .toolbar {
-                    ToolbarItem(placement: .navigationBarTrailing) {
-                        Menu {
-                            Button("Eksporter sikkerhetskopi") {
-                                Task { await prepareBackupExport() }
-                            }
-                            Button("Eksporter Excel") {
-                                prepareSpreadsheetExport()
-                            }
-                            Button("Del sikkerhetskopi") {
-                                Task { await prepareBackupShare() }
-                            }
-                            Button("Gjenopprett sikkerhetskopi") {
-                                isImportPresented = true
-                            }
-                        } label: {
-                            Label("Sikkerhetskopi", systemImage: "ellipsis.circle")
-                        }
-                        .accessibilityLabel("Sikkerhetskopi")
-                    }
-                }
-                .safeAreaInset(edge: .bottom) {
-                    if let statusMessage {
-                        Text(statusMessage)
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                            .padding()
-                    }
-                }
-        }
+        TimnorComposeHost(documentHandler: documentEffectHandler)
         .fileExporter(
             isPresented: $isExportPresented,
             document: backupDocument,
@@ -317,31 +285,46 @@ struct TimnorContentView: View {
     }
 }
 
-private struct PlatformNavigation<Content: View>: View {
-    let content: Content
-
-    init(@ViewBuilder content: () -> Content) {
-        self.content = content()
-    }
-
-    var body: some View {
-        if #available(iOS 16.0, *) {
-            NavigationStack { content }
-        } else {
-            NavigationView { content }
-                .navigationViewStyle(.stack)
-        }
-    }
-}
-
 private struct TimnorComposeHost: UIViewControllerRepresentable {
     let documentHandler: TimnorIosDocumentEffectHandler
 
     func makeUIViewController(context: Context) -> UIViewController {
-        MainViewControllerKt.MainViewController(documentHandler: documentHandler)
+        let controller = MainViewControllerKt.MainViewController(documentHandler: documentHandler)
+        let edgeBack = UIScreenEdgePanGestureRecognizer(
+            target: context.coordinator,
+            action: #selector(Coordinator.handleEdgeBack(_:)),
+        )
+        edgeBack.edges = controller.view.effectiveUserInterfaceLayoutDirection == .rightToLeft ? .right : .left
+        edgeBack.delegate = context.coordinator
+        controller.view.addGestureRecognizer(edgeBack)
+        return controller
     }
 
     func updateUIViewController(_ uiViewController: UIViewController, context: Context) {}
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator()
+    }
+
+    @MainActor
+    final class Coordinator: NSObject, UIGestureRecognizerDelegate {
+        @objc func handleEdgeBack(_ gesture: UIScreenEdgePanGestureRecognizer) {
+            guard gesture.state == .ended else { return }
+            let translation = gesture.translation(in: gesture.view).x
+            let velocity = gesture.velocity(in: gesture.view).x
+            let fromLeftEdge = gesture.edges.contains(.left)
+            let passedThreshold = fromLeftEdge
+                ? translation >= 72 || velocity >= 500
+                : translation <= -72 || velocity <= -500
+            if passedThreshold {
+                IosTimnorNavigationBridge.shared.handleBack()
+            }
+        }
+
+        func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+            IosTimnorNavigationBridge.shared.canHandleBack()
+        }
+    }
 }
 
 private struct TimnorActivityView: UIViewControllerRepresentable {

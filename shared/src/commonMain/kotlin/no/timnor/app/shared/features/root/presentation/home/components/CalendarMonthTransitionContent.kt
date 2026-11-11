@@ -13,7 +13,7 @@ import no.timnor.app.shared.data.persistence.StoredWork
 @Composable
 internal fun CalendarMonthTransitionContent(
     month: LocalDate,
-    selectedDate: LocalDate,
+    selectedGridDate: LocalDate?,
     works: List<StoredWork>,
     projects: List<StoredProject>,
     selectedProjectIds: Set<Int>?,
@@ -42,7 +42,7 @@ internal fun CalendarMonthTransitionContent(
         CalendarMonthContent(
             month = displayedMonth,
             currentMonth = month,
-            selectedDate = selectedDate,
+            selectedDate = selectedGridDate,
             works = works,
             projects = projects,
             selectedProjectIds = selectedProjectIds,
@@ -50,10 +50,7 @@ internal fun CalendarMonthTransitionContent(
             weekdays = weekdays,
             onMonthChange = onMonthChange,
             onSelectDate = onSelectDate,
-            onOpenMonthView = { date ->
-                onSelectDate(date)
-                onMonthView(date)
-            },
+            onOpenMonthView = onMonthView,
             onShareMonth = onShareMonth,
         )
     }

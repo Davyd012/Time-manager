@@ -13,9 +13,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import no.timnor.app.shared.features.root.domain.TimnorHomeUiState
 import no.timnor.app.shared.features.root.domain.TimnorHomeViewModel
-import no.timnor.app.shared.features.root.presentation.newProject.components.ProjectManagementSheet
 import no.timnor.app.shared.features.root.presentation.newProject.components.ProjectEditorSheet
 import no.timnor.app.shared.features.root.presentation.stopwatch.components.StopwatchSection
 import no.timnor.app.shared.generated.resources.Res
@@ -31,22 +31,24 @@ fun TimnorStopwatchScreen(
     viewModel: TimnorHomeViewModel,
     modifier: Modifier = Modifier,
 ) {
-    var showProjects by rememberSaveable { mutableStateOf(false) }
     var showProjectEditor by rememberSaveable { mutableStateOf(false) }
 
     fun createProject() {
         viewModel.cancelProjectEdit()
-        showProjects = false
         showProjectEditor = true
     }
 
     fun editProject(project: no.timnor.app.shared.data.persistence.StoredProject) {
         viewModel.editProject(project)
-        showProjects = false
         showProjectEditor = true
     }
-    Box(modifier = modifier.fillMaxSize()) {
-        StopwatchSection(
+    Surface(
+        modifier = modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.background,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+    ) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            StopwatchSection(
             projects = state.projects,
             elapsedSeconds = state.stopwatch.elapsedSeconds,
             isRunning = state.stopwatch.isRunning,
@@ -55,32 +57,23 @@ fun TimnorStopwatchScreen(
             onSelectProject = viewModel::selectProject,
             onStartPause = viewModel::startOrPauseStopwatch,
             onSave = viewModel::saveStopwatch,
-            onManageProjects = { showProjects = true },
             onCreateProject = ::createProject,
             onEditProject = ::editProject,
             onDeleteProject = { project, onResult -> viewModel.deleteProject(project, onResult) },
             modifier = Modifier.fillMaxSize().padding(horizontal = MaterialTheme.timnorSpacing.medium),
         )
-        FloatingActionButton(
+            FloatingActionButton(
             onClick = ::createProject,
             modifier = Modifier.align(Alignment.BottomEnd).padding(MaterialTheme.timnorSpacing.medium),
             containerColor = MaterialTheme.colorScheme.secondaryContainer,
             contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-        ) {
+            ) {
             Icon(
                 painter = painterResource(Res.drawable.icon_add),
                 contentDescription = stringResource(Res.string.project_add),
             )
+            }
         }
-    }
-    if (showProjects) {
-        ProjectManagementSheet(
-            state = state,
-            onCreateProject = ::createProject,
-            onEditProject = ::editProject,
-            onDeleteProject = { project -> viewModel.deleteProject(project) },
-            onDismiss = { showProjects = false },
-        )
     }
     if (showProjectEditor) {
         ProjectEditorSheet(
@@ -88,10 +81,6 @@ fun TimnorStopwatchScreen(
             onProjectNameChange = viewModel::updateProjectName,
             onProjectDescriptionChange = viewModel::updateProjectDescription,
             onSaveProject = viewModel::saveProjectAndSelect,
-            onCancel = {
-                showProjectEditor = false
-                viewModel.cancelProjectEdit()
-            },
             onDismiss = {
                 showProjectEditor = false
                 viewModel.cancelProjectEdit()

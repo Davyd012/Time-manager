@@ -9,6 +9,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.focus.onFocusChanged
 import no.timnor.app.shared.generated.resources.Res
 import no.timnor.app.shared.generated.resources.work_description_hint
@@ -23,7 +24,7 @@ internal fun WorkEntryDescriptionField(
     OutlinedTextField(
         value = value,
         onValueChange = onValueChange,
-        modifier = Modifier.fillMaxWidth().onFocusChanged { focused = it.isFocused },
+        modifier = Modifier.fillMaxWidth().testTag("work-description").onFocusChanged { focused = it.isFocused },
         minLines = if (focused || value.isNotBlank()) 4 else 2,
         maxLines = 4,
         label = { Text(stringResource(Res.string.work_description_hint)) },

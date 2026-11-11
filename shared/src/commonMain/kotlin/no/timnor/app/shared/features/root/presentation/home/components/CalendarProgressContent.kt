@@ -15,6 +15,7 @@ import no.timnor.app.shared.data.persistence.StoredWork
 internal fun CalendarProgressContent(
     month: LocalDate,
     selectedDate: LocalDate,
+    selectedGridDate: LocalDate?,
     works: List<StoredWork>,
     projects: List<StoredProject>,
     selectedProjectIds: Set<Int>?,
@@ -27,6 +28,7 @@ internal fun CalendarProgressContent(
     animationsEnabled: Boolean,
     onMonthChange: (LocalDate) -> Unit,
     onSelectDate: (LocalDate) -> Unit,
+    onSelectGridDate: (LocalDate) -> Unit,
     onMonthView: (LocalDate) -> Unit,
     onToggleExpanded: (() -> Unit)?,
     onShareMonth: ((String, String) -> Unit)?,
@@ -35,8 +37,8 @@ internal fun CalendarProgressContent(
         if (expansionProgress < 1f) {
             Column(
                 modifier = Modifier.fillMaxWidth()
-                    .alpha(1f - expansionProgress)
-                    .then(if (expansionProgress > 0f) Modifier.clearAndSetSemantics {} else Modifier),
+                    .alpha(if (isHomeWeekRowInteractive(expansionProgress)) 1f else 0f)
+                    .then(if (isHomeWeekRowInteractive(expansionProgress)) Modifier else Modifier.clearAndSetSemantics {}),
             ) {
                 CalendarWeekStrip(
                     weekDays = weekDays,
@@ -53,7 +55,7 @@ internal fun CalendarProgressContent(
         if (expansionProgress > 0f) {
             CalendarMonthTransitionContent(
                 month = month,
-                selectedDate = selectedDate,
+                selectedGridDate = selectedGridDate,
                 works = works,
                 projects = projects,
                 selectedProjectIds = selectedProjectIds,
@@ -62,7 +64,7 @@ internal fun CalendarProgressContent(
                 interactive = expandedContentEnabled,
                 animationsEnabled = animationsEnabled,
                 onMonthChange = onMonthChange,
-                onSelectDate = onSelectDate,
+                onSelectDate = onSelectGridDate,
                 onMonthView = onMonthView,
                 onShareMonth = onShareMonth,
             )

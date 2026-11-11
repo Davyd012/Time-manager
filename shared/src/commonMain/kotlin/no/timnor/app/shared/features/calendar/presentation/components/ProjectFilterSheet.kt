@@ -7,9 +7,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -23,23 +26,28 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.Role
 import kotlinx.datetime.LocalDate
 import no.timnor.app.shared.data.persistence.StoredProject
 import no.timnor.app.shared.data.persistence.StoredWork
+import no.timnor.app.shared.domain.project.calendarProjectSelectionForApply
 import no.timnor.app.shared.domain.project.toggleProjectSelection
 import no.timnor.app.shared.domain.project.toggleVisibleProjectSelection
 import no.timnor.app.shared.domain.time.utcLocalDateTimeFromEpochSeconds
 import no.timnor.app.shared.generated.resources.Res
-import no.timnor.app.shared.generated.resources.cancel
+import no.timnor.app.shared.generated.resources.back_to_home
+import no.timnor.app.shared.generated.resources.arrow_back
 import no.timnor.app.shared.generated.resources.done
 import no.timnor.app.shared.generated.resources.project_filter_search_hint
 import no.timnor.app.shared.generated.resources.project_filter_select_all
 import no.timnor.app.shared.generated.resources.project_filter_title
 import no.timnor.app.shared.generated.resources.project_filter_no_results
-import no.timnor.app.shared.generated.resources.project_filter_none_selected
 import no.timnor.app.shared.generated.resources.project_hours
+import no.timnor.app.shared.platform.locale.localizedDecimalSeparator
 import no.timnor.app.shared.ui.theme.timnorSpacing
 import org.jetbrains.compose.resources.stringResource
+import org.jetbrains.compose.resources.painterResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -53,7 +61,7 @@ internal fun ProjectFilterSheet(
 ) {
     var query by rememberSaveable { mutableStateOf("") }
     var selection by remember(projects, selectedProjectIds) {
-        mutableStateOf(selectedProjectIds)
+        mutableStateOf(calendarProjectSelectionForApply(selectedProjectIds))
     }
     val allProjectIds = remember(projects) { projects.mapTo(mutableSetOf(), StoredProject::id) }
     val visibleProjects = remember(projects, query) {
@@ -85,12 +93,19 @@ internal fun ProjectFilterSheet(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Text(stringResource(Res.string.project_filter_title), style = MaterialTheme.typography.titleLarge)
-                Row {
-                    TextButton(onClick = onDismiss) { Text(stringResource(Res.string.cancel)) }
-                    TextButton(onClick = { onApply(selection); onDismiss() }) {
-                        Text(stringResource(Res.string.done))
-                    }
+                IconButton(
+                    onClick = { onApply(calendarProjectSelectionForApply(selection)); onDismiss() },
+                    modifier = Modifier.testTag("project-filter-back"),
+                ) {
+                    Icon(painterResource(Res.drawable.arrow_back), contentDescription = stringResource(Res.string.back_to_home))
+                }
+                Text(
+                    stringResource(Res.string.project_filter_title),
+                    modifier = Modifier.weight(1f),
+                    style = MaterialTheme.typography.titleLarge,
+                )
+                TextButton(onClick = { onApply(calendarProjectSelectionForApply(selection)); onDismiss() }) {
+                    Text(stringResource(Res.string.done))
                 }
             }
             OutlinedTextField(
@@ -100,28 +115,26 @@ internal fun ProjectFilterSheet(
                 singleLine = true,
                 placeholder = { Text(stringResource(Res.string.project_filter_search_hint)) },
             )
-            if (selection?.isEmpty() == true) {
-                Text(
-                    stringResource(Res.string.project_filter_none_selected),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
             Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = MaterialTheme.timnorSpacing.small),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text(stringResource(Res.string.project_filter_select_all), style = MaterialTheme.typography.bodyLarge)
-                Checkbox(
-                    checked = allVisibleSelected,
-                    onCheckedChange = {
+                modifier = Modifier.fillMaxWidth().testTag("project-filter-select-all").toggleable(
+                    value = allVisibleSelected,
+                    enabled = visibleProjects.isNotEmpty(),
+                    role = Role.Checkbox,
+                    onValueChange = {
                         selection = toggleVisibleProjectSelection(
                             selectedIds = selection,
                             visibleProjectIds = visibleProjectIds,
                             allProjectIds = allProjectIds,
                         )
                     },
+                ).padding(horizontal = MaterialTheme.timnorSpacing.small),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(stringResource(Res.string.project_filter_select_all), style = MaterialTheme.typography.bodyLarge)
+                Checkbox(
+                    checked = allVisibleSelected,
+                    onCheckedChange = null,
                     enabled = visibleProjects.isNotEmpty(),
                 )
             }
@@ -142,7 +155,10 @@ internal fun ProjectFilterSheet(
                         ProjectFilterRow(
                             projectId = project.id,
                             projectName = project.name,
-                            monthlyHoursLabel = stringResource(Res.string.project_hours, formatHours(seconds)),
+                            monthlyHoursLabel = stringResource(
+                                Res.string.project_hours,
+                                formatHours(seconds, localizedDecimalSeparator()),
+                            ),
                             checked = selection == null || project.id in selection.orEmpty(),
                             onClick = {
                                 selection = toggleProjectSelection(selection, project.id, allProjectIds)
@@ -155,7 +171,7 @@ internal fun ProjectFilterSheet(
     }
 }
 
-internal fun formatHours(seconds: Long): String {
+internal fun formatHours(seconds: Long, decimalSeparator: Char): String {
     val unroundedHundredths = seconds / 36
     val remainder = seconds % 36
     val hundredths = when {
@@ -168,7 +184,7 @@ internal fun formatHours(seconds: Long): String {
     val fraction = hundredths % 100
     return when {
         fraction == 0L -> hours.toString()
-        fraction % 10L == 0L -> "$hours,${fraction / 10}"
-        else -> "$hours,${fraction.toString().padStart(2, '0')}"
+        fraction % 10L == 0L -> "$hours$decimalSeparator${fraction / 10}"
+        else -> "$hours$decimalSeparator${fraction.toString().padStart(2, '0')}"
     }
 }

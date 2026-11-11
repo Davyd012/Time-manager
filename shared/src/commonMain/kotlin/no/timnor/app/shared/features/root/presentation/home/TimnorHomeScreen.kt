@@ -1,16 +1,19 @@
 package no.timnor.app.shared.features.root.presentation.home
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.animation.core.Animatable
@@ -19,6 +22,8 @@ import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.snap
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import no.timnor.app.shared.features.calendar.presentation.components.TimnorMonthExportDialog
 import no.timnor.app.shared.features.root.domain.TimnorHomeError
 import no.timnor.app.shared.features.root.domain.TimnorHomeUiState
@@ -49,19 +54,24 @@ fun TimnorHomeScreen(
     onExportSpreadsheet: ((Int, Int, Set<Int>?) -> Unit)? = null,
     onShareMonth: ((String, String) -> Unit)? = null,
     onCalendarExpansionChange: (Boolean) -> Unit = {},
+    onCalendarBackEnabledChange: (Boolean) -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val projects = state.projects
     val works = state.works
     var showWorkEditor by rememberSaveable { mutableStateOf(false) }
     var showExportDialog by rememberSaveable { mutableStateOf(false) }
-    val expansionAnimation = androidx.compose.runtime.remember { Animatable(0f) }
+    var savedCalendarExpanded by rememberSaveable { mutableStateOf(false) }
+    val expansionAnimation = androidx.compose.runtime.remember { Animatable(if (savedCalendarExpanded) 1f else 0f) }
     val scope = rememberCoroutineScope()
     val animationsEnabled = rememberSystemAnimationsEnabled()
-    var dragProgress by rememberSaveable { mutableFloatStateOf(0f) }
-    var isDraggingCalendar by rememberSaveable { mutableStateOf(false) }
+    var dragProgress by androidx.compose.runtime.remember { mutableFloatStateOf(expansionAnimation.value) }
+    var isDraggingCalendar by androidx.compose.runtime.remember { mutableStateOf(false) }
+    var collapsedHeaderHeight by rememberSaveable { mutableIntStateOf(0) }
+    var collapsedCalendarHeight by rememberSaveable { mutableIntStateOf(0) }
     val calendarProgress = if (isDraggingCalendar) dragProgress else expansionAnimation.value
     val calendarExpanded = calendarProgress >= 0.5f
+    val calendarBackEnabled = calendarProgress > 0.001f
 
     fun updateCalendarExpansionProgress(progress: Float) {
         isDraggingCalendar = true
@@ -70,9 +80,10 @@ fun TimnorHomeScreen(
 
     fun settleCalendarExpansion(expanded: Boolean) {
         val start = if (isDraggingCalendar) dragProgress else expansionAnimation.value
-        isDraggingCalendar = false
+        savedCalendarExpanded = expanded
         scope.launch {
             expansionAnimation.snapTo(start)
+            isDraggingCalendar = false
             expansionAnimation.animateTo(
                 if (expanded) 1f else 0f,
                 if (animationsEnabled) spring(stiffness = Spring.StiffnessMedium) else snap(),
@@ -85,80 +96,101 @@ fun TimnorHomeScreen(
     }
     LaunchedEffect(homeReselectionCount) {
         if (homeReselectionCount > 0) {
+            val collapseStartProgress = homeCalendarCollapseStartProgress(
+                isDragging = isDraggingCalendar,
+                dragProgress = dragProgress,
+                animationProgress = expansionAnimation.value,
+            )
+            savedCalendarExpanded = false
+            expansionAnimation.snapTo(collapseStartProgress)
             isDraggingCalendar = false
             expansionAnimation.animateTo(0f, if (animationsEnabled) spring(stiffness = Spring.StiffnessMedium) else snap())
         }
     }
     LaunchedEffect(calendarExpanded) { onCalendarExpansionChange(calendarExpanded) }
+    LaunchedEffect(calendarBackEnabled) { onCalendarBackEnabledChange(calendarBackEnabled) }
 
-    Column(
-        modifier = modifier.fillMaxSize().padding(
-            horizontal = MaterialTheme.timnorSpacing.medium,
-            vertical = MaterialTheme.timnorSpacing.small,
-        ),
+    Surface(
+        modifier = modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.surface,
+        contentColor = MaterialTheme.colorScheme.onSurface,
     ) {
-        HomeHeaderBar(
-            selectedDate = state.selectedCalendarDate,
-            expansionProgress = calendarProgress,
-            canAddWork = projects.isNotEmpty(),
-            onToggleCalendar = { settleCalendarExpansion(calendarProgress < 0.5f) },
-            onSetExpanded = ::settleCalendarExpansion,
-            onExpansionProgressChange = ::updateCalendarExpansionProgress,
-            onSettings = onSettings,
-            onExport = onExportSpreadsheet?.let { { showExportDialog = true } },
-            onAddWork = {
-                viewModel.beginManualWork()
-                showWorkEditor = true
-            },
-        )
-        state.error?.let { error ->
-            Text(
-                text = stringResource(
-                    when (error) {
-                        TimnorHomeError.INVALID_PROJECT -> Res.string.invalid_project
-                        TimnorHomeError.INVALID_WORK -> Res.string.invalid_work
-                        TimnorHomeError.STORAGE -> Res.string.storage_error
-                        TimnorHomeError.ACTIVE_STOPWATCH_PROJECT -> Res.string.stopwatch_project_locked
-                    },
-                ),
-                modifier = Modifier.padding(horizontal = MaterialTheme.timnorSpacing.medium),
-                color = MaterialTheme.colorScheme.error,
-            )
-        }
-        CalendarSection(
-            month = state.calendarMonth,
-            selectedDate = state.selectedCalendarDate,
-            projects = projects,
-            selectedProjectIds = state.selectedCalendarProjectIds,
-            works = works,
-            onMonthChange = viewModel::updateCalendarMonth,
-            onSelectDate = viewModel::selectCalendarDate,
-            onApplyProjectFilter = viewModel::setCalendarProjectSelection,
-            onMonthView = onMonthView,
-            onShareMonth = onShareMonth,
-            onSetExpanded = ::settleCalendarExpansion,
-            onExpansionProgressChange = ::updateCalendarExpansionProgress,
-            modifier = if (calendarProgress > 0f) {
-                Modifier.fillMaxWidth().weight(0.25f + calendarProgress * 0.75f)
-            } else Modifier.fillMaxWidth(),
-            expanded = calendarExpanded,
-            expansionProgress = calendarProgress,
-            onToggleExpanded = { settleCalendarExpansion(calendarProgress < 0.5f) },
-        )
-        if (calendarProgress < 1f) {
-            HomeDailyWorkList(
+        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+            val dragDistance = (constraints.maxHeight - collapsedHeaderHeight - collapsedCalendarHeight)
+                .coerceAtLeast(1).toFloat()
+            val velocityThreshold = with(LocalDensity.current) { (MaterialTheme.timnorSpacing.extraLarge * 4).toPx() }
+            Column(modifier = Modifier.fillMaxSize()) {
+            HomeHeaderBar(
                 selectedDate = state.selectedCalendarDate,
-                works = works,
-                projects = projects,
-                canAddWork = projects.isNotEmpty(),
                 expansionProgress = calendarProgress,
-                modifier = Modifier.fillMaxWidth().weight((1f - calendarProgress).coerceAtLeast(0.01f)),
-                onEditWork = viewModel::editWork,
+                canAddWork = projects.isNotEmpty(),
+                onToggleCalendar = { settleCalendarExpansion(calendarProgress < 0.5f) },
+                onSetExpanded = ::settleCalendarExpansion,
+                onExpansionProgressChange = ::updateCalendarExpansionProgress,
+                expansionDragDistancePx = dragDistance,
+                expansionVelocityThresholdPx = velocityThreshold,
+                onSettings = onSettings,
+                onExport = onExportSpreadsheet?.let { { showExportDialog = true } },
                 onAddWork = {
                     viewModel.beginManualWork()
                     showWorkEditor = true
                 },
+                modifier = Modifier.onSizeChanged {
+                    if (calendarProgress <= 0.001f) collapsedHeaderHeight = it.height
+                },
             )
+            state.error?.let { error ->
+                Text(
+                    text = stringResource(
+                        when (error) {
+                            TimnorHomeError.INVALID_PROJECT -> Res.string.invalid_project
+                            TimnorHomeError.INVALID_WORK -> Res.string.invalid_work
+                            TimnorHomeError.STORAGE -> Res.string.storage_error
+                            TimnorHomeError.ACTIVE_STOPWATCH_PROJECT -> Res.string.stopwatch_project_locked
+                        },
+                    ),
+                    modifier = Modifier.padding(horizontal = MaterialTheme.timnorSpacing.medium),
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
+            CalendarSection(
+                month = state.calendarMonth,
+                selectedDate = state.selectedCalendarDate,
+                projects = projects,
+                selectedProjectIds = state.selectedCalendarProjectIds,
+                works = works,
+                onMonthChange = viewModel::updateCalendarMonth,
+                onSelectDate = viewModel::selectCalendarDate,
+                onApplyProjectFilter = viewModel::setCalendarProjectSelection,
+                onMonthView = onMonthView,
+                onShareMonth = onShareMonth,
+                onSetExpanded = ::settleCalendarExpansion,
+                onExpansionProgressChange = ::updateCalendarExpansionProgress,
+                expansionDragDistancePx = dragDistance,
+                expansionVelocityThresholdPx = velocityThreshold,
+                modifier = (if (calendarProgress > 0f) {
+                    Modifier.fillMaxWidth().weight(0.25f + calendarProgress * 0.75f)
+                } else Modifier.fillMaxWidth()).padding(horizontal = MaterialTheme.timnorSpacing.medium)
+                    .onSizeChanged { if (calendarProgress <= 0.001f) collapsedCalendarHeight = it.height },
+                expanded = calendarExpanded,
+                expansionProgress = calendarProgress,
+                onToggleExpanded = { settleCalendarExpansion(calendarProgress < 0.5f) },
+            )
+            if (calendarProgress < 1f) {
+                HomeDailyWorkList(
+                    selectedDate = state.selectedCalendarDate,
+                    works = works,
+                    projects = projects,
+                    expansionProgress = calendarProgress,
+                    modifier = Modifier.fillMaxWidth().weight((1f - calendarProgress).coerceAtLeast(0.01f)),
+                    onEditWork = viewModel::editWork,
+                    onAddWork = {
+                        viewModel.beginManualWork()
+                        showWorkEditor = true
+                    },
+                )
+            }
+            }
         }
     }
 
@@ -197,6 +229,7 @@ fun TimnorHomeScreen(
                 showWorkEditor = false
                 viewModel.cancelWorkEdit()
             },
+            showDragHandle = true,
         )
     }
 
@@ -211,3 +244,9 @@ fun TimnorHomeScreen(
         )
     }
 }
+
+internal fun homeCalendarCollapseStartProgress(
+    isDragging: Boolean,
+    dragProgress: Float,
+    animationProgress: Float,
+): Float = (if (isDragging) dragProgress else animationProgress).coerceIn(0f, 1f)

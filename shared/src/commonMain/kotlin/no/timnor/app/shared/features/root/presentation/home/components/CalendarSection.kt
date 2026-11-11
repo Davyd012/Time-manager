@@ -17,10 +17,10 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.semantics
@@ -66,6 +66,8 @@ internal fun CalendarSection(
     onMonthView: (LocalDate) -> Unit,
     onSetExpanded: (Boolean) -> Unit,
     onExpansionProgressChange: (Float) -> Unit,
+    expansionDragDistancePx: Float,
+    expansionVelocityThresholdPx: Float,
     onShareMonth: ((String, String) -> Unit)? = null,
     modifier: Modifier = Modifier,
     expanded: Boolean = true,
@@ -88,11 +90,10 @@ internal fun CalendarSection(
     } else {
         stringResource(Res.string.project_filter_active, selectedProjectIds.size, projects.size)
     }
-    val calendarWorks = remember(works, projects, selectedProjectIds) {
-        visibleWorks(works, projects, selectedProjectIds)
-    }
     var showFilterSheet by remember { mutableStateOf(false) }
     var monthTransitioning by remember { mutableStateOf(false) }
+    var selectedGridDateText by rememberSaveable { mutableStateOf<String?>(null) }
+    val selectedGridDate = selectedGridDateText?.let(LocalDate::parse)
     val weekdays = listOf(
         stringResource(Res.string.calendar_weekday_monday),
         stringResource(Res.string.calendar_weekday_tuesday),
@@ -105,10 +106,8 @@ internal fun CalendarSection(
     val latestExpansionProgress = rememberUpdatedState(expansionProgress)
     val latestOnSetExpanded = rememberUpdatedState(onSetExpanded)
     val latestOnExpansionProgressChange = rememberUpdatedState(onExpansionProgressChange)
-    val expansionDragDistancePx = with(LocalDensity.current) {
-        MaterialTheme.timnorSpacing.extraLarge.toPx() * 5f
-    }
     val latestExpansionDragDistance = rememberUpdatedState(expansionDragDistancePx)
+    val latestVelocityThreshold = rememberUpdatedState(expansionVelocityThresholdPx)
     var dragProgress by remember { mutableFloatStateOf(expansionProgress) }
     val expansionDragState = rememberDraggableState { delta ->
         dragProgress = (dragProgress + delta / latestExpansionDragDistance.value).coerceIn(0f, 1f)
@@ -118,9 +117,9 @@ internal fun CalendarSection(
         selectedDate.minus(selectedDate.dayOfWeek.ordinal, DateTimeUnit.DAY)
     }
     val weekDays = remember(weekStart) { List(7) { weekStart.plus(it, DateTimeUnit.DAY) } }
-    val weekSeconds = remember(calendarWorks, weekDays) {
+    val weekSeconds = remember(works, weekDays) {
         weekDays.associateWith { day ->
-            calendarWorks.asSequence()
+            works.asSequence()
                 .filter { utcLocalDateTimeFromEpochSeconds(it.dateEpochSeconds).date == day }
                 .sumOf(StoredWork::time)
         }
@@ -160,15 +159,28 @@ internal fun CalendarSection(
                     snap()
                 },
             )
+            .draggable(
+                state = expansionDragState,
+                orientation = Orientation.Vertical,
+                onDragStarted = { dragProgress = latestExpansionProgress.value },
+                onDragStopped = { velocity ->
+                    latestOnSetExpanded.value(
+                        calendarExpansionTarget(
+                            progress = dragProgress,
+                            velocityPxPerSecond = velocity,
+                            velocityThresholdPxPerSecond = latestVelocityThreshold.value,
+                        ),
+                    )
+                },
+            )
             .then(if (expansionProgress > 0f) Modifier.verticalScroll(rememberScrollState()) else Modifier),
         verticalArrangement = Arrangement.spacedBy(MaterialTheme.timnorSpacing.small),
     ) {
         if (expansionProgress > 0.01f) {
             CalendarExpandedToolbar(
-                selectedDate = selectedDate,
+                month = month,
                 expandedContentEnabled = expandedContentEnabled,
                 expansionProgress = expansionProgress,
-                hasProjects = projects.isNotEmpty(),
                 filterActive = selectedProjectIds != null,
                 closeLabel = closeCalendarLabel,
                 monthViewLabel = monthViewLabel,
@@ -183,7 +195,7 @@ internal fun CalendarSection(
                         calendarExpansionTarget(
                             progress = dragProgress,
                             velocityPxPerSecond = velocity,
-                            velocityThresholdPxPerSecond = latestExpansionDragDistance.value * 2f,
+                            velocityThresholdPxPerSecond = latestVelocityThreshold.value,
                         ),
                     )
                 },
@@ -192,6 +204,7 @@ internal fun CalendarSection(
         CalendarProgressContent(
             month = month,
             selectedDate = selectedDate,
+            selectedGridDate = selectedGridDate,
             works = works,
             projects = projects,
             selectedProjectIds = selectedProjectIds,
@@ -200,10 +213,11 @@ internal fun CalendarSection(
             weekSeconds = weekSeconds,
             expansionProgress = expansionProgress,
             expanded = expanded,
-            expandedContentEnabled = expandedContentEnabled && !monthTransitioning,
+                expandedContentEnabled = expansionProgress >= 0.999f && !monthTransitioning,
             animationsEnabled = systemAnimationsEnabled,
             onMonthChange = ::requestMonthChange,
             onSelectDate = onSelectDate,
+            onSelectGridDate = { selectedGridDateText = it.toString() },
             onMonthView = onMonthView,
             onToggleExpanded = onToggleExpanded,
             onShareMonth = onShareMonth,

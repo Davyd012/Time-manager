@@ -16,6 +16,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.Surface
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TextButton
 import androidx.compose.foundation.verticalScroll
@@ -47,7 +48,6 @@ import no.timnor.app.shared.generated.resources.backup_work_count_one
 import no.timnor.app.shared.generated.resources.backup_work_count_other
 import no.timnor.app.shared.generated.resources.create_backup
 import no.timnor.app.shared.generated.resources.document_failure
-import no.timnor.app.shared.generated.resources.export_spreadsheet
 import no.timnor.app.shared.generated.resources.go_to_timer
 import no.timnor.app.shared.generated.resources.replace_data
 import no.timnor.app.shared.generated.resources.restore_backup
@@ -56,7 +56,6 @@ import no.timnor.app.shared.generated.resources.restore_confirm_message
 import no.timnor.app.shared.generated.resources.restore_confirm_title
 import no.timnor.app.shared.generated.resources.restore_failure
 import no.timnor.app.shared.generated.resources.restore_success
-import no.timnor.app.shared.generated.resources.share_backup
 import no.timnor.app.shared.generated.resources.settings_title
 import no.timnor.app.shared.generated.resources.spreadsheet_creating
 import no.timnor.app.shared.generated.resources.spreadsheet_success
@@ -78,16 +77,18 @@ fun TimnorSettingsSection(
     onBack: () -> Unit,
     onCreateBackup: () -> Unit,
     onRestoreBackup: () -> Unit,
-    onShareBackup: () -> Unit,
-    onExportSpreadsheet: () -> Unit,
     onConfirmRestore: () -> Unit,
     onCancelRestore: () -> Unit,
     onGoToStopwatch: () -> Unit,
-    onDismissMessage: () -> Unit,
 ) {
     val backLabel = stringResource(Res.string.back_to_home)
-    Column(modifier = modifier.fillMaxSize()) {
-        TopAppBar(
+    Surface(
+        modifier = modifier.fillMaxSize(),
+        color = MaterialTheme.colorScheme.surface,
+        contentColor = MaterialTheme.colorScheme.onSurface,
+    ) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            TopAppBar(
             title = { Text(stringResource(Res.string.settings_title)) },
             navigationIcon = {
                 IconButton(
@@ -101,12 +102,12 @@ fun TimnorSettingsSection(
                 }
             },
         )
-        Column(
+            Column(
             modifier = Modifier.weight(1f)
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = MaterialTheme.timnorSpacing.large, vertical = MaterialTheme.timnorSpacing.medium),
+                .padding(horizontal = MaterialTheme.timnorSpacing.medium, vertical = MaterialTheme.timnorSpacing.medium),
             verticalArrangement = Arrangement.spacedBy(MaterialTheme.timnorSpacing.medium),
-        ) {
+            ) {
         Text(stringResource(Res.string.backup_restore_section), style = MaterialTheme.typography.titleMedium)
         Text(stringResource(Res.string.backup_restore_description), style = MaterialTheme.typography.bodyMedium)
         Button(onClick = onCreateBackup, enabled = !state.busy, modifier = Modifier.fillMaxWidth()) {
@@ -114,12 +115,6 @@ fun TimnorSettingsSection(
         }
         Button(onClick = onRestoreBackup, enabled = !state.busy, modifier = Modifier.fillMaxWidth()) {
             Text(stringResource(Res.string.restore_backup))
-        }
-        Button(onClick = onShareBackup, enabled = !state.busy, modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(Res.string.share_backup))
-        }
-        Button(onClick = onExportSpreadsheet, enabled = !state.busy, modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(Res.string.export_spreadsheet))
         }
         Text(stringResource(Res.string.backup_storage_note), style = MaterialTheme.typography.bodySmall)
         state.progress?.let { progress ->
@@ -141,8 +136,7 @@ fun TimnorSettingsSection(
             }
         }
         state.message?.let { message ->
-            Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.timnorSpacing.small)) {
-                Text(
+            Text(
                     stringResource(
                         when (message) {
                         TimnorSettingsMessage.BackupSaved -> Res.string.backup_success
@@ -164,10 +158,9 @@ fun TimnorSettingsSection(
                         message == TimnorSettingsMessage.RestoreFailed
                     ) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
                 )
-                TextButton(onClick = onDismissMessage) { Text(stringResource(Res.string.cancel)) }
             }
         }
-        }
+    }
     }
 
     state.preview?.takeUnless { state.timerBlocked }?.let { preview ->

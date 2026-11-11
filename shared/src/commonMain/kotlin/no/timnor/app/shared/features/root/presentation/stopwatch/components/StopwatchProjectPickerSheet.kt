@@ -1,19 +1,24 @@
 package no.timnor.app.shared.features.root.presentation.stopwatch.components
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -32,6 +37,9 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
@@ -39,12 +47,13 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import no.timnor.app.shared.data.persistence.StoredProject
 import no.timnor.app.shared.features.root.domain.TimnorHomeError
-import no.timnor.app.shared.features.root.presentation.newProject.components.ProjectIndicator
 import no.timnor.app.shared.generated.resources.Res
 import no.timnor.app.shared.generated.resources.delete
 import no.timnor.app.shared.generated.resources.done
+import no.timnor.app.shared.generated.resources.delete_project_accessibility
 import no.timnor.app.shared.generated.resources.edit
-import no.timnor.app.shared.generated.resources.manage_projects
+import no.timnor.app.shared.generated.resources.edit_project_accessibility
+import no.timnor.app.shared.generated.resources.icon_add
 import no.timnor.app.shared.generated.resources.no_projects
 import no.timnor.app.shared.generated.resources.project_add
 import no.timnor.app.shared.generated.resources.project_picker_title
@@ -65,7 +74,6 @@ internal fun StopwatchProjectPickerSheet(
     onEditProject: (StoredProject) -> Unit,
     onDeleteProject: (StoredProject, (Boolean) -> Unit) -> Unit,
     onCreateProject: () -> Unit,
-    onManageProjects: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     ModalBottomSheet(
@@ -73,22 +81,15 @@ internal fun StopwatchProjectPickerSheet(
         sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = MaterialTheme.timnorSpacing.large),
+            modifier = Modifier.fillMaxWidth().padding(horizontal = MaterialTheme.timnorSpacing.medium),
             verticalArrangement = Arrangement.spacedBy(MaterialTheme.timnorSpacing.small),
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text(stringResource(Res.string.project_picker_title), style = MaterialTheme.typography.titleLarge)
-                TextButton(onClick = onDismiss) { Text(stringResource(Res.string.done)) }
-            }
+            Text(stringResource(Res.string.project_picker_title), style = MaterialTheme.typography.headlineSmall)
             if (projects.isEmpty()) {
                 Text(stringResource(Res.string.no_projects), style = MaterialTheme.typography.bodyMedium)
             } else {
                 LazyColumn(
-                    modifier = Modifier.fillMaxWidth().weight(1f),
+                    modifier = Modifier.fillMaxWidth().heightIn(max = MaterialTheme.timnorSpacing.extraLarge * 12),
                     verticalArrangement = Arrangement.spacedBy(MaterialTheme.timnorSpacing.small),
                 ) {
                     items(projects, key = StoredProject::id) { project ->
@@ -111,8 +112,19 @@ internal fun StopwatchProjectPickerSheet(
                     color = MaterialTheme.colorScheme.error,
                 )
             }
-            TextButton(onClick = onCreateProject) { Text(stringResource(Res.string.project_add)) }
-            TextButton(onClick = onManageProjects) { Text(stringResource(Res.string.manage_projects)) }
+            HorizontalDivider()
+            TextButton(
+                onClick = onCreateProject,
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.textButtonColors(
+                    containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                ),
+            ) {
+                Icon(painterResource(Res.drawable.icon_add), contentDescription = null)
+                Spacer(Modifier.width(MaterialTheme.timnorSpacing.small))
+                Text(stringResource(Res.string.project_add))
+            }
         }
     }
 }
@@ -130,6 +142,8 @@ private fun SwipeableStopwatchProjectRow(
     var deleting by remember(project.id) { mutableStateOf(false) }
     val animationsEnabled = rememberSystemAnimationsEnabled()
     val scope = rememberCoroutineScope()
+    val editActionLabel = stringResource(Res.string.edit_project_accessibility, project.name)
+    val deleteActionLabel = stringResource(Res.string.delete_project_accessibility, project.name)
 
     LaunchedEffect(dismissState.currentValue) {
         when (dismissState.currentValue) {
@@ -143,7 +157,7 @@ private fun SwipeableStopwatchProjectRow(
     }
     LaunchedEffect(deleting) {
         if (deleting) {
-            if (animationsEnabled) delay(180)
+            if (animationsEnabled) delay(500)
             onDelete { deleted ->
                 if (!deleted) {
                     deleting = false
@@ -155,54 +169,57 @@ private fun SwipeableStopwatchProjectRow(
 
     AnimatedVisibility(
         visible = !deleting,
-        exit = if (animationsEnabled) fadeOut() + shrinkVertically() else androidx.compose.animation.ExitTransition.None,
+        exit = if (animationsEnabled) {
+            fadeOut(tween(500)) + shrinkVertically(tween(500))
+        } else androidx.compose.animation.ExitTransition.None,
     ) {
         SwipeToDismissBox(
             state = dismissState,
+            modifier = Modifier.testTag("stopwatch-project-${project.id}"),
             backgroundContent = {
-                val editing = dismissState.targetValue == SwipeToDismissBoxValue.StartToEnd
                 Row(
-                    modifier = Modifier.fillMaxWidth()
-                        .background(
-                            if (editing) MaterialTheme.colorScheme.secondaryContainer
-                            else MaterialTheme.colorScheme.errorContainer,
-                            shape = MaterialTheme.shapes.small,
-                        )
+                    modifier = Modifier.fillMaxSize()
                         .padding(MaterialTheme.timnorSpacing.medium),
                     horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    if (editing) {
-                        Icon(
-                            painterResource(Res.drawable.edit),
-                            contentDescription = stringResource(Res.string.edit),
-                            tint = MaterialTheme.colorScheme.onSecondaryContainer,
-                        )
-                    } else {
-                        Spacer(Modifier)
-                    }
-                    if (!editing) {
-                        Icon(
-                            painterResource(Res.drawable.delete),
-                            contentDescription = stringResource(Res.string.delete),
-                            tint = MaterialTheme.colorScheme.onErrorContainer,
-                        )
-                    }
+                    Icon(
+                        painterResource(Res.drawable.edit),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error,
+                    )
+                    Icon(
+                        painterResource(Res.drawable.delete),
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.error,
+                    )
                 }
             },
             content = {
                 Surface(
                     onClick = onSelect,
-                    modifier = Modifier.fillMaxWidth().semantics { this.selected = selected },
-                    color = if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface,
-                    contentColor = if (selected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurface,
-                    shape = MaterialTheme.shapes.medium,
+                    modifier = Modifier.fillMaxWidth().semantics {
+                        this.selected = selected
+                        customActions = listOf(
+                            CustomAccessibilityAction(editActionLabel) {
+                                onEdit()
+                                true
+                            },
+                            CustomAccessibilityAction(deleteActionLabel) {
+                                deleting = true
+                                true
+                            },
+                        )
+                    },
+                    color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface,
+                    contentColor = if (selected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
+                    shape = MaterialTheme.shapes.small,
                 ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth().padding(MaterialTheme.timnorSpacing.small),
+                        modifier = Modifier.fillMaxWidth().padding(MaterialTheme.timnorSpacing.medium),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(MaterialTheme.timnorSpacing.medium),
                     ) {
-                        ProjectIndicator(project.id)
                         Text(
                             project.name,
                             modifier = Modifier.weight(1f),

@@ -21,6 +21,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import io.github.alexzhirkevich.compottie.LottieCompositionSpec
 import io.github.alexzhirkevich.compottie.animateLottieCompositionAsState
 import io.github.alexzhirkevich.compottie.rememberLottiePainter
@@ -37,18 +38,18 @@ import org.jetbrains.compose.resources.painterResource
 
 @Composable
 internal fun MonthViewEmptyState(
-    canAddWork: Boolean,
     onAddWork: () -> Unit,
     modifier: Modifier = Modifier,
+    loopAnimation: Boolean = false,
 ) {
     val animationsEnabled = rememberSystemAnimationsEnabled()
     val composition by rememberLottieComposition {
         LottieCompositionSpec.JsonString(Res.readBytes("files/empty.json").decodeToString())
     }
     val progress = if (animationsEnabled) {
-        animateLottieCompositionAsState(composition, iterations = 1).value
+        animateLottieCompositionAsState(composition, iterations = if (loopAnimation) Int.MAX_VALUE else 1).value
     } else {
-        1f
+        0f
     }
 
     Box(modifier = modifier, contentAlignment = Alignment.Center) {
@@ -63,13 +64,20 @@ internal fun MonthViewEmptyState(
             Image(
                 painter = rememberLottiePainter(composition = composition, progress = { progress }),
                 contentDescription = null,
-                modifier = Modifier.size(MaterialTheme.timnorSpacing.extraLarge * 9),
+                modifier = Modifier.size(MaterialTheme.timnorSpacing.extraLarge * 12),
             )
-            Text(stringResource(Res.string.month_empty_title), style = MaterialTheme.typography.headlineSmall)
-            Text(stringResource(Res.string.month_empty_description), style = MaterialTheme.typography.bodyLarge)
+            Text(
+                stringResource(Res.string.month_empty_title),
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
+            )
+            Text(
+                stringResource(Res.string.month_empty_description),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
             Button(
                 onClick = onAddWork,
-                enabled = canAddWork,
                 modifier = Modifier.fillMaxWidth().heightIn(min = MaterialTheme.timnorSpacing.extraLarge * 2),
                 shape = MaterialTheme.shapes.large,
                 colors = ButtonDefaults.buttonColors(

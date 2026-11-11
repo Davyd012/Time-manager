@@ -11,11 +11,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.DatePickerDialog
+import androidx.compose.material3.DatePickerDefaults
 import androidx.compose.material3.DateRangePicker
 import androidx.compose.material3.DateRangePickerState
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -45,6 +47,7 @@ import no.timnor.app.shared.generated.resources.done
 import no.timnor.app.shared.generated.resources.work_period_range_label
 import no.timnor.app.shared.generated.resources.work_period_registration
 import no.timnor.app.shared.generated.resources.work_period_select_range
+import no.timnor.app.shared.generated.resources.work_period_select_range_title
 import no.timnor.app.shared.generated.resources.work_period_single_date
 import no.timnor.app.shared.platform.motion.rememberSystemAnimationsEnabled
 import no.timnor.app.shared.ui.theme.timnorSpacing
@@ -116,7 +119,24 @@ internal fun WorkPeriodRegistration(
                 TextButton(onClick = { showPicker = false }) { Text(stringResource(Res.string.cancel)) }
             },
         ) {
-            DateRangePicker(state = rangeState)
+            DateRangePicker(
+                state = rangeState,
+                title = {
+                    Text(
+                        text = stringResource(Res.string.work_period_select_range_title),
+                        modifier = Modifier.padding(MaterialTheme.timnorSpacing.small),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onPrimary,
+                    )
+                },
+                showModeToggle = false,
+                colors = DatePickerDefaults.colors(
+                    selectedDayContainerColor = MaterialTheme.colorScheme.secondaryContainer,
+                    selectedDayContentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                    todayContentColor = MaterialTheme.colorScheme.secondaryContainer,
+                    todayDateBorderColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                ),
+            )
         }
     }
 }

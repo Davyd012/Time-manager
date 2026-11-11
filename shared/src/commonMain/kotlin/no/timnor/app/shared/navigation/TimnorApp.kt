@@ -1,14 +1,11 @@
 package no.timnor.app.shared.navigation
 
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBar
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -18,16 +15,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toLocalDateTime
-import kotlin.time.Clock
 import no.timnor.app.shared.generated.resources.Res
-import no.timnor.app.shared.generated.resources.clock_filled
-import no.timnor.app.shared.generated.resources.clock_outline
-import no.timnor.app.shared.generated.resources.home_filled
-import no.timnor.app.shared.generated.resources.home_outline
-import no.timnor.app.shared.generated.resources.home_tab
-import no.timnor.app.shared.generated.resources.stopwatch_title
 import no.timnor.app.shared.features.month_view.presentation.TimnorMonthViewScreen
 import no.timnor.app.shared.features.root.domain.TimnorHomeViewModel
 import no.timnor.app.shared.features.root.presentation.home.TimnorHomeScreen
@@ -35,10 +23,6 @@ import no.timnor.app.shared.features.root.presentation.stopwatch.TimnorStopwatch
 import no.timnor.app.shared.features.settings.presentation.TimnorSettingsSection
 import no.timnor.app.shared.features.settings.domain.TimnorSettingsEffect
 import no.timnor.app.shared.features.settings.domain.TimnorSettingsViewModel
-import org.jetbrains.compose.resources.painterResource
-import org.jetbrains.compose.resources.stringResource
-
-private enum class AppDestination { Home, Stopwatch, MonthView, Settings }
 
 /** Shared application shell. Screen state and business actions remain in the feature ViewModel. */
 @Composable
@@ -46,9 +30,15 @@ fun TimnorApp(
     viewModel: TimnorHomeViewModel,
     settingsViewModel: TimnorSettingsViewModel,
     onSettingsEffect: suspend (TimnorSettingsEffect) -> Unit = {},
+    onPlatformBackHandlerChanged: (canGoBack: Boolean, handleBack: () -> Unit) -> Unit = { _, _ -> },
 ) {
-    var destination by rememberSaveable { mutableStateOf(AppDestination.Home) }
+    var selectedTab by rememberSaveable { mutableStateOf(SharedAppTab.Home) }
+    var homeRoute by rememberSaveable { mutableStateOf(SharedHomeRoute.Home) }
     var homeReselectionCount by rememberSaveable { mutableIntStateOf(0) }
+    var monthViewEntryKey by rememberSaveable { mutableIntStateOf(0) }
+    var calendarBackEnabled by rememberSaveable { mutableStateOf(false) }
+    val navigationState = SharedAppNavigationState(selectedTab, homeRoute)
+    val destination = navigationState.destination
     val state by viewModel.state.collectAsState()
     val settingsState = settingsViewModel.state.collectAsState().value
     val screenStateHolder = rememberSaveableStateHolder()
@@ -57,100 +47,98 @@ fun TimnorApp(
         settingsViewModel.effects.collect { effect -> onSettingsEffect(effect) }
     }
 
-    Scaffold(
-        bottomBar = {
-            NavigationBar {
-                listOf(
-                    NavigationItem(
-                        AppDestination.Home,
-                        stringResource(Res.string.home_tab),
-                        Res.drawable.home_outline,
-                        Res.drawable.home_filled,
-                    ),
-                    NavigationItem(
-                        AppDestination.Stopwatch,
-                        stringResource(Res.string.stopwatch_title),
-                        Res.drawable.clock_outline,
-                        Res.drawable.clock_filled,
-                    ),
-                ).forEach { item ->
-                    NavigationBarItem(
-                        selected = destination == item.destination,
-                        onClick = {
-                            if (item.destination == AppDestination.Home) {
-                                if (destination == AppDestination.Home || destination == AppDestination.MonthView) {
-                                    homeReselectionCount++
-                                }
-                            }
-                            destination = item.destination
-                        },
-                        icon = {
-                            Icon(
-                                painter = painterResource(if (destination == item.destination) item.selectedIcon else item.icon),
-                                contentDescription = null,
-                            )
-                        },
-                        label = { Text(item.label) },
-                    )
-                }
+    val canHandlePlatformBack = selectedTab == SharedAppTab.Home &&
+        (homeRoute != SharedHomeRoute.Home || calendarBackEnabled)
+    val handlePlatformBack: () -> Unit = {
+        if (selectedTab == SharedAppTab.Home && homeRoute == SharedHomeRoute.Home && calendarBackEnabled) {
+            homeReselectionCount++
+        } else {
+            navigationState.onPlatformBack()?.let { next ->
+                selectedTab = next.selectedTab
+                homeRoute = next.homeRoute
             }
-        },
+        }
+    }
+    SideEffect {
+        onPlatformBackHandlerChanged(canHandlePlatformBack, handlePlatformBack)
+    }
+    DisposableEffect(onPlatformBackHandlerChanged) {
+        onDispose { onPlatformBackHandlerChanged(false) {} }
+    }
+
+    val onSelectTab: (SharedAppTab) -> Unit = { destination ->
+        if (destination == SharedAppTab.Home && selectedTab == SharedAppTab.Home) {
+            homeReselectionCount++
+        }
+        val next = navigationState.selectTab(destination)
+        selectedTab = next.selectedTab
+        homeRoute = next.homeRoute
+    }
+
+    Scaffold(
+        bottomBar = { SharedNavigationBar(selectedTab, onSelectTab) },
     ) { insets ->
         screenStateHolder.SaveableStateProvider(destination.name) {
             when (destination) {
-                AppDestination.Home -> TimnorHomeScreen(
+                SharedAppDestination.Home -> TimnorHomeScreen(
                     state = state,
                     viewModel = viewModel,
                     homeReselectionCount = homeReselectionCount,
                     onMonthView = { date ->
                         viewModel.selectCalendarDate(date)
-                        destination = AppDestination.MonthView
+                        monthViewEntryKey++
+                        calendarBackEnabled = false
+                        val next = navigationState.openHomeRoute(SharedHomeRoute.MonthView)
+                        selectedTab = next.selectedTab
+                        homeRoute = next.homeRoute
                     },
-                    onSettings = { destination = AppDestination.Settings },
+                    onSettings = {
+                        calendarBackEnabled = false
+                        val next = navigationState.openHomeRoute(SharedHomeRoute.Settings)
+                        selectedTab = next.selectedTab
+                        homeRoute = next.homeRoute
+                    },
                     onExportSpreadsheet = { year, month, projectIds ->
                         settingsViewModel.exportSpreadsheet(year, month, projectIds)
                     },
                     onShareMonth = settingsViewModel::shareText,
+                    onCalendarBackEnabledChange = { calendarBackEnabled = it },
                     modifier = Modifier.padding(insets),
                 )
-                AppDestination.Stopwatch -> TimnorStopwatchScreen(
+                SharedAppDestination.Stopwatch -> TimnorStopwatchScreen(
                     state = state,
                     viewModel = viewModel,
                     modifier = Modifier.padding(insets),
                 )
-                AppDestination.MonthView -> TimnorMonthViewScreen(
+                SharedAppDestination.MonthView -> TimnorMonthViewScreen(
                     state = state,
                     viewModel = viewModel,
                     modifier = Modifier.padding(insets),
-                    onBack = { destination = AppDestination.Home },
+                    scrollToSelectedDateKey = monthViewEntryKey,
+                    onBack = {
+                        val next = navigationState.backToHomeRoot()
+                        selectedTab = next.selectedTab
+                        homeRoute = next.homeRoute
+                    },
                 )
-                AppDestination.Settings -> {
+                SharedAppDestination.Settings -> {
                     TimnorSettingsSection(
                         state = settingsState,
                         modifier = Modifier.padding(insets),
-                        onBack = { destination = AppDestination.Home },
+                        onBack = {
+                            val next = navigationState.backToHomeRoot()
+                            selectedTab = next.selectedTab
+                            homeRoute = next.homeRoute
+                        },
                         onCreateBackup = settingsViewModel::createBackup,
                         onRestoreBackup = settingsViewModel::requestBackupRestore,
-                        onShareBackup = settingsViewModel::shareBackup,
-                        onExportSpreadsheet = {
-                            val today = Clock.System.now()
-                                .toLocalDateTime(TimeZone.currentSystemDefault()).date
-                            settingsViewModel.exportSpreadsheet(today.year, today.month.ordinal + 1)
-                        },
                         onConfirmRestore = settingsViewModel::restoreBackup,
                         onCancelRestore = settingsViewModel::cancelRestorePreview,
-                        onGoToStopwatch = { destination = AppDestination.Stopwatch },
-                        onDismissMessage = settingsViewModel::dismissMessage,
+                        onGoToStopwatch = { selectedTab = SharedAppTab.Stopwatch },
                     )
                 }
             }
         }
     }
 }
-private data class NavigationItem(
-    val destination: AppDestination,
-    val label: String,
-    val icon: org.jetbrains.compose.resources.DrawableResource,
-    val selectedIcon: org.jetbrains.compose.resources.DrawableResource,
-)
 

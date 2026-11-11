@@ -9,6 +9,7 @@ import kotlin.io.encoding.ExperimentalEncodingApi
 import no.timnor.app.shared.data.persistence.createTimnorPersistence
 import no.timnor.app.shared.platform.documents.IosTimnorDocumentEffectHandler
 import no.timnor.app.shared.platform.documents.IosTimnorSettingsBridge
+import no.timnor.app.shared.platform.navigation.IosTimnorNavigationBridge
 import no.timnor.app.shared.platform.stopwatch.IosStopwatchPlatform
 import no.timnor.app.shared.features.settings.domain.TimnorSettingsEffect
 import no.timnor.app.shared.features.settings.domain.TimnorSettingsViewModel
@@ -43,6 +44,7 @@ fun MainViewController(documentHandler: IosTimnorDocumentEffectHandler): UIViewC
                     )
                 }
             },
+            onPlatformBackHandlerChanged = IosTimnorNavigationBridge::update,
         )
     }
 }

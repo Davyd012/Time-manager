@@ -8,12 +8,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
 import no.timnor.app.shared.domain.work.manualWorkDurationSeconds
@@ -42,6 +44,7 @@ internal fun WorkEntrySheet(
     onSubmitPeriod: (List<LocalDate>) -> Unit,
     onCancel: () -> Unit,
     onDismiss: () -> Unit,
+    showDragHandle: Boolean,
 ) {
     val selectedProjectId = state.workProjectId?.takeIf { id -> state.projects.any { it.id == id } }
         ?: state.projects.firstOrNull()?.id
@@ -52,7 +55,12 @@ internal fun WorkEntrySheet(
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        sheetState = rememberModalBottomSheetState(),
+        dragHandle = if (showDragHandle) {
+            { BottomSheetDefaults.DragHandle(modifier = Modifier.testTag(WORK_ENTRY_DRAG_HANDLE_TAG)) }
+        } else {
+            null
+        },
     ) {
         Column(
             modifier = Modifier.fillMaxWidth().imePadding()
@@ -78,12 +86,13 @@ internal fun WorkEntrySheet(
                 canSave = canSave,
                 onSave = onSubmit,
                 onDelete = {
-                    onDelete { deleted ->
-                        if (deleted) onCancel()
+                    onCancel()
+                    onDelete { _ ->
+                        // The editor closes immediately, matching the legacy action. A failure is
+                        // reported by the home screen after the sheet has closed.
                     }
                 },
                 onSubmitPeriod = onSubmitPeriod,
-                onCancel = onCancel,
             )
             state.error?.let { error ->
                 Text(
@@ -101,3 +110,5 @@ internal fun WorkEntrySheet(
         }
     }
 }
+
+internal const val WORK_ENTRY_DRAG_HANDLE_TAG = "work-entry-sheet-drag-handle"

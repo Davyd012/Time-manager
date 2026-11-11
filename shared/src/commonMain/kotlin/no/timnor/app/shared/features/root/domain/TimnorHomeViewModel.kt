@@ -22,6 +22,8 @@ import no.timnor.app.shared.data.persistence.TimnorPersistence
 import no.timnor.app.shared.domain.time.utcEpochSecondsFromLocalDateTime
 import no.timnor.app.shared.domain.time.utcLocalDateTimeFromEpochSeconds
 import no.timnor.app.shared.domain.work.createManualWork
+import no.timnor.app.shared.domain.work.defaultManualWorkStart
+import no.timnor.app.shared.domain.work.manualWorkDurationSeconds
 import no.timnor.app.shared.domain.work.plannedWeekdayWork
 import no.timnor.app.shared.domain.calendar.monthGridLayout
 import no.timnor.app.shared.domain.project.toggleProjectSelection
@@ -39,7 +41,8 @@ data class TimnorHomeUiState(
     val projectDescription: String = "",
     val editingProjectId: Int? = null,
     val workDate: String = currentLocalDate().toString(),
-    val workStartTime: String = "07:00",
+    val workStartTime: String = "00:00",
+    val workStartTimeManuallySet: Boolean = false,
     val workHours: String = "0",
     val workMinutes: String = "0",
     val workDescription: String = "",
@@ -193,7 +196,7 @@ class TimnorHomeViewModel(
     }
 
     fun updateWorkStartTime(time: String) {
-        mutableState.update { it.copy(workStartTime = time, error = null) }
+        mutableState.update { it.copy(workStartTime = time, workStartTimeManuallySet = true, error = null) }
     }
 
     fun updateWorkHours(hours: String) {
@@ -214,7 +217,8 @@ class TimnorHomeViewModel(
                 workProjectId = current.workProjectId?.takeIf { id -> current.projects.any { it.id == id } }
                     ?: current.projects.firstOrNull()?.id,
                 workDate = current.selectedCalendarDate.toString(),
-                workStartTime = "07:00",
+                workStartTime = "00:00",
+                workStartTimeManuallySet = false,
                 workHours = "0",
                 workMinutes = "0",
                 workDescription = "",
@@ -227,11 +231,7 @@ class TimnorHomeViewModel(
     fun updateCalendarMonth(month: LocalDate) {
         mutableState.update { current ->
             val firstOfMonth = LocalDate(month.year, month.month.ordinal + 1, 1)
-            val day = current.selectedCalendarDate.day.coerceAtMost(monthGridLayout(month.year, month.month.ordinal + 1).daysInMonth)
-            current.copy(
-                calendarMonth = firstOfMonth,
-                selectedCalendarDate = LocalDate(month.year, month.month.ordinal + 1, day),
-            )
+            current.copy(calendarMonth = firstOfMonth)
         }
     }
 
@@ -323,13 +323,34 @@ class TimnorHomeViewModel(
         performStorageAction(onResult) {
             persistence.upsertWork(work)
             mutableState.update {
-                it.copy(workHours = "0", workMinutes = "0", workDescription = "", editingWorkId = null)
+                it.copy(
+                    workStartTime = "00:00",
+                    workStartTimeManuallySet = false,
+                    workHours = "0",
+                    workMinutes = "0",
+                    workDescription = "",
+                    editingWorkId = null,
+                )
             }
         }
     }
 
     fun submitManualWork(onResult: (Boolean) -> Unit = {}) {
         val form = mutableState.value
+        val startTime = if (form.workStartTimeManuallySet) {
+            form.workStartTime
+        } else {
+            val currentDateTime = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault())
+            val selectedDate = runCatching { LocalDate.parse(form.workDate) }.getOrNull()
+            val duration = manualWorkDurationSeconds(
+                form.workHours.toIntOrNull(),
+                form.workMinutes.toIntOrNull(),
+            ) ?: 0
+            if (selectedDate == null) form.workStartTime
+            else defaultManualWorkStart(selectedDate, duration, currentDateTime).let {
+                "${it.hour.toString().padStart(2, '0')}:${it.minute.toString().padStart(2, '0')}"
+            }
+        }
         saveManualWork(
             workId = form.editingWorkId,
             projectId = form.workProjectId,
@@ -337,7 +358,7 @@ class TimnorHomeViewModel(
             hours = form.workHours,
             minutes = form.workMinutes,
             description = form.workDescription,
-            startTime = form.workStartTime,
+            startTime = startTime,
             onResult = onResult,
         )
     }
@@ -379,6 +400,7 @@ class TimnorHomeViewModel(
                 editingWorkId = work.id,
                 workDate = start.date.toString(),
                 workStartTime = "${start.hour.toString().padStart(2, '0')}:${start.minute.toString().padStart(2, '0')}",
+                workStartTimeManuallySet = true,
                 workHours = (work.time / 3600).toString(),
                 workMinutes = (work.time % 3600 / 60).toString(),
                 workDescription = work.description,
@@ -393,7 +415,8 @@ class TimnorHomeViewModel(
                 editingWorkId = null,
                 workHours = "0",
                 workMinutes = "0",
-                workStartTime = "07:00",
+                workStartTime = "00:00",
+                workStartTimeManuallySet = false,
                 workDescription = "",
             )
         }

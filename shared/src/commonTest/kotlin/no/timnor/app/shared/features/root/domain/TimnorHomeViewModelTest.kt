@@ -11,6 +11,8 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
 import kotlinx.datetime.LocalDateTime
 import kotlinx.datetime.LocalTime
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import no.timnor.app.shared.data.persistence.StoredProject
 import no.timnor.app.shared.data.persistence.StoredWork
 import no.timnor.app.shared.data.persistence.TimnorPersistence
@@ -18,6 +20,8 @@ import no.timnor.app.shared.data.persistence.TimnorDataSnapshot
 import no.timnor.app.shared.domain.time.utcEpochSecondsFromLocalDateTime
 import no.timnor.app.shared.platform.stopwatch.StopwatchPlatform
 import no.timnor.app.shared.platform.stopwatch.StopwatchSnapshot
+import kotlin.time.Clock
+import kotlin.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
@@ -46,6 +50,72 @@ class TimnorHomeViewModelTest {
     }
 
     @Test
+    fun savingStopwatchPersistsElapsedTimeAndProjectBeforeClearingIt() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val persistence = FakeTimnorPersistence()
+            val stopwatch = FakeStopwatch()
+            val viewModel = TimnorHomeViewModel(persistence, stopwatch)
+            runCurrent()
+            val elapsedSeconds = 3_605
+            val selectedProject = 7
+            stopwatch.setElapsed(elapsedSeconds, selectedProject, isRunning = true)
+            runCurrent()
+            val nowBeforeSave = Clock.System.now().epochSeconds
+
+            viewModel.saveStopwatch()
+            runCurrent()
+
+            val saved = persistence.works.value.single()
+            val nowAfterSave = Clock.System.now().epochSeconds
+            val expectedStartEpochSeconds = (nowBeforeSave..nowAfterSave).map { now ->
+                utcEpochSecondsFromLocalDateTime(
+                    Instant.fromEpochSeconds(now - elapsedSeconds)
+                        .toLocalDateTime(TimeZone.currentSystemDefault()),
+                )
+            }
+            assertEquals(elapsedSeconds, saved.time)
+            assertEquals(selectedProject, saved.project)
+            assertTrue(saved.dateEpochSeconds in expectedStartEpochSeconds.min()..expectedStartEpochSeconds.max())
+            assertEquals(1, stopwatch.timerSavedCount)
+            assertEquals(0, stopwatch.state.value.elapsedSeconds)
+            assertFalse(stopwatch.state.value.isRunning)
+
+            viewModel.saveStopwatch()
+            runCurrent()
+
+            assertEquals(1, persistence.works.value.size)
+            assertEquals(1, stopwatch.timerSavedCount)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
+    fun failedStopwatchSaveKeepsThePausedSessionAvailableForRetry() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val persistence = FakeTimnorPersistence().apply { failWorkWrites = true }
+            val stopwatch = FakeStopwatch()
+            val viewModel = TimnorHomeViewModel(persistence, stopwatch)
+            runCurrent()
+            stopwatch.setElapsed(95, 4, isRunning = true)
+            runCurrent()
+
+            viewModel.saveStopwatch()
+            runCurrent()
+
+            assertTrue(persistence.works.value.isEmpty())
+            assertEquals(TimnorHomeError.STORAGE, viewModel.state.value.error)
+            assertEquals(95, stopwatch.state.value.elapsedSeconds)
+            assertFalse(stopwatch.state.value.isRunning)
+            assertEquals(0, stopwatch.timerSavedCount)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
     fun sharedMonthRouteStartsAtItsSelectedDate() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         try {
@@ -54,6 +124,22 @@ class TimnorHomeViewModelTest {
 
             assertEquals(selectedDate, viewModel.state.value.selectedCalendarDate)
             assertEquals(kotlinx.datetime.LocalDate(2024, 2, 1), viewModel.state.value.calendarMonth)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
+    fun browsingCalendarMonthsKeepsTheSelectedHomeDate() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val selectedDate = kotlinx.datetime.LocalDate(2026, 11, 10)
+            val viewModel = TimnorHomeViewModel(FakeTimnorPersistence(), FakeStopwatch(), selectedDate)
+
+            viewModel.updateCalendarMonth(kotlinx.datetime.LocalDate(2026, 12, 1))
+
+            assertEquals(kotlinx.datetime.LocalDate(2026, 12, 1), viewModel.state.value.calendarMonth)
+            assertEquals(selectedDate, viewModel.state.value.selectedCalendarDate)
         } finally {
             Dispatchers.resetMain()
         }
@@ -83,7 +169,7 @@ class TimnorHomeViewModelTest {
             viewModel.toggleCalendarProject(1)
             viewModel.deleteProject(viewModel.state.value.projects.first { it.id == 2 })
             runCurrent()
-            assertEquals(null, viewModel.state.value.selectedCalendarProjectIds)
+            assertEquals(emptySet(), viewModel.state.value.selectedCalendarProjectIds)
         } finally {
             Dispatchers.resetMain()
         }
@@ -262,6 +348,7 @@ class TimnorHomeViewModelTest {
             viewModel.addProject("Research")
             runCurrent()
             viewModel.updateWorkDescription("Keep this draft")
+            viewModel.updateWorkHours("1")
             persistence.failWorkWrites = true
             var result: Boolean? = null
 
@@ -458,6 +545,28 @@ class TimnorHomeViewModelTest {
             Dispatchers.resetMain()
         }
     }
+
+    @Test
+    fun newManualWorkKeepsLegacyAutomaticStartTimeUntilUserEditsIt() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val selectedDate = kotlinx.datetime.LocalDate(2026, 11, 10)
+            val viewModel = TimnorHomeViewModel(
+                FakeTimnorPersistence(),
+                FakeStopwatch(),
+                selectedDate,
+            )
+
+            viewModel.beginManualWork()
+
+            assertEquals("00:00", viewModel.state.value.workStartTime)
+            assertFalse(viewModel.state.value.workStartTimeManuallySet)
+            viewModel.updateWorkStartTime("09:20")
+            assertTrue(viewModel.state.value.workStartTimeManuallySet)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
 }
 
 private class FakeTimnorPersistence : TimnorPersistence {
@@ -520,6 +629,7 @@ private class FakeTimnorPersistence : TimnorPersistence {
 private class FakeStopwatch : StopwatchPlatform {
     private val mutableState = MutableStateFlow(StopwatchSnapshot())
     override val state = mutableState
+    var timerSavedCount = 0
 
     override fun start() {
         mutableState.value = mutableState.value.copy(isRunning = true)
@@ -533,13 +643,16 @@ private class FakeStopwatch : StopwatchPlatform {
         mutableState.value = StopwatchSnapshot(selectedProject = mutableState.value.selectedProject)
     }
 
-    override fun timerSaved() = cancel()
+    override fun timerSaved() {
+        timerSavedCount++
+        cancel()
+    }
 
     override fun selectProject(projectId: Int) {
         mutableState.value = mutableState.value.copy(selectedProject = projectId)
     }
 
-    fun setElapsed(seconds: Int, projectId: Int) {
-        mutableState.value = StopwatchSnapshot(seconds, isRunning = false, selectedProject = projectId)
+    fun setElapsed(seconds: Int, projectId: Int, isRunning: Boolean = false) {
+        mutableState.value = StopwatchSnapshot(seconds, isRunning, projectId)
     }
 }

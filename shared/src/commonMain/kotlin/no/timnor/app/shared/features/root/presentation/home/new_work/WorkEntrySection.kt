@@ -70,7 +70,6 @@ internal fun WorkEntrySection(
     onSave: () -> Unit,
     onDelete: () -> Unit,
     onSubmitPeriod: (List<LocalDate>) -> Unit,
-    onCancel: () -> Unit,
 ) {
     var periodRegistration by remember { mutableStateOf(false) }
     val periodRangeState = androidx.compose.material3.rememberDateRangePickerState()
@@ -87,7 +86,7 @@ internal fun WorkEntrySection(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Text(dateHeader, style = MaterialTheme.typography.titleMedium)
-        Text(stringResource(Res.string.work_title), style = MaterialTheme.typography.titleLarge)
+        Text(stringResource(Res.string.work_title), style = MaterialTheme.typography.headlineSmall)
         Text(stringResource(Res.string.work_project_hint), style = MaterialTheme.typography.labelLarge)
         ProjectSelector(
             projects = projects,
@@ -105,6 +104,7 @@ internal fun WorkEntrySection(
             minutes = minutes,
             onMinutesChange = onMinutesChange,
             periodRegistration = periodRegistration,
+            isEditing = isEditing,
         )
         WorkPeriodRegistration(
             enabled = periodRegistration,
@@ -114,12 +114,10 @@ internal fun WorkEntrySection(
             value = description,
             onValueChange = onDescriptionChange,
         )
-        if (!isEditing) {
-            WorkPeriodRegistrationSwitch(
-                enabled = periodRegistration,
-                onEnabledChange = { periodRegistration = it },
-            )
-        }
+        WorkPeriodRegistrationSwitch(
+            enabled = periodRegistration,
+            onEnabledChange = { periodRegistration = it },
+        )
         WorkEntryActions(
             isEditing = isEditing,
             periodRegistration = periodRegistration,
@@ -129,7 +127,6 @@ internal fun WorkEntrySection(
             onSave = onSave,
             onDelete = onDelete,
             onSubmitPeriod = onSubmitPeriod,
-            onCancel = onCancel,
         )
     }
 }

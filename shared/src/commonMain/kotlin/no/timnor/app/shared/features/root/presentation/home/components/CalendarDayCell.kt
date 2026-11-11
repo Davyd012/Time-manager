@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -25,7 +26,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlinx.datetime.LocalDate
-import no.timnor.app.shared.domain.calendar.formatCalendarHours
+import no.timnor.app.shared.domain.calendar.formatDayHours
 import no.timnor.app.shared.platform.motion.rememberSystemAnimationsEnabled
 import no.timnor.app.shared.ui.theme.timnorSpacing
 
@@ -35,6 +36,7 @@ internal fun CalendarDayCell(
     dayLabel: String? = null,
     seconds: Int,
     selected: Boolean,
+    showHours: Boolean,
     enabled: Boolean = true,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -82,6 +84,7 @@ internal fun CalendarDayCell(
             val compact = maxWidth < 48.dp || androidx.compose.ui.platform.LocalDensity.current.fontScale > 1.15f
             Column(
                 modifier = Modifier
+                    .fillMaxWidth()
                     .heightIn(min = MaterialTheme.timnorSpacing.extraLarge * if (compact) 2.25f else 2.5f)
                     .padding(horizontal = MaterialTheme.timnorSpacing.extraSmall, vertical = MaterialTheme.timnorSpacing.small),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -95,9 +98,10 @@ internal fun CalendarDayCell(
                     )
                 }
                 Text(date.day.toString(), style = MaterialTheme.typography.titleMedium, maxLines = 1)
-                if (seconds > 0) {
+                val hoursText = formatDayHours(seconds.toLong())
+                if (showHours && (!compact || hoursText != "0")) {
                     Text(
-                        "${formatCalendarHours(seconds.toLong())}h",
+                        hoursText,
                         style = MaterialTheme.typography.labelSmall,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,

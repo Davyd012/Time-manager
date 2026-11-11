@@ -9,8 +9,12 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.shape.CornerSize
+import androidx.compose.foundation.shape.CornerBasedShape
+import androidx.compose.ui.unit.dp
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.graphicsLayer
@@ -32,7 +36,6 @@ internal fun HomeDailyWorkList(
     selectedDate: LocalDate,
     works: List<StoredWork>,
     projects: List<StoredProject>,
-    canAddWork: Boolean,
     expansionProgress: Float,
     modifier: Modifier = Modifier,
     onEditWork: (StoredWork) -> Unit,
@@ -45,15 +48,16 @@ internal fun HomeDailyWorkList(
         targetState = selectedWorks.isEmpty(),
         modifier = modifier
             .fillMaxSize()
+            .clipToBounds()
             .graphicsLayer {
                 alpha = 1f - (expansionProgress / 0.25f).coerceIn(0f, 1f)
                 translationY = expansionProgress * expansionTranslationPx
             }
             .then(
-                if (expansionProgress >= 0.25f) {
+                if (shouldBlockHomeWorkListInput(expansionProgress)) {
                     Modifier
                         .clearAndSetSemantics { hideFromAccessibility() }
-                        .pointerInput(expansionProgress >= 0.25f) {
+                        .pointerInput(shouldBlockHomeWorkListInput(expansionProgress)) {
                             awaitPointerEventScope {
                                 while (true) awaitPointerEvent().changes.forEach { it.consume() }
                             }
@@ -74,17 +78,26 @@ internal fun HomeDailyWorkList(
     ) { empty ->
         if (empty) {
             MonthViewEmptyState(
-                canAddWork = canAddWork,
                 onAddWork = onAddWork,
                 modifier = Modifier.fillMaxSize(),
+                loopAnimation = true,
             )
         } else {
             MonthViewTimeline(
                 works = selectedWorks,
                 projects = projects,
                 modifier = Modifier.fillMaxSize(),
+                shape = homeDailyTimelineShape(MaterialTheme.shapes.large),
+                showDuration = true,
+                showProjectMarker = true,
                 onSelectWork = onEditWork,
             )
         }
     }
 }
+
+internal fun shouldBlockHomeWorkListInput(expansionProgress: Float): Boolean =
+    expansionProgress > 0.8f
+
+internal fun homeDailyTimelineShape(shape: CornerBasedShape) =
+    shape.copy(bottomStart = CornerSize(0.dp), bottomEnd = CornerSize(0.dp))

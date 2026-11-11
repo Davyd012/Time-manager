@@ -6,27 +6,18 @@ import kotlin.test.assertTrue
 
 class HomeCalendarToggleTest {
     @Test
-    fun verticalSwipeExpandsAndCollapsesInExpectedDirections() {
-        assertTrue(shouldToggleExpandedCalendar(expanded = false, dragDistancePx = 40f, thresholdPx = 32f))
-        assertFalse(shouldToggleExpandedCalendar(expanded = false, dragDistancePx = -40f, thresholdPx = 32f))
-        assertTrue(shouldToggleExpandedCalendar(expanded = true, dragDistancePx = -40f, thresholdPx = 32f))
-        assertFalse(shouldToggleExpandedCalendar(expanded = true, dragDistancePx = 40f, thresholdPx = 32f))
-        assertFalse(shouldToggleExpandedCalendar(expanded = false, dragDistancePx = 31f, thresholdPx = 32f))
-    }
-
-    @Test
     fun expansionDragUsesFastFlingDirectionBeforeProgressThreshold() {
         assertTrue(
             calendarExpansionTarget(
                 progress = 0.2f,
-                velocityPxPerSecond = -600f,
+                velocityPxPerSecond = 600f,
                 velocityThresholdPxPerSecond = 500f,
             ),
         )
         assertFalse(
             calendarExpansionTarget(
                 progress = 0.8f,
-                velocityPxPerSecond = 600f,
+                velocityPxPerSecond = -600f,
                 velocityThresholdPxPerSecond = 500f,
             ),
         )

@@ -8,6 +8,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -27,6 +29,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import no.timnor.app.shared.data.persistence.StoredProject
@@ -63,7 +66,6 @@ internal fun StopwatchSection(
     onSelectProject: (Int) -> Unit,
     onStartPause: () -> Unit,
     onSave: () -> Unit,
-    onManageProjects: () -> Unit,
     onCreateProject: () -> Unit,
     onEditProject: (StoredProject) -> Unit,
     onDeleteProject: (StoredProject, (Boolean) -> Unit) -> Unit,
@@ -96,7 +98,7 @@ internal fun StopwatchSection(
         Card(
             onClick = { showProjectPicker = true },
             enabled = canChangeStopwatchProject(elapsed),
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().testTag("stopwatch-project-picker"),
             shape = MaterialTheme.shapes.medium,
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         ) {
@@ -132,7 +134,7 @@ internal fun StopwatchSection(
                     )
                 },
                 colors = ListItemDefaults.colors(
-                    containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
+                    containerColor = MaterialTheme.colorScheme.surface,
                 ),
             )
         }
@@ -144,20 +146,23 @@ internal fun StopwatchSection(
         }
         LargeFloatingActionButton(
             onClick = { if (selectedProject == null) showProjectPicker = true else onStartPause() },
-            containerColor = MaterialTheme.colorScheme.secondaryContainer,
-            contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
+            containerColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            shape = CircleShape,
         ) {
             if (animationsEnabled) {
                 AnimatedContent(targetState = isRunning, label = "stopwatch-action-icon") { running ->
                     Icon(
                         painter = painterResource(if (running) Res.drawable.pause else Res.drawable.play),
                         contentDescription = primaryAction,
+                        modifier = Modifier.size(MaterialTheme.timnorSpacing.extraLarge),
                     )
                 }
             } else {
                 Icon(
                     painter = painterResource(if (isRunning) Res.drawable.pause else Res.drawable.play),
                     contentDescription = primaryAction,
+                    modifier = Modifier.size(MaterialTheme.timnorSpacing.extraLarge),
                 )
             }
         }
@@ -199,10 +204,6 @@ internal fun StopwatchSection(
             onCreateProject = {
                 showProjectPicker = false
                 onCreateProject()
-            },
-            onManageProjects = {
-                showProjectPicker = false
-                onManageProjects()
             },
             onDismiss = { showProjectPicker = false },
         )

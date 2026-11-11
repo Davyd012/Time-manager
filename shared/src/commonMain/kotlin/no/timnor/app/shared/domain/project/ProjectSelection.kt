@@ -32,3 +32,7 @@ fun toggleVisibleProjectSelection(
     }
     return next.takeUnless { it == allProjectIds }
 }
+
+/** Legacy calendar filtering treats an empty applied list as no filter (all projects). */
+fun calendarProjectSelectionForApply(selectedIds: Set<Int>?): Set<Int>? =
+    selectedIds?.takeUnless { it.isEmpty() }

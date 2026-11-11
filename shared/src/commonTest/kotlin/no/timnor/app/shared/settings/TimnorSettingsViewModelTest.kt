@@ -27,6 +27,42 @@ import kotlin.test.assertTrue
 @OptIn(ExperimentalCoroutinesApi::class)
 class TimnorSettingsViewModelTest {
     @Test
+    fun createBackupUsesLegacySuggestedFilename() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val viewModel = TimnorSettingsViewModel(
+                SettingsTestPersistence(),
+                SettingsTestRestoreGate(allowRestore = true),
+            )
+            val nextEffect = async { viewModel.effects.first() }
+            runCurrent()
+
+            viewModel.createBackup()
+            runCurrent()
+
+            val effect = assertIs<TimnorSettingsEffect.SaveBackup>(nextEffect.await())
+            assertTrue(effect.fileName.startsWith("time-manager-backup-"))
+            assertTrue(effect.fileName.endsWith(".json"))
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
+    fun restorePickerUsesTheLegacyBroadDocumentFilter() = runTest {
+        val viewModel = TimnorSettingsViewModel(
+            SettingsTestPersistence(),
+            SettingsTestRestoreGate(allowRestore = true),
+        )
+        val nextEffect = async { viewModel.effects.first() }
+        runCurrent()
+
+        viewModel.requestBackupRestore()
+
+        assertEquals(TimnorSettingsEffect.OpenBackup(listOf("*/*")), nextEffect.await())
+    }
+
+    @Test
     fun documentResultsExposeSharedSuccessFailureAndDismissalState() {
         val viewModel = TimnorSettingsViewModel(
             SettingsTestPersistence(),
@@ -44,6 +80,21 @@ class TimnorSettingsViewModelTest {
 
         viewModel.dismissMessage()
         assertEquals(null, viewModel.state.value.message)
+    }
+
+    @Test
+    fun successfulHomeTextShareDoesNotLeaveBackupFeedbackInSettings() {
+        val viewModel = TimnorSettingsViewModel(
+            SettingsTestPersistence(),
+            SettingsTestRestoreGate(allowRestore = true),
+        )
+
+        viewModel.reportTextShareResult(shared = true)
+
+        assertNull(viewModel.state.value.message)
+        assertFalse(viewModel.state.value.busy)
+        viewModel.reportTextShareResult(shared = false)
+        assertEquals(TimnorSettingsMessage.DocumentFailed, viewModel.state.value.message)
     }
 
     @Test

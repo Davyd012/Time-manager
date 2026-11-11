@@ -67,6 +67,13 @@ class ProjectSelectionTest {
     }
 
     @Test
+    fun applyingAnEmptyCalendarFilterMeansAllProjectsLikeLegacy() {
+        assertEquals(null, calendarProjectSelectionForApply(emptySet()))
+        assertEquals(null, calendarProjectSelectionForApply(null))
+        assertEquals(setOf(2), calendarProjectSelectionForApply(setOf(2)))
+    }
+
+    @Test
     fun togglingAFilteredSubsetChangesOnlyThoseProjects() {
         assertEquals(
             setOf(2),

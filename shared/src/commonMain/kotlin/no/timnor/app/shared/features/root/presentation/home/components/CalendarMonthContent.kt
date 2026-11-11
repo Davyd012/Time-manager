@@ -10,6 +10,7 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -17,17 +18,23 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.Month
@@ -35,11 +42,13 @@ import kotlinx.datetime.minus
 import kotlinx.datetime.plus
 import no.timnor.app.shared.data.persistence.StoredProject
 import no.timnor.app.shared.data.persistence.StoredWork
-import no.timnor.app.shared.domain.calendar.MonthGridLayout
 import no.timnor.app.shared.domain.calendar.formatCalendarHours
 import no.timnor.app.shared.domain.calendar.monthGridLayout
 import no.timnor.app.shared.domain.calendar.workSecondsByDay
 import no.timnor.app.shared.domain.time.utcLocalDateTimeFromEpochSeconds
+import no.timnor.app.shared.features.calendar.presentation.components.MonthShareSummaryKind
+import no.timnor.app.shared.features.calendar.presentation.components.formatMonthShareHours
+import no.timnor.app.shared.features.calendar.presentation.components.monthShareSummaryKind
 import no.timnor.app.shared.generated.resources.Res
 import no.timnor.app.shared.generated.resources.arrow_back
 import no.timnor.app.shared.generated.resources.arrow_right
@@ -56,12 +65,17 @@ import no.timnor.app.shared.generated.resources.calendar_month_november
 import no.timnor.app.shared.generated.resources.calendar_month_october
 import no.timnor.app.shared.generated.resources.calendar_month_september
 import no.timnor.app.shared.generated.resources.calendar_month_share
-import no.timnor.app.shared.generated.resources.calendar_month_share_summary
 import no.timnor.app.shared.generated.resources.calendar_month_total
 import no.timnor.app.shared.generated.resources.calendar_next_month
 import no.timnor.app.shared.generated.resources.calendar_previous_month
 import no.timnor.app.shared.generated.resources.share
-import no.timnor.app.shared.platform.motion.rememberSystemAnimationsEnabled
+import no.timnor.app.shared.generated.resources.share_chooser_title
+import no.timnor.app.shared.generated.resources.summary_no_hours
+import no.timnor.app.shared.generated.resources.summary_quiet_month
+import no.timnor.app.shared.generated.resources.summary_normal_month
+import no.timnor.app.shared.generated.resources.summary_active_month
+import no.timnor.app.shared.generated.resources.hour_singular
+import no.timnor.app.shared.generated.resources.hour_plural
 import no.timnor.app.shared.ui.theme.timnorSpacing
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
@@ -70,7 +84,7 @@ import org.jetbrains.compose.resources.stringResource
 internal fun CalendarMonthContent(
     month: LocalDate,
     currentMonth: LocalDate,
-    selectedDate: LocalDate,
+    selectedDate: LocalDate?,
     works: List<StoredWork>,
     projects: List<StoredProject>,
     selectedProjectIds: Set<Int>?,
@@ -98,14 +112,37 @@ internal fun CalendarMonthContent(
             secondsOf = StoredWork::time,
         )
     }
-    val monthTotal = remember(visibleMonthWorks) {
-        formatCalendarHours(visibleMonthWorks.sumOf { it.time.toLong() })
+    val monthSeconds = remember(visibleMonthWorks) { visibleMonthWorks.sumOf { it.time.toLong() } }
+    val monthTotal = remember(monthSeconds) { formatCalendarHours(monthSeconds) }
+    val monthTotalMinutes = (monthSeconds + 30) / 60
+    val monthTitle = "${monthName(month.month).replaceFirstChar { it.titlecase() }} ${month.year}"
+    val monthLabel = "${monthName(month.month)} ${month.year}"
+    val monthSummary = when (monthShareSummaryKind(monthSeconds)) {
+        MonthShareSummaryKind.NoHours -> stringResource(Res.string.summary_no_hours, monthLabel)
+        MonthShareSummaryKind.Quiet -> stringResource(
+            Res.string.summary_quiet_month,
+            monthLabel,
+            formatMonthShareHours(monthSeconds),
+            stringResource(if (monthSeconds == 3600L) Res.string.hour_singular else Res.string.hour_plural),
+        )
+        MonthShareSummaryKind.Normal -> stringResource(
+            Res.string.summary_normal_month,
+            formatMonthShareHours(monthSeconds),
+            stringResource(if (monthSeconds == 3600L) Res.string.hour_singular else Res.string.hour_plural),
+            monthLabel,
+        )
+        MonthShareSummaryKind.Active -> stringResource(
+            Res.string.summary_active_month,
+            formatMonthShareHours(monthSeconds),
+            stringResource(if (monthSeconds == 3600L) Res.string.hour_singular else Res.string.hour_plural),
+            monthLabel,
+        )
     }
-    val monthTitle = "${monthName(month.month)} ${month.year}"
-    val monthSummary = stringResource(Res.string.calendar_month_share_summary, monthTitle, monthTotal)
+    val shareSubject = stringResource(Res.string.share_chooser_title)
     val previousMonthLabel = stringResource(Res.string.calendar_previous_month)
     val nextMonthLabel = stringResource(Res.string.calendar_next_month)
     val shareMonthLabel = stringResource(Res.string.calendar_month_share)
+    val swipeThreshold = with(LocalDensity.current) { (MaterialTheme.timnorSpacing.extraLarge * 2).toPx() }
     fun requestMonthChange(target: LocalDate) {
         if (interactive && target != currentMonth) {
             onMonthChange(target)
@@ -113,23 +150,23 @@ internal fun CalendarMonthContent(
     }
 
     Column(
-        modifier = Modifier.pointerInput(currentMonth, interactive) {
+        modifier = Modifier.testTag("calendar-month-content").pointerInput(currentMonth, interactive, swipeThreshold) {
             if (interactive) {
                 var horizontalDrag = 0f
-                var changedMonth = false
                 detectHorizontalDragGestures(
+                    onDragStart = { horizontalDrag = 0f },
                     onHorizontalDrag = { change, amount ->
                         horizontalDrag += amount
-                        if (!changedMonth && horizontalDrag < -size.width * 0.2f) {
-                            changedMonth = true
-                            requestMonthChange(currentMonth.plus(1, DateTimeUnit.MONTH))
-                        } else if (!changedMonth && horizontalDrag > size.width * 0.2f) {
-                            changedMonth = true
-                            requestMonthChange(currentMonth.minus(1, DateTimeUnit.MONTH))
-                        }
                         change.consume()
                     },
-                    onDragEnd = { horizontalDrag = 0f },
+                    onDragEnd = {
+                        if (horizontalDrag <= -swipeThreshold) {
+                            requestMonthChange(currentMonth.plus(1, DateTimeUnit.MONTH))
+                        } else if (horizontalDrag >= swipeThreshold) {
+                            requestMonthChange(currentMonth.minus(1, DateTimeUnit.MONTH))
+                        }
+                        horizontalDrag = 0f
+                    },
                     onDragCancel = { horizontalDrag = 0f },
                 )
             }
@@ -139,58 +176,91 @@ internal fun CalendarMonthContent(
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center,
+            horizontalArrangement = Arrangement.spacedBy(MaterialTheme.timnorSpacing.small, Alignment.CenterHorizontally),
         ) {
-            IconButton(
+            OutlinedIconButton(
                 onClick = { requestMonthChange(currentMonth.minus(1, DateTimeUnit.MONTH)) },
                 modifier = Modifier.semantics { contentDescription = previousMonthLabel },
                 enabled = interactive,
+                colors = IconButtonDefaults.outlinedIconButtonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                ),
             ) {
                 Icon(painterResource(Res.drawable.arrow_back), contentDescription = null)
             }
-            Text(
-                text = "${monthName(month.month)} ${month.year}",
-                style = MaterialTheme.typography.titleMedium,
-            )
-            IconButton(
+            Surface(
+                onClick = { onOpenMonthView(LocalDate(month.year, month.month, 1)) },
+                modifier = Modifier.weight(1f, fill = false),
+                enabled = interactive,
+                color = MaterialTheme.colorScheme.primaryContainer,
+                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                shape = MaterialTheme.shapes.extraLarge,
+            ) {
+                Text(
+                    text = monthTitle,
+                    modifier = Modifier.padding(MaterialTheme.timnorSpacing.medium),
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            OutlinedIconButton(
                 onClick = { requestMonthChange(currentMonth.plus(1, DateTimeUnit.MONTH)) },
                 modifier = Modifier.semantics { contentDescription = nextMonthLabel },
                 enabled = interactive,
+                colors = IconButtonDefaults.outlinedIconButtonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                ),
             ) {
                 Icon(painterResource(Res.drawable.arrow_right), contentDescription = null)
             }
         }
-        CalendarMonthGrid(
-            month = month,
-            layout = layout,
-            secondsByDay = byDay,
-            selectedDate = selectedDate,
-            weekdays = weekdays,
-            interactive = interactive,
-            onSelectDate = onOpenMonthView,
-        )
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            color = MaterialTheme.colorScheme.primaryContainer,
-            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+            color = MaterialTheme.colorScheme.primary,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
             shape = MaterialTheme.shapes.large,
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = MaterialTheme.timnorSpacing.medium),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Text(stringResource(Res.string.calendar_month_total, monthTotal), style = MaterialTheme.typography.titleMedium)
-                onShareMonth?.let { share ->
-                    IconButton(
-                        onClick = { share(monthTitle, monthSummary) },
-                        modifier = Modifier.semantics {
-                            contentDescription = shareMonthLabel
-                        },
-                        enabled = interactive,
+            Column(modifier = Modifier.padding(MaterialTheme.timnorSpacing.extraSmall)) {
+                CalendarMonthGrid(
+                    month = month,
+                    layout = layout,
+                    secondsByDay = byDay,
+                    selectedDate = selectedDate,
+                    weekdays = weekdays,
+                    interactive = interactive,
+                    onSelectDate = onSelectDate,
+                )
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = MaterialTheme.timnorSpacing.medium),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(MaterialTheme.timnorSpacing.small),
+                ) {
+                    HorizontalDivider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outlineVariant)
+                    Surface(
+                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        contentColor = MaterialTheme.colorScheme.onSurface,
+                        shape = MaterialTheme.shapes.extraLarge,
                     ) {
-                        Icon(painterResource(Res.drawable.share), contentDescription = null)
+                        Text(
+                            stringResource(Res.string.calendar_month_total, monthTotalMinutes / 60, monthTotalMinutes % 60),
+                            modifier = Modifier.padding(MaterialTheme.timnorSpacing.medium),
+                            style = MaterialTheme.typography.labelLarge,
+                        )
                     }
+                    onShareMonth?.let { share ->
+                        IconButton(
+                            onClick = { share(shareSubject, monthSummary) },
+                            modifier = Modifier.semantics { contentDescription = shareMonthLabel },
+                            enabled = interactive,
+                        ) {
+                            Icon(painterResource(Res.drawable.share), contentDescription = null)
+                        }
+                    }
+                    HorizontalDivider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outlineVariant)
                 }
             }
         }

@@ -8,7 +8,7 @@
 - `iosApp/Timnor.xcodeproj` is the SwiftUI iOS host. Its Compose root renders the common Home, Stopwatch, Month View, and Settings screens; SwiftUI still provides the native file import/export and share UI through the shared Settings document-effect bridge. The legacy backup/export menu remains during migration. Notifications are not implemented. Its bundle identifier is `no.timnor.ios`.
 - The Xcode project declares iOS 15 as its minimum target. The SwiftUI shell selects `NavigationStack` on iOS 16+ and retains a stack-style `NavigationView` path for iOS 15; this source has not been checked by Xcode.
 
-Android Room remains in `:app`, using `work.db` and schema version 1. The iOS app stores records in a separate JSON file in its app Documents directory. A shared strict version-1 backup codec and iOS store import/export methods preserve the Android JSON envelope. The common Settings screen owns backup validation, restore preview/confirmation, and replacement state; SwiftUI supplies the native document and share presenters. The iOS app does not import Android SQLite directly. Backup interchange and all iOS paths remain uncompiled and unverified.
+Android Room remains in `:app`, using `work.db` and schema version 1. The iOS app stores records in a separate JSON file in its app Documents directory. A shared strict version-1 backup codec and iOS store import/export methods preserve the Android JSON envelope. The common Settings screen owns backup validation, restore preview/confirmation, and replacement state; SwiftUI supplies the native document and share presenters. The iOS app does not import Android SQLite directly. The shared iOS Kotlin targets compile, but backup interchange and the Xcode app remain unverified.
 
 ## Android on Windows
 
@@ -20,7 +20,7 @@ gradlew.bat :shared:compileAndroidMain :shared:testAndroidHostTest :app:testDebu
 
 This compiles shared Android code, runs common host tests and app unit tests, assembles the debug APK, and compiles Android instrumentation-test sources. It does not execute instrumentation tests or verify device behavior. Android device acceptance and existing-user backup restore are still required.
 
-Windows cannot build Kotlin/Native iOS targets or run Xcode. Android build success does not establish iOS acceptance.
+The configured Kotlin/Native iOS targets can be compiled on this Windows setup. Xcode builds, iOS simulator tests, and device acceptance require macOS. Android build success does not establish iOS acceptance.
 
 ## iOS on macOS
 

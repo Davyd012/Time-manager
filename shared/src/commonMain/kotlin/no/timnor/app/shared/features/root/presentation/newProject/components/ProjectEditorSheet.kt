@@ -13,19 +13,19 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.font.FontWeight
 import no.timnor.app.shared.features.root.domain.TimnorHomeError
 import no.timnor.app.shared.features.root.domain.TimnorHomeUiState
 import no.timnor.app.shared.generated.resources.Res
-import no.timnor.app.shared.generated.resources.cancel
 import no.timnor.app.shared.generated.resources.invalid_project
-import no.timnor.app.shared.generated.resources.project_add
 import no.timnor.app.shared.generated.resources.project_description_hint
+import no.timnor.app.shared.generated.resources.project_editor_title
 import no.timnor.app.shared.generated.resources.project_name_hint
-import no.timnor.app.shared.generated.resources.project_update
+import no.timnor.app.shared.generated.resources.project_save
 import no.timnor.app.shared.generated.resources.storage_error
 import no.timnor.app.shared.generated.resources.stopwatch_project_locked
 import no.timnor.app.shared.ui.theme.timnorSpacing
@@ -38,12 +38,13 @@ internal fun ProjectEditorSheet(
     onProjectNameChange: (String) -> Unit,
     onProjectDescriptionChange: (String) -> Unit,
     onSaveProject: ((Boolean) -> Unit) -> Unit,
-    onCancel: () -> Unit,
     onDismiss: () -> Unit,
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        modifier = Modifier.testTag("project-editor"),
+        sheetState = rememberModalBottomSheetState(),
+        dragHandle = null,
     ) {
         Column(
             modifier = Modifier.fillMaxWidth().imePadding()
@@ -52,8 +53,9 @@ internal fun ProjectEditorSheet(
             verticalArrangement = Arrangement.spacedBy(MaterialTheme.timnorSpacing.medium),
         ) {
             Text(
-                stringResource(if (state.editingProjectId == null) Res.string.project_add else Res.string.project_update),
-                style = MaterialTheme.typography.titleLarge,
+                stringResource(Res.string.project_editor_title),
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold,
             )
             OutlinedTextField(
                 value = state.projectName,
@@ -94,18 +96,18 @@ internal fun ProjectEditorSheet(
                         if (saved) onDismiss()
                     }
                 },
-                onCancel = onCancel,
             )
         }
     }
 }
 
 @Composable
-private fun RowActions(isEditing: Boolean, onSave: () -> Unit, onCancel: () -> Unit) {
+private fun RowActions(isEditing: Boolean, onSave: () -> Unit) {
     androidx.compose.foundation.layout.Row(
         horizontalArrangement = Arrangement.spacedBy(MaterialTheme.timnorSpacing.small),
     ) {
-        Button(onClick = onSave) { Text(stringResource(if (isEditing) Res.string.project_update else Res.string.project_add)) }
-        if (isEditing) TextButton(onClick = onCancel) { Text(stringResource(Res.string.cancel)) }
+        Button(onClick = onSave, modifier = Modifier.weight(1f)) {
+            Text(stringResource(if (isEditing) Res.string.project_save else Res.string.project_editor_title))
+        }
     }
 }

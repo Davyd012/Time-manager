@@ -6,6 +6,13 @@ import kotlinx.datetime.LocalDate
 
 class WorkCalendarAggregationTest {
     @Test
+    fun compactDayHoursMatchAndroidLabels() {
+        assertEquals("0", formatDayHours(0))
+        assertEquals("1", formatDayHours(3_600))
+        assertEquals("1.5", formatDayHours(5_400))
+    }
+
+    @Test
     fun sumsEntriesByDayAndExcludesAdjacentMonths() {
         val entries = listOf(
             Entry(LocalDate(2024, 2, 1), 3_600),

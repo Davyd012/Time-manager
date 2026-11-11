@@ -93,7 +93,7 @@ class TimnorSettingsViewModel(
                 val snapshot = persistence.snapshotAll()
                 val contents = encodeTimnorBackupV1(snapshot.projects, snapshot.works)
                 val today = currentLocalDate()
-                val name = "timnor-backup-$today.json"
+                val name = if (share) "timnor-backup-$today.json" else "time-manager-backup-$today.json"
                 mutableEffects.emit(
                     if (share) TimnorSettingsEffect.ShareBackup(contents, name)
                     else TimnorSettingsEffect.SaveBackup(contents, name),
@@ -108,7 +108,7 @@ class TimnorSettingsViewModel(
     }
 
     fun requestBackupRestore() {
-        mutableEffects.tryEmit(TimnorSettingsEffect.OpenBackup(listOf("application/json", "text/json")))
+        mutableEffects.tryEmit(TimnorSettingsEffect.OpenBackup(listOf("*/*")))
     }
 
     /** Pass null when the platform picker was cancelled. */
@@ -198,6 +198,11 @@ class TimnorSettingsViewModel(
 
     fun reportDocumentFailure() {
         mutableState.value = TimnorSettingsUiState(message = TimnorSettingsMessage.DocumentFailed)
+    }
+
+    /** Text sharing from Home has no success banner; only surface a failure if the chooser cannot open. */
+    fun reportTextShareResult(shared: Boolean) {
+        if (!shared) reportDocumentFailure()
     }
 
     fun reportInvalidBackupDocument() {

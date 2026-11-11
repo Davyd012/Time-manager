@@ -3,28 +3,36 @@ package no.timnor.app.shared.features.month_view.presentation.components
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.IntrinsicSize
-import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.background
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
-import androidx.compose.material3.VerticalDivider
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.DividerDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import kotlinx.datetime.LocalDate
 import no.timnor.app.shared.data.persistence.StoredProject
 import no.timnor.app.shared.data.persistence.StoredWork
 import no.timnor.app.shared.domain.time.utcLocalDateTimeFromEpochSeconds
 import no.timnor.app.shared.generated.resources.Res
 import no.timnor.app.shared.generated.resources.unknown_project
+import no.timnor.app.shared.platform.locale.localizedDecimalSeparator
 import no.timnor.app.shared.ui.theme.timnorSpacing
 import org.jetbrains.compose.resources.stringResource
 
@@ -33,6 +41,9 @@ internal fun MonthViewTimeline(
     works: List<StoredWork>,
     projects: List<StoredProject>,
     modifier: Modifier = Modifier,
+    shape: Shape? = null,
+    showDuration: Boolean = true,
+    showProjectMarker: Boolean = false,
     onSelectWork: (StoredWork) -> Unit,
 ) {
     val unknownProject = stringResource(Res.string.unknown_project)
@@ -42,11 +53,19 @@ internal fun MonthViewTimeline(
         modifier = modifier,
         color = MaterialTheme.colorScheme.tertiaryContainer,
         contentColor = MaterialTheme.colorScheme.onTertiaryContainer,
-        shape = MaterialTheme.shapes.large,
+        shape = shape ?: MaterialTheme.shapes.large,
     ) {
         LazyColumn(
-            modifier = Modifier.fillMaxWidth().padding(MaterialTheme.timnorSpacing.medium),
-            verticalArrangement = Arrangement.spacedBy(MaterialTheme.timnorSpacing.small),
+            modifier = Modifier.fillMaxWidth().padding(
+                if (showProjectMarker) {
+                    MaterialTheme.timnorSpacing.small + MaterialTheme.timnorSpacing.extraSmall / 2
+                } else MaterialTheme.timnorSpacing.small,
+            ),
+            verticalArrangement = Arrangement.spacedBy(
+                if (showProjectMarker) {
+                    MaterialTheme.timnorSpacing.small - MaterialTheme.timnorSpacing.extraSmall / 2
+                } else MaterialTheme.timnorSpacing.small,
+            ),
         ) {
             groupedWorks.forEach { (hour, entries) ->
                 item(key = "hour-$hour") {
@@ -54,6 +73,8 @@ internal fun MonthViewTimeline(
                         hour = hour,
                         works = entries,
                         projectName = { work -> projectNames[work.project] ?: unknownProject },
+                        showDuration = showDuration,
+                        showProjectMarker = showProjectMarker,
                         onSelectWork = onSelectWork,
                     )
                 }
@@ -77,41 +98,83 @@ private fun MonthViewTimelineGroup(
     hour: Int,
     works: List<StoredWork>,
     projectName: (StoredWork) -> String,
+    showDuration: Boolean,
+    showProjectMarker: Boolean,
     onSelectWork: (StoredWork) -> Unit,
 ) {
+    val homeRowSpacing = MaterialTheme.timnorSpacing.extraSmall + MaterialTheme.timnorSpacing.extraSmall / 4
+    val groupVerticalPadding = if (showProjectMarker) 0.dp else MaterialTheme.timnorSpacing.small
+    val workCardMinHeight = if (showProjectMarker) {
+        MaterialTheme.timnorSpacing.extraLarge * 2 - MaterialTheme.timnorSpacing.extraSmall
+    } else {
+        MaterialTheme.timnorSpacing.extraLarge * 2 + MaterialTheme.timnorSpacing.small
+    }
+    val projectMarkerWidth = if (showProjectMarker) {
+        MaterialTheme.timnorSpacing.small + MaterialTheme.timnorSpacing.extraSmall / 2
+    } else MaterialTheme.timnorSpacing.small
+
     Row(
-        modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min)
-            .padding(vertical = MaterialTheme.timnorSpacing.small),
-        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.timnorSpacing.small),
+        modifier = Modifier.fillMaxWidth()
+            .padding(vertical = groupVerticalPadding),
+        horizontalArrangement = Arrangement.spacedBy(
+            if (showProjectMarker) 0.dp else MaterialTheme.timnorSpacing.small,
+        ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
+        if (showProjectMarker) Spacer(Modifier.width(homeRowSpacing))
         Text(
             text = hour.toString().padStart(2, '0'),
-            modifier = Modifier.width(MaterialTheme.timnorSpacing.extraLarge),
-            style = MaterialTheme.typography.titleMedium,
+            modifier = if (showProjectMarker) Modifier else Modifier.width(MaterialTheme.timnorSpacing.extraLarge),
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onPrimaryContainer,
+            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
         )
-        VerticalDivider(
-            modifier = Modifier.fillMaxHeight(),
-            color = MaterialTheme.colorScheme.outlineVariant,
+        if (showProjectMarker) Spacer(Modifier.width(homeRowSpacing))
+        HorizontalDivider(
+            modifier = Modifier.width(
+                if (showProjectMarker) {
+                    MaterialTheme.timnorSpacing.large + MaterialTheme.timnorSpacing.extraSmall / 4
+                } else MaterialTheme.timnorSpacing.large,
+            ),
+            thickness = if (showProjectMarker) {
+                MaterialTheme.timnorSpacing.extraSmall / 2
+            } else DividerDefaults.Thickness,
+            color = MaterialTheme.colorScheme.onPrimaryContainer,
         )
+        if (showProjectMarker) Spacer(Modifier.width(homeRowSpacing))
         Column(
             modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(MaterialTheme.timnorSpacing.small),
+            verticalArrangement = Arrangement.spacedBy(if (showProjectMarker) 0.dp else MaterialTheme.timnorSpacing.small),
         ) {
             works.forEach { work ->
                 Surface(
                     onClick = { onSelectWork(work) },
-                    modifier = Modifier.fillMaxWidth(),
-                    color = MaterialTheme.colorScheme.secondaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                    shape = MaterialTheme.shapes.medium,
+                    modifier = Modifier.fillMaxWidth()
+                        .padding(vertical = if (showProjectMarker) homeRowSpacing else 0.dp)
+                        .heightIn(min = workCardMinHeight)
+                        .testTag("work-entry-${work.id}"),
+                    color = MaterialTheme.colorScheme.onSecondaryContainer,
+                    contentColor = MaterialTheme.colorScheme.secondaryContainer,
+                    shape = MaterialTheme.shapes.small,
                 ) {
                     Row(
-                        modifier = Modifier.padding(MaterialTheme.timnorSpacing.small),
+                        modifier = Modifier.fillMaxWidth().height(IntrinsicSize.Min),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.timnorSpacing.medium),
                     ) {
-                        Column(modifier = Modifier.weight(1f)) {
+                        if (showProjectMarker) {
+                            androidx.compose.foundation.layout.Box(
+                                modifier = Modifier.fillMaxHeight().width(projectMarkerWidth)
+                                    .testTag("work-entry-project-marker-${work.id}")
+                                    .background(MaterialTheme.colorScheme.secondaryContainer),
+                            )
+                        }
+                        Column(
+                            modifier = Modifier.weight(1f).padding(
+                                start = if (showProjectMarker) projectMarkerWidth else MaterialTheme.timnorSpacing.small,
+                                top = if (showProjectMarker) homeRowSpacing else MaterialTheme.timnorSpacing.small,
+                                bottom = if (showProjectMarker) homeRowSpacing else MaterialTheme.timnorSpacing.small,
+                            ),
+                        ) {
                             Text(
                                 projectName(work),
                                 style = MaterialTheme.typography.titleMedium,
@@ -127,28 +190,46 @@ private fun MonthViewTimelineGroup(
                                 )
                             }
                         }
-                        val start = utcLocalDateTimeFromEpochSeconds(work.dateEpochSeconds)
-                        Text(
-                            text = "${start.hour.toString().padStart(2, '0')}:${start.minute.toString().padStart(2, '0')} · ${formatMonthViewDuration(work.time)}",
-                            style = MaterialTheme.typography.bodyLarge,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
+                        workTimelineDurationLabel(work.time, showDuration, localizedDecimalSeparator())?.let { durationLabel ->
+                            Text(
+                                text = durationLabel,
+                                modifier = Modifier
+                                    .padding(
+                                        start = if (showProjectMarker) {
+                                            homeRowSpacing
+                                        } else MaterialTheme.timnorSpacing.small,
+                                        end = if (showProjectMarker) {
+                                            MaterialTheme.timnorSpacing.small + MaterialTheme.timnorSpacing.extraSmall / 2
+                                        } else MaterialTheme.timnorSpacing.small,
+                                    )
+                                    .testTag("work-entry-duration-${work.id}"),
+                                style = MaterialTheme.typography.bodyLarge,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                        }
                     }
                 }
+                if (showProjectMarker) Spacer(Modifier.width(MaterialTheme.timnorSpacing.extraSmall))
             }
         }
     }
 }
 
-internal fun formatMonthViewDuration(seconds: Int): String = when {
+internal fun formatMonthViewDuration(seconds: Int, decimalSeparator: Char = ','): String = when {
     seconds >= 3_600 -> {
         val tenths = (seconds.toLong() * 10 + 1_800) / 3_600
-        "${tenths / 10},${tenths % 10}h"
+        "${tenths / 10}$decimalSeparator${tenths % 10}h"
     }
     seconds >= 60 -> {
-        val tenths = (seconds.toLong() * 10 + 300) / 600
-        "${tenths / 10},${tenths % 10}m"
+        val tenths = (seconds.toLong() * 10 + 30) / 60
+        "${tenths / 10}$decimalSeparator${tenths % 10}m"
     }
     else -> "$seconds s"
 }
+
+internal fun workTimelineDurationLabel(
+    seconds: Int,
+    showDuration: Boolean,
+    decimalSeparator: Char = ',',
+): String? = if (showDuration) formatMonthViewDuration(seconds, decimalSeparator) else null

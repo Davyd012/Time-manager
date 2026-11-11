@@ -19,9 +19,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.datetime.TimeZone
-import kotlinx.datetime.toLocalDateTime
-import kotlin.time.Clock
 import no.timnor.app.shared.data.backup.TIMNOR_BACKUP_MAX_BYTES
 import no.timnor.app.shared.features.settings.domain.TimnorDocumentAction
 import no.timnor.app.shared.features.settings.domain.TimnorSettingsEffect
@@ -89,8 +86,7 @@ fun AndroidTimnorDocumentEffectHandler(viewModel: TimnorSettingsViewModel) {
                 }
                 is TimnorSettingsEffect.ShareText -> {
                     val shared = shareText(context, effect.subject, effect.contents)
-                    if (shared) viewModel.reportDocumentSuccess(TimnorDocumentAction.Share)
-                    else viewModel.reportDocumentFailure()
+                    viewModel.reportTextShareResult(shared)
                 }
                 is TimnorSettingsEffect.OpenBackup -> openBackupLauncher.launch(effect.mimeTypes.toTypedArray())
                 is TimnorSettingsEffect.SaveSpreadsheet -> {
@@ -120,15 +116,9 @@ fun SharedSettingsScreen(
         onBack = onBack,
         onCreateBackup = viewModel::createBackup,
         onRestoreBackup = viewModel::requestBackupRestore,
-        onShareBackup = viewModel::shareBackup,
-        onExportSpreadsheet = {
-            val today = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).date
-            viewModel.exportSpreadsheet(today.year, today.month.ordinal + 1)
-        },
         onConfirmRestore = viewModel::restoreBackup,
         onCancelRestore = viewModel::cancelRestorePreview,
         onGoToStopwatch = onGoToTimer,
-        onDismissMessage = viewModel::dismissMessage,
     )
 }
 
@@ -199,7 +189,6 @@ private fun shareTextFile(context: Context, contents: String, fileName: String):
 private fun shareText(context: Context, subject: String, contents: String): Boolean = try {
     val sendIntent = Intent(Intent.ACTION_SEND).apply {
         type = "text/plain"
-        putExtra(Intent.EXTRA_SUBJECT, subject)
         putExtra(Intent.EXTRA_TEXT, contents)
     }
     context.startActivity(Intent.createChooser(sendIntent, subject))

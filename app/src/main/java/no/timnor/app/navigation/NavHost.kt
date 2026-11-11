@@ -44,7 +44,7 @@ fun AppNavHost(
     val navigationState = rememberNavigationState()
     val navigator = remember(navigationState) { Navigator(navigationState) }
     var homeReselectionCount by remember { mutableIntStateOf(0) }
-    var sharedCalendarExpanded by remember { mutableStateOf(false) }
+    var sharedCalendarBackEnabled by remember { mutableStateOf(false) }
     val sharedHomeViewModel = viewModel<TimnorHomeViewModel>(
         factory = getSharedHomeViewModelFactory(diContainer),
     )
@@ -56,7 +56,7 @@ fun AppNavHost(
 
     BackHandler(
         enabled = navigationState.selectedTopLevelRoute == AppRoute.Home &&
-            navigationState.homeStack.lastOrNull() == AppRoute.Home && sharedCalendarExpanded,
+            navigationState.homeStack.lastOrNull() == AppRoute.Home && sharedCalendarBackEnabled,
     ) {
         homeReselectionCount++
     }
@@ -80,7 +80,7 @@ fun AppNavHost(
                         settingsViewModel.exportSpreadsheet(year, month, projectIds)
                     },
                     onShareMonth = settingsViewModel::shareText,
-                    onCalendarExpansionChange = { sharedCalendarExpanded = it },
+                    onCalendarBackEnabledChange = { sharedCalendarBackEnabled = it },
                     modifier = Modifier.statusBarsPadding(),
                 )
             }
