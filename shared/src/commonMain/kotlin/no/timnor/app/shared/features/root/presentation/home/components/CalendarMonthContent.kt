@@ -1,5 +1,6 @@
 package no.timnor.app.shared.features.root.presentation.home.components
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
@@ -11,9 +12,11 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.material3.Icon
@@ -27,6 +30,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
@@ -42,9 +47,6 @@ import kotlinx.datetime.minus
 import kotlinx.datetime.plus
 import no.timnor.app.shared.data.persistence.StoredProject
 import no.timnor.app.shared.data.persistence.StoredWork
-import no.timnor.app.shared.domain.calendar.formatCalendarHours
-import no.timnor.app.shared.domain.calendar.monthGridLayout
-import no.timnor.app.shared.domain.calendar.workSecondsByDay
 import no.timnor.app.shared.domain.time.utcLocalDateTimeFromEpochSeconds
 import no.timnor.app.shared.features.calendar.presentation.components.MonthShareSummaryKind
 import no.timnor.app.shared.features.calendar.presentation.components.formatMonthShareHours
@@ -85,37 +87,41 @@ internal fun CalendarMonthContent(
     month: LocalDate,
     currentMonth: LocalDate,
     selectedDate: LocalDate?,
+    homeSelectedDate: LocalDate,
     works: List<StoredWork>,
     projects: List<StoredProject>,
     selectedProjectIds: Set<Int>?,
     interactive: Boolean,
     weekdays: List<String>,
+    expansionProgress: Float,
     onMonthChange: (LocalDate) -> Unit,
+    onSelectWeekDate: (LocalDate) -> Unit,
     onSelectDate: (LocalDate) -> Unit,
     onOpenMonthView: (LocalDate) -> Unit,
     onShareMonth: ((String, String) -> Unit)?,
 ) {
     val monthNumber = month.month.ordinal + 1
-    val layout = remember(month.year, monthNumber) { monthGridLayout(month.year, monthNumber) }
+    val progress = expansionProgress.coerceIn(0f, 1f)
+    val fontScale = LocalDensity.current.fontScale.coerceAtLeast(1f)
+    val expandedActionRowHeight = MaterialTheme.timnorSpacing.extraLarge * 2 * fontScale
+    val monthTotalRowHeight = expandedActionRowHeight + MaterialTheme.timnorSpacing.medium * 2 * fontScale
     val visibleMonthWorks = remember(works, projects, selectedProjectIds, month) {
         visibleWorks(works, projects, selectedProjectIds).filter { work ->
             val date = utcLocalDateTimeFromEpochSeconds(work.dateEpochSeconds).date
             date.year == month.year && date.month == month.month
         }
     }
-    val byDay = remember(month, visibleMonthWorks) {
-        workSecondsByDay(
-            entries = visibleMonthWorks,
-            year = month.year,
-            month = monthNumber,
-            dateOf = { utcLocalDateTimeFromEpochSeconds(it.dateEpochSeconds).date },
-            secondsOf = StoredWork::time,
-        )
+    val byDate = remember(works, projects, selectedProjectIds) {
+        visibleWorks(works, projects, selectedProjectIds)
+            .groupBy { utcLocalDateTimeFromEpochSeconds(it.dateEpochSeconds).date }
+            .mapValues { (_, entries) -> entries.sumOf(StoredWork::time) }
+    }
+    val weekSecondsByDate = remember(works) {
+        works.groupBy { utcLocalDateTimeFromEpochSeconds(it.dateEpochSeconds).date }
+            .mapValues { (_, entries) -> entries.sumOf(StoredWork::time) }
     }
     val monthSeconds = remember(visibleMonthWorks) { visibleMonthWorks.sumOf { it.time.toLong() } }
-    val monthTotal = remember(monthSeconds) { formatCalendarHours(monthSeconds) }
     val monthTotalMinutes = (monthSeconds + 30) / 60
-    val monthTitle = "${monthName(month.month).replaceFirstChar { it.titlecase() }} ${month.year}"
     val monthLabel = "${monthName(month.month)} ${month.year}"
     val monthSummary = when (monthShareSummaryKind(monthSeconds)) {
         MonthShareSummaryKind.NoHours -> stringResource(Res.string.summary_no_hours, monthLabel)
@@ -171,8 +177,15 @@ internal fun CalendarMonthContent(
                 )
             }
         },
-        verticalArrangement = Arrangement.spacedBy(MaterialTheme.timnorSpacing.small),
+        verticalArrangement = Arrangement.spacedBy(MaterialTheme.timnorSpacing.small * progress),
     ) {
+        Box(
+            modifier = Modifier.fillMaxWidth()
+                .height(expandedActionRowHeight * progress)
+                .clipToBounds()
+                .alpha(progress),
+            contentAlignment = Alignment.Center,
+        ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -197,13 +210,21 @@ internal fun CalendarMonthContent(
                 contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
                 shape = MaterialTheme.shapes.extraLarge,
             ) {
-                Text(
-                    text = monthTitle,
+                AnimatedContent(
+                    targetState = month,
                     modifier = Modifier.padding(MaterialTheme.timnorSpacing.medium),
-                    style = MaterialTheme.typography.titleMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                    transitionSpec = {
+                        monthTransitionSpec(forward = targetState > initialState)
+                    },
+                    label = "calendar-month-title-transition",
+                ) { titleMonth ->
+                    Text(
+                        text = "${monthName(titleMonth.month).replaceFirstChar { it.titlecase() }} ${titleMonth.year}",
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
             OutlinedIconButton(
                 onClick = { requestMonthChange(currentMonth.plus(1, DateTimeUnit.MONTH)) },
@@ -217,6 +238,7 @@ internal fun CalendarMonthContent(
                 Icon(painterResource(Res.drawable.arrow_right), contentDescription = null)
             }
         }
+        }
         Surface(
             modifier = Modifier.fillMaxWidth(),
             color = MaterialTheme.colorScheme.primary,
@@ -225,15 +247,27 @@ internal fun CalendarMonthContent(
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         ) {
             Column(modifier = Modifier.padding(MaterialTheme.timnorSpacing.extraSmall)) {
-                CalendarMonthGrid(
-                    month = month,
-                    layout = layout,
-                    secondsByDay = byDay,
-                    selectedDate = selectedDate,
-                    weekdays = weekdays,
-                    interactive = interactive,
-                    onSelectDate = onSelectDate,
-                )
+                Box(Modifier.fillMaxWidth().testTag("home-week-strip")) {
+                    CalendarMonthGrid(
+                        month = month,
+                        selectedDate = homeSelectedDate,
+                        selectedGridDate = selectedDate,
+                        secondsByDate = byDate,
+                        weekSecondsByDate = weekSecondsByDate,
+                        weekdays = weekdays,
+                        expansionProgress = progress,
+                        interactive = interactive,
+                        onSelectWeekDate = onSelectWeekDate,
+                        onSelectDate = onSelectDate,
+                    )
+                }
+                Box(
+                    modifier = Modifier.fillMaxWidth()
+                        .height(monthTotalRowHeight * progress)
+                        .clipToBounds()
+                        .alpha(progress),
+                    contentAlignment = Alignment.Center,
+                ) {
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(vertical = MaterialTheme.timnorSpacing.medium),
                     verticalAlignment = Alignment.CenterVertically,
@@ -262,24 +296,10 @@ internal fun CalendarMonthContent(
                     }
                     HorizontalDivider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outlineVariant)
                 }
+                }
             }
         }
     }
-}
-
-internal fun monthTransitionSpec(forward: Boolean, enabled: Boolean): ContentTransform {
-    if (!enabled) return ContentTransform(EnterTransition.None, ExitTransition.None)
-
-    val duration = 300
-    val enterOffset: (Int) -> Int = { width -> if (forward) width else -width }
-    val exitOffset: (Int) -> Int = { width -> if (forward) -width else width }
-    return (
-        fadeIn(tween(duration)) +
-            slideInHorizontally(tween(duration), initialOffsetX = enterOffset)
-        ) togetherWith (
-        fadeOut(tween(duration)) +
-            slideOutHorizontally(tween(duration), targetOffsetX = exitOffset)
-        )
 }
 
 internal fun visibleWorks(
@@ -309,3 +329,15 @@ private fun monthName(month: Month): String = stringResource(
         Month.DECEMBER -> Res.string.calendar_month_december
     },
 )
+
+private fun monthTransitionSpec(forward: Boolean): ContentTransform {
+    val direction = if (forward) 1 else -1
+    return slideInHorizontally(
+        animationSpec = tween(durationMillis = 300),
+        initialOffsetX = { width -> direction * width / 4 },
+    ).plus(fadeIn(animationSpec = tween(durationMillis = 220))) togetherWith
+        slideOutHorizontally(
+            animationSpec = tween(durationMillis = 300),
+            targetOffsetX = { width -> -direction * width / 4 },
+        ).plus(fadeOut(animationSpec = tween(durationMillis = 220)))
+}

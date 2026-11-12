@@ -9,7 +9,6 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.gestures.DraggableState
 import androidx.compose.foundation.shape.CornerSize
 import androidx.compose.foundation.shape.CornerBasedShape
 import androidx.compose.ui.unit.dp
@@ -36,9 +35,6 @@ internal fun HomeDailyWorkList(
     projects: List<StoredProject>,
     expansionProgress: Float,
     modifier: Modifier = Modifier,
-    expansionDragState: DraggableState,
-    onExpansionDragStarted: () -> Unit,
-    onExpansionDragStopped: (Float) -> Unit,
     isDraggingCalendar: Boolean,
     onEditWork: (StoredWork) -> Unit,
     onAddWork: () -> Unit,
@@ -72,12 +68,7 @@ internal fun HomeDailyWorkList(
             MonthViewEmptyState(
                 onAddWork = onAddWork,
                 modifier = Modifier.fillMaxSize()
-                    .testTag("home-empty-work-drag-surface")
-                    .calendarExpansionDrag(
-                        state = expansionDragState,
-                        onStarted = onExpansionDragStarted,
-                        onStopped = onExpansionDragStopped,
-                    ),
+                    .testTag("home-empty-work-drag-surface"),
                 loopAnimation = true,
             )
         } else {

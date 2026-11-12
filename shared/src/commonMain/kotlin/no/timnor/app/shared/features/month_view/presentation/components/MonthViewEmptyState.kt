@@ -21,6 +21,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import io.github.alexzhirkevich.compottie.LottieCompositionSpec
 import io.github.alexzhirkevich.compottie.animateLottieCompositionAsState
@@ -64,10 +65,13 @@ internal fun MonthViewEmptyState(
             Image(
                 painter = rememberLottiePainter(composition = composition, progress = { progress }),
                 contentDescription = null,
-                modifier = Modifier.size(MaterialTheme.timnorSpacing.extraLarge * 12),
+                modifier = Modifier
+                    .size(MaterialTheme.timnorSpacing.extraLarge * 12)
+                    .testTag("home-empty-state-illustration"),
             )
             Text(
                 stringResource(Res.string.month_empty_title),
+                modifier = Modifier.testTag("home-empty-state-title"),
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
             )
@@ -78,7 +82,10 @@ internal fun MonthViewEmptyState(
             )
             Button(
                 onClick = onAddWork,
-                modifier = Modifier.fillMaxWidth().heightIn(min = MaterialTheme.timnorSpacing.extraLarge * 2),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = MaterialTheme.timnorSpacing.extraLarge * 2)
+                    .testTag("home-add-hours-action"),
                 shape = MaterialTheme.shapes.large,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.secondary,

@@ -39,4 +39,38 @@ class MonthGridLayoutTest {
         assertFalse(isSameMonth(LocalDate(2024, 12, 31), january))
         assertFalse(isSameMonth(LocalDate(2025, 2, 1), january))
     }
+
+    @Test
+    fun november2026UsesThirdRowForNovemberNinthThroughFifteenth() {
+        val dates = monthGridDates(2026, 11)
+        assertEquals(42, dates.size)
+        assertEquals((9..15).map { LocalDate(2026, 11, it) }, dates.subList(14, 21))
+        assertEquals(2, monthGridRow(LocalDate(2026, 11, 11), 2026, 11))
+        assertEquals((9..15).map { LocalDate(2026, 11, it) }, weekDates(LocalDate(2026, 11, 11)))
+    }
+
+    @Test
+    fun monthGridDatesIncludeRealAdjacentMonthDates() {
+        val dates = monthGridDates(2025, 1)
+        assertEquals(LocalDate(2024, 12, 30), dates.first())
+        assertEquals(LocalDate(2025, 2, 2), dates.last())
+        assertEquals(0, monthGridRow(LocalDate(2025, 1, 1), 2025, 1))
+        assertEquals(null, monthGridRow(LocalDate(2024, 12, 31), 2025, 1))
+    }
+
+    @Test
+    fun adjacentMonthDatesKeepTheirVisibleGridRows() {
+        assertEquals(0, monthGridDateRow(LocalDate(2026, 10, 26), 2026, 11))
+        assertEquals(5, monthGridDateRow(LocalDate(2026, 12, 6), 2026, 11))
+        assertEquals(null, monthGridDateRow(LocalDate(2026, 10, 25), 2026, 11))
+    }
+
+    @Test
+    fun interpolationClampsProgressAndHasExactEndpoints() {
+        assertEquals(10f, interpolateCalendarCoordinate(10f, 30f, 0f))
+        assertEquals(20f, interpolateCalendarCoordinate(10f, 30f, 0.5f))
+        assertEquals(30f, interpolateCalendarCoordinate(10f, 30f, 1f))
+        assertEquals(10f, interpolateCalendarCoordinate(10f, 30f, -1f))
+        assertEquals(30f, interpolateCalendarCoordinate(10f, 30f, 2f))
+    }
 }

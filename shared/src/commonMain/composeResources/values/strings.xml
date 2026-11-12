@@ -70,6 +70,8 @@
     <string name="calendar_open_state">Kalender utvidet</string>
     <string name="open_calendar_action">Åpne kalender</string>
     <string name="close_calendar_action">Lukk kalender</string>
+    <string name="calendar_scroll_mode_enable">Aktiver rulling</string>
+    <string name="calendar_scroll_mode_disable">Aktiver kalendersveip</string>
     <string name="project_filter_title">Velg prosjekter</string>
     <string name="project_filter_search_hint">Søk prosjekter…</string>
     <string name="project_filter_select_all">Velg alle</string>

@@ -7,9 +7,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.draggable
-import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.material3.FilledTonalIconButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -18,15 +15,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.role
@@ -51,31 +45,18 @@ import kotlin.math.abs
 internal fun HomeHeaderBar(
     selectedDate: LocalDate,
     expansionProgress: Float,
-    gestureProgress: Float = expansionProgress,
+    visibilityProgress: Float = expansionProgress,
     canAddWork: Boolean,
     onToggleCalendar: () -> Unit,
-    onSetExpanded: (Boolean) -> Unit,
-    onExpansionProgressChange: (Float) -> Unit,
-    expansionDragDistancePx: Float,
-    expansionVelocityThresholdPx: Float,
     onSettings: () -> Unit,
     onExport: (() -> Unit)?,
     onAddWork: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val latestProgress = rememberUpdatedState(gestureProgress)
-    val latestOnSetExpanded = rememberUpdatedState(onSetExpanded)
-    val latestOnProgressChange = rememberUpdatedState(onExpansionProgressChange)
-    val latestDragDistance = rememberUpdatedState(expansionDragDistancePx)
-    val latestVelocityThreshold = rememberUpdatedState(expansionVelocityThresholdPx)
-    var dragProgress by remember { mutableFloatStateOf(expansionProgress) }
-    val dragState = rememberDraggableState { delta ->
-        dragProgress = (dragProgress + delta / latestDragDistance.value).coerceIn(0f, 1f)
-        latestOnProgressChange.value(dragProgress)
-    }
     val weekday = formatLocalizedWeekday(selectedDate)
+    val fontScale = LocalDensity.current.fontScale.coerceAtLeast(1f)
     val headerTopPadding = MaterialTheme.timnorSpacing.extraSmall
-    val collapsedHeaderHeight = MaterialTheme.timnorSpacing.extraLarge * 2 + headerTopPadding
+    val collapsedHeaderHeight = (MaterialTheme.timnorSpacing.extraLarge * 2 + headerTopPadding) * fontScale
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -83,29 +64,16 @@ internal fun HomeHeaderBar(
             .height(collapsedHeaderHeight * (1f - expansionProgress.coerceIn(0f, 1f)))
             .padding(top = headerTopPadding)
             .clipToBounds()
-            .graphicsLayer { alpha = 1f - expansionProgress.coerceIn(0f, 1f) }
+            .graphicsLayer { alpha = 1f - visibilityProgress.coerceIn(0f, 1f) }
             .padding(horizontal = MaterialTheme.timnorSpacing.medium)
-            .then(if (expansionProgress >= 0.98f) Modifier.clearAndSetSemantics {} else Modifier)
-            .draggable(
-                state = dragState,
-                orientation = Orientation.Vertical,
-                onDragStarted = { dragProgress = latestProgress.value },
-                onDragStopped = { velocity ->
-                    latestOnSetExpanded.value(
-                        calendarExpansionTarget(
-                            progress = dragProgress,
-                            velocityPxPerSecond = velocity,
-                            velocityThresholdPxPerSecond = latestVelocityThreshold.value,
-                        ),
-                    )
-                },
-            ),
+            .then(if (expansionProgress >= 0.98f) Modifier.clearAndSetSemantics {} else Modifier),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = weekday,
             modifier = Modifier.weight(1f)
                 .padding(start = MaterialTheme.timnorSpacing.extraSmall)
+                .testTag("home-header")
                 .clickable(onClick = onToggleCalendar)
                 .semantics { role = Role.Button },
             style = MaterialTheme.typography.headlineSmall,

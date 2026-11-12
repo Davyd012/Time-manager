@@ -8,6 +8,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -59,7 +60,7 @@ class SharedMonthViewTest {
             }
         }
 
-        composeRule.onNodeWithText("MON").assertIsDisplayed()
+        composeRule.onNodeWithTag("month-day-2").assertTextContains("MON")
         composeRule.onNodeWithText("Man").assertDoesNotExist()
     }
 

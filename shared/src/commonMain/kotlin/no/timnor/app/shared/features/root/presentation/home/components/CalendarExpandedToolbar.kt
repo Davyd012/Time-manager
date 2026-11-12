@@ -16,7 +16,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -27,7 +29,10 @@ import no.timnor.app.shared.generated.resources.Res
 import no.timnor.app.shared.generated.resources.arrow_back
 import no.timnor.app.shared.generated.resources.calendar
 import no.timnor.app.shared.generated.resources.calendar_title
+import no.timnor.app.shared.generated.resources.calendar_scroll_mode_disable
+import no.timnor.app.shared.generated.resources.calendar_scroll_mode_enable
 import no.timnor.app.shared.generated.resources.filter_list
+import no.timnor.app.shared.generated.resources.swap_vert
 import no.timnor.app.shared.ui.theme.timnorSpacing
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
@@ -37,20 +42,28 @@ internal fun CalendarExpandedToolbar(
     month: LocalDate,
     expandedContentEnabled: Boolean,
     expansionProgress: Float,
+    visibilityProgress: Float = expansionProgress,
     filterActive: Boolean,
     closeLabel: String,
     monthViewLabel: String,
     filterLabel: String,
+    scrollMode: Boolean,
+    onToggleScrollMode: () -> Unit,
     onToggleExpanded: (() -> Unit)?,
     onMonthView: (LocalDate) -> Unit,
     onShowFilter: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val scrollModeLabel = stringResource(
+        if (scrollMode) Res.string.calendar_scroll_mode_disable else Res.string.calendar_scroll_mode_enable,
+    )
+    val fontScale = LocalDensity.current.fontScale.coerceAtLeast(1f)
     Box(
         modifier = modifier.fillMaxWidth()
-            .height(MaterialTheme.timnorSpacing.extraLarge * 2)
+            .height(MaterialTheme.timnorSpacing.extraLarge * 2 * fontScale * expansionProgress.coerceIn(0f, 1f))
+            .clipToBounds()
             .testTag("calendar-expanded-toolbar")
-            .alpha(expansionProgress)
+            .alpha(visibilityProgress.coerceIn(0f, 1f))
             .then(if (expandedContentEnabled) Modifier else Modifier.clearAndSetSemantics {}),
         contentAlignment = Alignment.Center,
     ) {
@@ -58,7 +71,9 @@ internal fun CalendarExpandedToolbar(
             IconButton(
                 onClick = close,
                 enabled = expandedContentEnabled,
-                modifier = Modifier.align(Alignment.CenterStart).semantics { contentDescription = closeLabel },
+                modifier = Modifier.align(Alignment.CenterStart)
+                    .testTag("calendar-close")
+                    .semantics { contentDescription = closeLabel },
             ) {
                 Icon(painterResource(Res.drawable.arrow_back), contentDescription = null)
             }
@@ -76,6 +91,14 @@ internal fun CalendarExpandedToolbar(
             horizontalArrangement = Arrangement.spacedBy(MaterialTheme.timnorSpacing.small),
             verticalAlignment = Alignment.CenterVertically,
         ) {
+            IconButton(
+                onClick = onToggleScrollMode,
+                enabled = expandedContentEnabled,
+                modifier = Modifier.testTag("calendar-scroll-mode")
+                    .semantics { contentDescription = scrollModeLabel },
+            ) {
+                Icon(painterResource(Res.drawable.swap_vert), contentDescription = null)
+            }
             FilledTonalIconButton(
                 onClick = onShowFilter,
                 enabled = expandedContentEnabled,
