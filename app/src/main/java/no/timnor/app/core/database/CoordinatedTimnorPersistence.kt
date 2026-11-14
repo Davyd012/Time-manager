@@ -16,6 +16,10 @@ class CoordinatedTimnorPersistence(
 
     override fun observeProjects(): Flow<List<StoredProject>> = delegate.observeProjects()
 
+    override fun observeSharedWorkIds(): Flow<Set<Int>> = delegate.observeSharedWorkIds()
+
+    override fun observeSharedWorkIndicators() = delegate.observeSharedWorkIndicators()
+
     override fun observeWorks(
         startEpochSeconds: Long,
         endEpochSeconds: Long,
@@ -28,6 +32,9 @@ class CoordinatedTimnorPersistence(
     override suspend fun upsertProject(project: StoredProject) =
         coordinator.mutate { delegate.upsertProject(project) }
 
+    override suspend fun createProject(project: StoredProject): StoredProject =
+        coordinator.mutate { delegate.createProject(project) }
+
     override suspend fun deleteProject(project: StoredProject) =
         coordinator.mutate { delegate.deleteProject(project) }
 
@@ -39,6 +46,9 @@ class CoordinatedTimnorPersistence(
 
     override suspend fun deleteWork(work: StoredWork) =
         coordinator.mutate { delegate.deleteWork(work) }
+
+    override suspend fun deleteWork(work: StoredWork, sharedDeletionConfirmed: Boolean) =
+        coordinator.mutate { delegate.deleteWork(work, sharedDeletionConfirmed) }
 
     /** Restore replaces records inside the separate timer-clear gate and DB transaction. */
     override suspend fun replaceAll(projects: List<StoredProject>, works: List<StoredWork>) =

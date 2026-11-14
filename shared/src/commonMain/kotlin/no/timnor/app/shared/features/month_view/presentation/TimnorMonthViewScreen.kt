@@ -93,6 +93,8 @@ fun TimnorMonthViewScreen(
             MonthViewTimeline(
                 works = selectedWorks,
                 projects = state.projects,
+                linkedPlannorProjectNames = state.linkedPlannorProjectNames,
+                sharedWorkIndicators = state.sharedWorkIndicators,
                 modifier = Modifier.fillMaxWidth().weight(1f),
                 onSelectWork = viewModel::editWork,
             )
@@ -103,23 +105,25 @@ fun TimnorMonthViewScreen(
     if (showWorkEditor) {
         WorkEntrySheet(
             state = state,
+            linkedPlannorProjectNames = state.linkedPlannorProjectNames,
             onUpdateWorkDate = viewModel::updateWorkDate,
             onUpdateWorkStartTime = viewModel::updateWorkStartTime,
             onUpdateWorkHours = viewModel::updateWorkHours,
             onUpdateWorkMinutes = viewModel::updateWorkMinutes,
             onUpdateWorkDescription = viewModel::updateWorkDescription,
             onSelectWorkProject = viewModel::selectWorkProject,
+            onSelectPlannorTask = viewModel::selectPlannorTask,
             onSubmit = {
                 viewModel.submitManualWork { saved ->
                     if (saved) showWorkEditor = false
                 }
             },
-            onDelete = { onResult ->
+            onDelete = { confirmed, onResult ->
                 val editingWork = state.works.firstOrNull { it.id == state.editingWorkId }
                 if (editingWork == null) {
                     onResult(true)
                 } else {
-                    viewModel.deleteWork(editingWork, onResult)
+                    viewModel.deleteWork(editingWork, onResult, sharedDeletionConfirmed = confirmed)
                 }
             },
             onSubmitPeriod = { dates ->

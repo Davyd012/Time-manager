@@ -25,6 +25,8 @@ import no.timnor.app.shared.features.settings.domain.TimnorSettingsEffect
 import no.timnor.app.shared.features.settings.domain.TimnorSettingsMessage
 import no.timnor.app.shared.features.settings.domain.TimnorSettingsViewModel
 import no.timnor.app.shared.features.settings.presentation.TimnorSettingsSection
+import no.timnor.app.features.sharedhours.PlannorConnectionSection
+import no.timnor.app.features.sharedhours.PlannorConnectionViewModel
 import java.io.File
 
 /** Collect document effects at the host root so Home export remains available outside Settings. */
@@ -101,6 +103,7 @@ fun AndroidTimnorDocumentEffectHandler(viewModel: TimnorSettingsViewModel) {
 @Composable
 fun SharedSettingsScreen(
     viewModel: TimnorSettingsViewModel,
+    plannorViewModel: PlannorConnectionViewModel,
     onBack: () -> Unit,
     onGoToTimer: () -> Unit,
     onRestored: () -> Unit,
@@ -119,6 +122,7 @@ fun SharedSettingsScreen(
         onConfirmRestore = viewModel::restoreBackup,
         onCancelRestore = viewModel::cancelRestorePreview,
         onGoToStopwatch = onGoToTimer,
+        additionalContent = { PlannorConnectionSection(plannorViewModel) },
     )
 }
 

@@ -32,6 +32,7 @@ import androidx.compose.ui.semantics.Role
 import kotlinx.datetime.LocalDate
 import no.timnor.app.shared.data.persistence.StoredProject
 import no.timnor.app.shared.data.persistence.StoredWork
+import no.timnor.app.core.repository.SharedWorkSyncIndicator
 import no.timnor.app.shared.domain.project.calendarProjectSelectionForApply
 import no.timnor.app.shared.domain.project.toggleProjectSelection
 import no.timnor.app.shared.domain.project.toggleVisibleProjectSelection
@@ -56,6 +57,8 @@ internal fun ProjectFilterSheet(
     projects: List<StoredProject>,
     works: List<StoredWork>,
     month: LocalDate,
+    linkedPlannorProjectNames: Map<Int, String> = emptyMap(),
+    sharedProjectIndicators: Map<Int, SharedWorkSyncIndicator> = emptyMap(),
     selectedProjectIds: Set<Int>?,
     onApply: (Set<Int>?) -> Unit,
     onDismiss: () -> Unit,
@@ -159,6 +162,8 @@ internal fun ProjectFilterSheet(
                         ProjectFilterRow(
                             projectId = project.id,
                             projectName = project.name,
+                            linkedPlannorProjectName = linkedPlannorProjectNames[project.id],
+                            syncIndicator = sharedProjectIndicators[project.id],
                             monthlyHoursLabel = stringResource(
                                 Res.string.project_hours,
                                 formatHours(seconds, localizedDecimalSeparator()),

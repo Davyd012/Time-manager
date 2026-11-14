@@ -14,8 +14,6 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.snapshotFlow
-import kotlinx.coroutines.flow.collect
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.atStartOfDayIn
@@ -57,13 +55,11 @@ internal fun WorkEntryDialogs(
         )
         val currentDate by rememberUpdatedState(date)
         val currentOnDateChange by rememberUpdatedState(onDateChange)
-        LaunchedEffect(pickerState) {
-            snapshotFlow { pickerState.selectedDateMillis }.collect { selectedMillis ->
-                selectedMillis?.let { millis ->
-                    val selectedDate = Instant.fromEpochMilliseconds(millis)
-                        .toLocalDateTime(TimeZone.UTC).date.toString()
-                    if (selectedDate != currentDate) currentOnDateChange(selectedDate)
-                }
+        LaunchedEffect(pickerState.selectedDateMillis) {
+            pickerState.selectedDateMillis?.let { millis ->
+                val selectedDate = Instant.fromEpochMilliseconds(millis)
+                    .toLocalDateTime(TimeZone.UTC).date.toString()
+                if (selectedDate != currentDate) currentOnDateChange(selectedDate)
             }
         }
         DatePickerDialog(

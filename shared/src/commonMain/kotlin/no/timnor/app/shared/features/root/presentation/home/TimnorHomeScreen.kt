@@ -190,6 +190,8 @@ fun TimnorHomeScreen(
                 month = state.calendarMonth,
                 selectedDate = state.selectedCalendarDate,
                 projects = projects,
+                linkedPlannorProjectNames = state.linkedPlannorProjectNames,
+                sharedProjectIndicators = state.sharedWorkIndicatorsByProject,
                 selectedProjectIds = state.selectedCalendarProjectIds,
                 works = works,
                 onMonthChange = viewModel::updateCalendarMonth,
@@ -211,6 +213,8 @@ fun TimnorHomeScreen(
                 selectedDate = state.selectedCalendarDate,
                 works = works,
                 projects = projects,
+                linkedPlannorProjectNames = state.linkedPlannorProjectNames,
+                sharedWorkIndicators = state.sharedWorkIndicators,
                 expansionProgress = calendarProgress,
                 isDraggingCalendar = isDraggingCalendar,
                 modifier = Modifier.fillMaxWidth()
@@ -242,23 +246,25 @@ fun TimnorHomeScreen(
     if (showWorkEditor) {
         WorkEntrySheet(
             state = state,
+            linkedPlannorProjectNames = state.linkedPlannorProjectNames,
             onUpdateWorkDate = viewModel::updateWorkDate,
             onUpdateWorkStartTime = viewModel::updateWorkStartTime,
             onUpdateWorkHours = viewModel::updateWorkHours,
             onUpdateWorkMinutes = viewModel::updateWorkMinutes,
             onUpdateWorkDescription = viewModel::updateWorkDescription,
             onSelectWorkProject = viewModel::selectWorkProject,
+            onSelectPlannorTask = viewModel::selectPlannorTask,
             onSubmit = {
                 viewModel.submitManualWork { saved ->
                     if (saved) showWorkEditor = false
                 }
             },
-            onDelete = { onResult ->
+            onDelete = { confirmed, onResult ->
                 val editingWork = state.works.firstOrNull { it.id == state.editingWorkId }
                 if (editingWork == null) {
                     onResult(true)
                 } else {
-                    viewModel.deleteWork(editingWork, onResult)
+                    viewModel.deleteWork(editingWork, onResult, sharedDeletionConfirmed = confirmed)
                 }
             },
             onSubmitPeriod = { dates ->

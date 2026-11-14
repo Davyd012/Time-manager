@@ -3,6 +3,7 @@ package no.timnor.app.shared.features.settings.presentation
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -52,6 +53,7 @@ import no.timnor.app.shared.generated.resources.go_to_timer
 import no.timnor.app.shared.generated.resources.replace_data
 import no.timnor.app.shared.generated.resources.restore_backup
 import no.timnor.app.shared.generated.resources.restore_confirm_counts
+import no.timnor.app.shared.generated.resources.restore_shared_hours_count
 import no.timnor.app.shared.generated.resources.restore_confirm_message
 import no.timnor.app.shared.generated.resources.restore_confirm_title
 import no.timnor.app.shared.generated.resources.restore_failure
@@ -80,6 +82,7 @@ fun TimnorSettingsSection(
     onConfirmRestore: () -> Unit,
     onCancelRestore: () -> Unit,
     onGoToStopwatch: () -> Unit,
+    additionalContent: @Composable ColumnScope.() -> Unit = {},
 ) {
     val backLabel = stringResource(Res.string.back_to_home)
     Surface(
@@ -108,6 +111,7 @@ fun TimnorSettingsSection(
                 .padding(horizontal = MaterialTheme.timnorSpacing.medium, vertical = MaterialTheme.timnorSpacing.medium),
             verticalArrangement = Arrangement.spacedBy(MaterialTheme.timnorSpacing.medium),
             ) {
+        additionalContent()
         Text(stringResource(Res.string.backup_restore_section), style = MaterialTheme.typography.titleMedium)
         Text(stringResource(Res.string.backup_restore_description), style = MaterialTheme.typography.bodyMedium)
         Button(onClick = onCreateBackup, enabled = !state.busy, modifier = Modifier.fillMaxWidth()) {
@@ -181,6 +185,9 @@ fun TimnorSettingsSection(
                         stringResource(Res.string.backup_work_count_other, preview.workCount)
                     }
                     Text(stringResource(Res.string.restore_confirm_counts, projectCount, workCount))
+                    if (preview.sharedHoursRecordCount > 0) {
+                        Text(stringResource(Res.string.restore_shared_hours_count, preview.sharedHoursRecordCount))
+                    }
                     Text(
                         stringResource(
                             Res.string.backup_created_at,

@@ -25,6 +25,7 @@ import no.timnor.app.R
 import no.timnor.app.di.DIContainer
 import no.timnor.app.features.settings.SharedSettingsScreen
 import no.timnor.app.features.settings.AndroidTimnorDocumentEffectHandler
+import no.timnor.app.features.sharedhours.PlannorConnectionViewModel
 import no.timnor.app.shared.features.settings.domain.TimnorSettingsViewModel
 import no.timnor.app.shared.features.root.domain.TimnorHomeViewModel
 import no.timnor.app.shared.features.root.presentation.home.TimnorHomeScreen
@@ -52,6 +53,17 @@ fun AppNavHost(
     val settingsViewModel = viewModel<TimnorSettingsViewModel>(
         factory = getSharedSettingsViewModelFactory(diContainer),
     )
+    val plannorConnectionViewModel = viewModel<PlannorConnectionViewModel>(
+        factory = getPlannorConnectionViewModelFactory(diContainer),
+    )
+    val plannorState by plannorConnectionViewModel.state.collectAsStateWithLifecycle()
+    SharedWorkSyncTriggers(plannorConnectionViewModel)
+    LaunchedEffect(plannorState.projects) {
+        sharedHomeViewModel.refreshLinkedProjectNames()
+    }
+    LaunchedEffect(sharedHomeState.works, plannorState.projects, plannorState.session?.accountId) {
+        plannorConnectionViewModel.requestSync()
+    }
     AndroidTimnorDocumentEffectHandler(settingsViewModel)
 
     BackHandler(
@@ -112,6 +124,7 @@ fun AppNavHost(
             entry<AppRoute.Settings> {
                 SharedSettingsScreen(
                     viewModel = settingsViewModel,
+                    plannorViewModel = plannorConnectionViewModel,
                     onBack = { navigator.goBack() },
                     onGoToTimer = { navigator.select(AppRoute.Stopwatch) },
                     onRestored = {},

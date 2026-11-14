@@ -23,6 +23,7 @@ import androidx.compose.material3.MaterialTheme
 import kotlinx.datetime.LocalDate
 import no.timnor.app.shared.data.persistence.StoredProject
 import no.timnor.app.shared.data.persistence.StoredWork
+import no.timnor.app.core.repository.SharedWorkSyncIndicator
 import no.timnor.app.shared.features.month_view.presentation.components.MonthViewEmptyState
 import no.timnor.app.shared.features.month_view.presentation.components.MonthViewTimeline
 import no.timnor.app.shared.features.month_view.presentation.components.monthViewWorksForDate
@@ -33,6 +34,8 @@ internal fun HomeDailyWorkList(
     selectedDate: LocalDate,
     works: List<StoredWork>,
     projects: List<StoredProject>,
+    linkedPlannorProjectNames: Map<Int, String> = emptyMap(),
+    sharedWorkIndicators: Map<Int, SharedWorkSyncIndicator> = emptyMap(),
     expansionProgress: Float,
     modifier: Modifier = Modifier,
     isDraggingCalendar: Boolean,
@@ -79,6 +82,8 @@ internal fun HomeDailyWorkList(
                 shape = homeDailyTimelineShape(MaterialTheme.shapes.large),
                 showDuration = true,
                 showProjectMarker = true,
+                linkedPlannorProjectNames = linkedPlannorProjectNames,
+                sharedWorkIndicators = sharedWorkIndicators,
                 onSelectWork = onEditWork,
             )
         }

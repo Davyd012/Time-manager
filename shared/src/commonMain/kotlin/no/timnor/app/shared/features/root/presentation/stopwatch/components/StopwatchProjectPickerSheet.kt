@@ -47,6 +47,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import no.timnor.app.shared.data.persistence.StoredProject
+import no.timnor.app.core.repository.SharedWorkSyncIndicator
+import no.timnor.app.shared.features.shared_hours.presentation.SharedWorkSyncLabel
 import no.timnor.app.shared.features.root.domain.TimnorHomeError
 import no.timnor.app.shared.generated.resources.Res
 import no.timnor.app.shared.generated.resources.delete
@@ -58,6 +60,7 @@ import no.timnor.app.shared.generated.resources.icon_add
 import no.timnor.app.shared.generated.resources.no_projects
 import no.timnor.app.shared.generated.resources.project_add
 import no.timnor.app.shared.generated.resources.project_picker_title
+import no.timnor.app.shared.generated.resources.plannor_linked_project_label
 import no.timnor.app.shared.generated.resources.storage_error
 import no.timnor.app.shared.generated.resources.stopwatch_project_locked
 import no.timnor.app.shared.platform.motion.rememberSystemAnimationsEnabled
@@ -70,6 +73,8 @@ import org.jetbrains.compose.resources.stringResource
 internal fun StopwatchProjectPickerSheet(
     projects: List<StoredProject>,
     selectedProjectId: Int,
+    linkedPlannorProjectNames: Map<Int, String> = emptyMap(),
+    sharedProjectIndicators: Map<Int, SharedWorkSyncIndicator> = emptyMap(),
     error: TimnorHomeError?,
     onSelectProject: (Int) -> Unit,
     onEditProject: (StoredProject) -> Unit,
@@ -100,6 +105,8 @@ internal fun StopwatchProjectPickerSheet(
                         SwipeableStopwatchProjectRow(
                             project = project,
                             selected = project.id == selectedProjectId,
+                            linkedPlannorProjectName = linkedPlannorProjectNames[project.id],
+                            sharedWorkIndicator = sharedProjectIndicators[project.id],
                             onSelect = { onSelectProject(project.id) },
                             onEdit = { onEditProject(project) },
                             onDelete = { onResult -> onDeleteProject(project, onResult) },
@@ -138,6 +145,8 @@ internal fun StopwatchProjectPickerSheet(
 private fun SwipeableStopwatchProjectRow(
     project: StoredProject,
     selected: Boolean,
+    linkedPlannorProjectName: String?,
+    sharedWorkIndicator: SharedWorkSyncIndicator?,
     onSelect: () -> Unit,
     onEdit: () -> Unit,
     onDelete: ((Boolean) -> Unit) -> Unit,
@@ -179,7 +188,6 @@ private fun SwipeableStopwatchProjectRow(
     ) {
         SwipeToDismissBox(
             state = dismissState,
-            modifier = Modifier.testTag("stopwatch-project-${project.id}"),
             backgroundContent = {
                 Row(
                     modifier = Modifier.fillMaxSize()
@@ -202,7 +210,9 @@ private fun SwipeableStopwatchProjectRow(
             content = {
                 Surface(
                     onClick = onSelect,
-                    modifier = Modifier.fillMaxWidth().semantics {
+                    modifier = Modifier.fillMaxWidth()
+                        .testTag("stopwatch-project-${project.id}")
+                        .semantics {
                         this.selected = selected
                         customActions = listOf(
                             CustomAccessibilityAction(editActionLabel) {
@@ -224,13 +234,24 @@ private fun SwipeableStopwatchProjectRow(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.spacedBy(MaterialTheme.timnorSpacing.medium),
                     ) {
-                        Text(
-                            project.name,
-                            modifier = Modifier.weight(1f),
-                            style = MaterialTheme.typography.bodyLarge,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                        )
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                project.name,
+                                style = MaterialTheme.typography.bodyLarge,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            linkedPlannorProjectName?.let { linkedName ->
+                                Text(
+                                    stringResource(Res.string.plannor_linked_project_label, linkedName),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+                            sharedWorkIndicator?.let { indicator -> SharedWorkSyncLabel(indicator) }
+                        }
                         if (selected) Icon(painterResource(Res.drawable.done), contentDescription = null)
                     }
                 }

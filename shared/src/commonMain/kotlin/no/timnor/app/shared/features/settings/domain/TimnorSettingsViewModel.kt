@@ -15,10 +15,10 @@ import kotlinx.datetime.LocalDate
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Clock
-import no.timnor.app.shared.data.backup.TimnorBackupV1
+import no.timnor.app.shared.data.backup.TimnorBackupImport
 import no.timnor.app.shared.data.backup.UnsupportedTimnorBackupVersionException
-import no.timnor.app.shared.data.backup.decodeTimnorBackupV1
-import no.timnor.app.shared.data.backup.encodeTimnorBackupV1
+import no.timnor.app.shared.data.backup.decodeTimnorBackup
+import no.timnor.app.shared.data.backup.encodeTimnorBackupV2
 import no.timnor.app.shared.data.backup.toStoredProjects
 import no.timnor.app.shared.data.backup.toStoredWorks
 import no.timnor.app.shared.data.export.createTimnorXlsx
@@ -28,6 +28,7 @@ import no.timnor.app.shared.platform.documents.TimnorRestoreGate
 data class TimnorRestorePreview(
     val projectCount: Int,
     val workCount: Int,
+    val sharedHoursRecordCount: Int,
     val createdAt: String,
 )
 
@@ -75,7 +76,7 @@ class TimnorSettingsViewModel(
     private val mutableEffects = MutableSharedFlow<TimnorSettingsEffect>(extraBufferCapacity = 1)
     val effects: SharedFlow<TimnorSettingsEffect> = mutableEffects.asSharedFlow()
 
-    private var pendingBackup: TimnorBackupV1? = null
+    private var pendingBackup: TimnorBackupImport? = null
 
     fun createBackup() = createBackup(share = false)
 
@@ -90,8 +91,12 @@ class TimnorSettingsViewModel(
         viewModelScope.launch {
             mutableState.value = TimnorSettingsUiState(busy = true, progress = TimnorSettingsProgress.CreatingBackup)
             try {
-                val snapshot = persistence.snapshotAll()
-                val contents = encodeTimnorBackupV1(snapshot.projects, snapshot.works)
+                val snapshot = persistence.snapshotBackup()
+                val contents = encodeTimnorBackupV2(
+                    snapshot.projects,
+                    snapshot.works,
+                    snapshot.sharedHoursRecords,
+                )
                 val today = currentLocalDate()
                 val name = if (share) "timnor-backup-$today.json" else "time-manager-backup-$today.json"
                 mutableEffects.emit(
@@ -117,12 +122,13 @@ class TimnorSettingsViewModel(
         viewModelScope.launch {
             mutableState.value = TimnorSettingsUiState(busy = true, progress = TimnorSettingsProgress.CheckingBackup)
             try {
-                val backup = decodeTimnorBackupV1(contents)
+                val backup = decodeTimnorBackup(contents)
                 pendingBackup = backup
                 mutableState.value = TimnorSettingsUiState(
                     preview = TimnorRestorePreview(
                         projectCount = backup.projects.size,
                         workCount = backup.works.size,
+                        sharedHoursRecordCount = backup.sharedHoursRecords.size,
                         createdAt = backup.createdAt,
                     ),
                 )
@@ -150,7 +156,11 @@ class TimnorSettingsViewModel(
             mutableState.update { it.copy(busy = true, progress = TimnorSettingsProgress.RestoringBackup, timerBlocked = false) }
             try {
                 val restored = restoreGate.withTimerClear {
-                    persistence.replaceAll(backup.toStoredProjects(), backup.toStoredWorks())
+                    persistence.replaceAll(
+                        backup.toStoredProjects(),
+                        backup.toStoredWorks(),
+                        backup.sharedHoursRecords,
+                    )
                 }
                 if (!restored) {
                     mutableState.value = mutableState.value.copy(

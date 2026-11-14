@@ -21,6 +21,7 @@ import androidx.compose.ui.semantics.stateDescription
 import kotlinx.datetime.LocalDate
 import no.timnor.app.shared.data.persistence.StoredProject
 import no.timnor.app.shared.data.persistence.StoredWork
+import no.timnor.app.core.repository.SharedWorkSyncIndicator
 import no.timnor.app.shared.features.calendar.presentation.components.ProjectFilterSheet
 import no.timnor.app.shared.generated.resources.Res
 import no.timnor.app.shared.generated.resources.calendar_closed_state
@@ -45,6 +46,8 @@ internal fun CalendarSection(
     month: LocalDate,
     selectedDate: LocalDate,
     projects: List<StoredProject>,
+    linkedPlannorProjectNames: Map<Int, String> = emptyMap(),
+    sharedProjectIndicators: Map<Int, SharedWorkSyncIndicator> = emptyMap(),
     selectedProjectIds: Set<Int>?,
     works: List<StoredWork>,
     onMonthChange: (LocalDate) -> Unit,
@@ -156,6 +159,8 @@ internal fun CalendarSection(
             projects = projects,
             works = works,
             month = month,
+            linkedPlannorProjectNames = linkedPlannorProjectNames,
+            sharedProjectIndicators = sharedProjectIndicators,
             selectedProjectIds = selectedProjectIds,
             onApply = onApplyProjectFilter,
             onDismiss = { showFilterSheet = false },

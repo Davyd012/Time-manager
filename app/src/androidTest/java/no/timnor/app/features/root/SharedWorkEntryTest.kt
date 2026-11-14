@@ -44,6 +44,30 @@ class SharedWorkEntryTest {
     val composeRule = createAndroidComposeRule<ComponentActivity>()
 
     @Test
+    fun sharedWorkDeletionRequiresConfirmation() {
+        val date = LocalDate(2026, 11, 10)
+        val persistence = WorkPersistence(date)
+        val viewModel = TimnorHomeViewModel(persistence, IdleStopwatch(), date,
+            observeSharedWorkIds = { flowOf(setOf(1)) })
+        composeRule.setContent {
+            val state by viewModel.state.collectAsState()
+            TimnorTheme(darkTheme = false) {
+                TimnorHomeScreen(state = state, viewModel = viewModel, homeReselectionCount = 0, onMonthView = {})
+            }
+        }
+        composeRule.waitUntil(5_000) { viewModel.state.value.works.isNotEmpty() && 1 in viewModel.state.value.sharedWorkIds }
+        composeRule.onNodeWithTag("work-entry-1").performClick()
+        composeRule.onNodeWithTag("delete-work").performScrollTo().performClick()
+        composeRule.onNodeWithText("Slette registrering?").assertIsDisplayed()
+        composeRule.onNodeWithText("Avbryt").performClick()
+        assertEquals(1, viewModel.state.value.works.size)
+        composeRule.onNodeWithTag("delete-work").performScrollTo().performClick()
+        composeRule.onNodeWithText("Slett").performClick()
+        composeRule.waitUntil(5_000) { viewModel.state.value.works.isEmpty() }
+        assertEquals(true, persistence.sharedDeletionConfirmed)
+    }
+
+    @Test
     fun existingWorkOpensEditorAndCanBeDeleted() {
         val date = LocalDate(2026, 11, 10)
         val viewModel = TimnorHomeViewModel(WorkPersistence(date), IdleStopwatch(), date)
@@ -56,9 +80,10 @@ class SharedWorkEntryTest {
         composeRule.waitUntil(5_000) { viewModel.state.value.works.isNotEmpty() }
         composeRule.onNodeWithTag("work-entry-1").performClick()
         composeRule.onNodeWithText("Registrer timer").assertIsDisplayed()
-        composeRule.onNodeWithTag("work-entry-sheet-drag-handle").assertIsDisplayed()
+        composeRule.onNodeWithTag("work-entry-sheet-drag-handle", useUnmergedTree = true).assertIsDisplayed()
         composeRule.onAllNodesWithText("Avbryt").assertCountEquals(0)
-        composeRule.onNodeWithContentDescription("Fjern").assertIsDisplayed()
+        composeRule.onNodeWithTag("delete-work").performScrollTo()
+        composeRule.onNodeWithContentDescription("Fjern", useUnmergedTree = true).assertExists()
         composeRule.onNodeWithTag("delete-work")
             .assertWidthIsEqualTo(56.dp)
             .assertHeightIsEqualTo(56.dp)
@@ -171,7 +196,7 @@ class SharedWorkEntryTest {
             .toLocalDateTime(TimeZone.currentSystemDefault()).year - 1
         composeRule.onNodeWithTag("month-export-previous-year").performClick()
         composeRule.onNodeWithTag("month-export-option-0").performClick()
-        composeRule.onNodeWithText("Test").performClick()
+        composeRule.onNodeWithTag("month-export-project-1").performClick()
         composeRule.onNodeWithText("Eksporter").performClick()
 
         assertEquals(Triple(expectedYear, 1, setOf(1)), exported)
@@ -228,7 +253,10 @@ class SharedWorkEntryTest {
         composeRule.waitUntil(5_000) { viewModel.state.value.works.isNotEmpty() }
         composeRule.onNodeWithTag("work-entry-1").performClick()
         composeRule.onNodeWithTag("work-date-picker-field").performScrollTo().performClick()
-        composeRule.onNodeWithText("15", useUnmergedTree = true).performClick()
+        composeRule.onNodeWithText("OK").assertIsDisplayed()
+        composeRule.onNodeWithText("Sunday, November 15, 2026", useUnmergedTree = true)
+            .performClick()
+            .assertIsSelected()
 
         composeRule.waitUntil(5_000) { viewModel.state.value.workDate == "2026-11-15" }
         composeRule.onNodeWithText("OK").assertIsDisplayed()
@@ -276,8 +304,8 @@ class SharedWorkEntryTest {
         composeRule.onNodeWithText("Perioderegistrering").assertIsDisplayed().performClick()
 
         composeRule.onNodeWithText("Velg start- og sluttdato").assertIsDisplayed()
-        composeRule.onNodeWithText("Perioderegistrering").performClick()
-        composeRule.onNodeWithTag("save-work").assertIsDisplayed()
+        composeRule.onNodeWithText("Periode").assertIsDisplayed()
+        composeRule.onNodeWithText("Perioderegistrering").assertIsDisplayed()
     }
 
     @Test
@@ -306,6 +334,7 @@ private class WorkPersistence(
     private val failDelete: Boolean = false,
     private val projects: List<StoredProject> = listOf(StoredProject(description = "", name = "Test", id = 1)),
 ) : TimnorPersistence {
+    var sharedDeletionConfirmed = false
     private val project = projects.first()
     private val works = MutableStateFlow(
         listOf(
@@ -330,6 +359,10 @@ private class WorkPersistence(
     override suspend fun deleteWork(work: StoredWork) {
         if (failDelete) error("Delete failed")
         works.value = works.value.filterNot { it.id == work.id }
+    }
+    override suspend fun deleteWork(work: StoredWork, sharedDeletionConfirmed: Boolean) {
+        this.sharedDeletionConfirmed = sharedDeletionConfirmed
+        deleteWork(work)
     }
     override suspend fun replaceAll(projects: List<StoredProject>, works: List<StoredWork>) = Unit
 }

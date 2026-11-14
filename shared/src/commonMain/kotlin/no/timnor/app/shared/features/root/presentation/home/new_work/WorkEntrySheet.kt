@@ -12,7 +12,13 @@ import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import kotlinx.datetime.LocalDate
@@ -25,6 +31,10 @@ import no.timnor.app.shared.generated.resources.invalid_project
 import no.timnor.app.shared.generated.resources.invalid_work
 import no.timnor.app.shared.generated.resources.storage_error
 import no.timnor.app.shared.generated.resources.stopwatch_project_locked
+import no.timnor.app.shared.generated.resources.delete_work_title
+import no.timnor.app.shared.generated.resources.delete_shared_work_confirmation
+import no.timnor.app.shared.generated.resources.delete
+import no.timnor.app.shared.generated.resources.cancel
 import no.timnor.app.shared.ui.theme.timnorSpacing
 import org.jetbrains.compose.resources.stringResource
 
@@ -32,19 +42,26 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 internal fun WorkEntrySheet(
     state: TimnorHomeUiState,
+    linkedPlannorProjectNames: Map<Int, String> = emptyMap(),
     onUpdateWorkDate: (String) -> Unit,
     onUpdateWorkStartTime: (String) -> Unit,
     onUpdateWorkHours: (String) -> Unit,
     onUpdateWorkMinutes: (String) -> Unit,
     onUpdateWorkDescription: (String) -> Unit,
     onSelectWorkProject: (Int) -> Unit,
+    onSelectPlannorTask: (Int?) -> Unit,
     onSubmit: () -> Unit,
-    onDelete: ((Boolean) -> Unit) -> Unit,
+    onDelete: (Boolean, (Boolean) -> Unit) -> Unit,
     onSubmitPeriod: (List<LocalDate>) -> Unit,
     onCancel: () -> Unit,
     onDismiss: () -> Unit,
     showDragHandle: Boolean,
 ) {
+    var confirmSharedDeletion by remember(state.editingWorkId) { mutableStateOf(false) }
+    fun delete(confirmed: Boolean) {
+        onCancel()
+        onDelete(confirmed) { _ -> }
+    }
     val selectedProjectId = state.workProjectId?.takeIf { id -> state.projects.any { it.id == id } }
         ?: state.projects.firstOrNull()?.id
     val canSave = selectedProjectId != null &&
@@ -68,8 +85,14 @@ internal fun WorkEntrySheet(
         ) {
             WorkEntrySection(
                 projects = state.projects,
+                linkedPlannorProjectNames = linkedPlannorProjectNames,
+                sharedProjectIndicators = state.sharedWorkIndicatorsByProject,
+                editingSyncIndicator = state.editingWorkSyncIndicator,
                 selectedProjectId = selectedProjectId,
                 onProjectSelected = onSelectWorkProject,
+                taskOptions = state.linkedPlannorTasks,
+                selectedTaskId = state.selectedPlannorTaskId,
+                onTaskSelected = onSelectPlannorTask,
                 date = state.workDate,
                 onDateChange = onUpdateWorkDate,
                 startTime = state.workStartTime,
@@ -84,11 +107,8 @@ internal fun WorkEntrySheet(
                 canSave = canSave,
                 onSave = onSubmit,
                 onDelete = {
-                    onCancel()
-                    onDelete { _ ->
-                        // The editor closes immediately, matching the legacy action. A failure is
-                        // reported by the home screen after the sheet has closed.
-                    }
+                    if (state.editingWorkId?.let { it in state.sharedWorkIds } == true) confirmSharedDeletion = true
+                    else delete(false)
                 },
                 onSubmitPeriod = onSubmitPeriod,
             )
@@ -106,6 +126,23 @@ internal fun WorkEntrySheet(
                 )
             }
         }
+    }
+    if (confirmSharedDeletion) {
+        AlertDialog(
+            onDismissRequest = { confirmSharedDeletion = false },
+            title = { Text(stringResource(Res.string.delete_work_title)) },
+            text = { Text(stringResource(Res.string.delete_shared_work_confirmation)) },
+            confirmButton = {
+                TextButton(onClick = { confirmSharedDeletion = false; delete(true) }) {
+                    Text(stringResource(Res.string.delete))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmSharedDeletion = false }) {
+                    Text(stringResource(Res.string.cancel))
+                }
+            },
+        )
     }
 }
 

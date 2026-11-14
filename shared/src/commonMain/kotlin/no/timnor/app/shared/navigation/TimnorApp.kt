@@ -1,6 +1,7 @@
 package no.timnor.app.shared.navigation
 
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -31,6 +32,7 @@ fun TimnorApp(
     settingsViewModel: TimnorSettingsViewModel,
     onSettingsEffect: suspend (TimnorSettingsEffect) -> Unit = {},
     onPlatformBackHandlerChanged: (canGoBack: Boolean, handleBack: () -> Unit) -> Unit = { _, _ -> },
+    additionalSettingsContent: @Composable ColumnScope.() -> Unit = {},
 ) {
     var selectedTab by rememberSaveable { mutableStateOf(SharedAppTab.Home) }
     var homeRoute by rememberSaveable { mutableStateOf(SharedHomeRoute.Home) }
@@ -135,6 +137,7 @@ fun TimnorApp(
                         onConfirmRestore = settingsViewModel::restoreBackup,
                         onCancelRestore = settingsViewModel::cancelRestorePreview,
                         onGoToStopwatch = { selectedTab = SharedAppTab.Stopwatch },
+                        additionalContent = additionalSettingsContent,
                     )
                 }
             }

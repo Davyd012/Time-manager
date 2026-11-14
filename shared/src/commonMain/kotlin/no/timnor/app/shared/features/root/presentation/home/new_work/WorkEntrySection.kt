@@ -2,9 +2,13 @@ package no.timnor.app.shared.features.root.presentation.home.new_work
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -15,6 +19,9 @@ import androidx.compose.ui.Modifier
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.Month
 import no.timnor.app.shared.data.persistence.StoredProject
+import no.timnor.app.shared.features.shared_hours.domain.PlannorTaskOption
+import no.timnor.app.core.repository.SharedWorkSyncIndicator
+import no.timnor.app.shared.features.shared_hours.presentation.SharedWorkSyncLabel
 import no.timnor.app.shared.domain.work.formatWorkDateInput
 import no.timnor.app.shared.features.root.presentation.newProject.components.ProjectSelector
 import no.timnor.app.shared.generated.resources.Res
@@ -45,6 +52,7 @@ import no.timnor.app.shared.generated.resources.work_period_select_range
 import no.timnor.app.shared.generated.resources.work_period_single_date
 import no.timnor.app.shared.generated.resources.work_project_hint
 import no.timnor.app.shared.generated.resources.work_time_details
+import no.timnor.app.shared.generated.resources.work_task_optional
 import no.timnor.app.shared.generated.resources.work_title
 import no.timnor.app.shared.ui.theme.timnorSpacing
 import org.jetbrains.compose.resources.stringResource
@@ -53,8 +61,14 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 internal fun WorkEntrySection(
     projects: List<StoredProject>,
+    linkedPlannorProjectNames: Map<Int, String>,
+    sharedProjectIndicators: Map<Int, SharedWorkSyncIndicator>,
+    editingSyncIndicator: SharedWorkSyncIndicator?,
     selectedProjectId: Int?,
     onProjectSelected: (Int) -> Unit,
+    taskOptions: List<PlannorTaskOption>,
+    selectedTaskId: Int?,
+    onTaskSelected: (Int?) -> Unit,
     date: String,
     onDateChange: (String) -> Unit,
     startTime: String,
@@ -81,19 +95,34 @@ internal fun WorkEntrySection(
 
     Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.timnorSpacing.small)) {
         Text(
-            stringResource(if (periodRegistration) Res.string.work_period_label else Res.string.work_date_label),
+            stringResource(
+                if (periodRegistration) Res.string.work_period_label
+                else Res.string.work_date_label,
+            ),
             style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Text(dateHeader, style = MaterialTheme.typography.titleMedium)
+        if (dateHeader.isNotBlank()) {
+            Text(dateHeader, style = MaterialTheme.typography.titleMedium)
+        }
         Text(stringResource(Res.string.work_title), style = MaterialTheme.typography.headlineSmall)
+        editingSyncIndicator?.let { SharedWorkSyncLabel(it) }
         Text(stringResource(Res.string.work_project_hint), style = MaterialTheme.typography.labelLarge)
         ProjectSelector(
             projects = projects,
+            linkedPlannorProjectNames = linkedPlannorProjectNames,
+            sharedProjectIndicators = sharedProjectIndicators,
             selectedProjectId = selectedProjectId,
             onProjectSelected = onProjectSelected,
         )
+        if (!periodRegistration && taskOptions.isNotEmpty()) {
+            WorkTaskSelector(taskOptions, selectedTaskId, onTaskSelected)
+        }
         Text(stringResource(Res.string.work_time_details), style = MaterialTheme.typography.labelLarge)
+        WorkPeriodRegistrationSwitch(
+            enabled = periodRegistration,
+            onEnabledChange = { periodRegistration = it },
+        )
         WorkEntryManualFields(
             date = date,
             onDateChange = onDateChange,
@@ -114,10 +143,6 @@ internal fun WorkEntrySection(
             value = description,
             onValueChange = onDescriptionChange,
         )
-        WorkPeriodRegistrationSwitch(
-            enabled = periodRegistration,
-            onEnabledChange = { periodRegistration = it },
-        )
         WorkEntryActions(
             isEditing = isEditing,
             periodRegistration = periodRegistration,
@@ -132,13 +157,51 @@ internal fun WorkEntrySection(
 }
 
 @Composable
+private fun WorkTaskSelector(
+    tasks: List<PlannorTaskOption>,
+    selectedTaskId: Int?,
+    onTaskSelected: (Int?) -> Unit,
+) {
+    var expanded by remember(selectedTaskId, tasks) { mutableStateOf(false) }
+    val selectedTask = tasks.firstOrNull { it.taskId == selectedTaskId }
+    Column {
+        Text(
+            stringResource(Res.string.work_task_optional),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        androidx.compose.foundation.layout.Box {
+            OutlinedButton(
+                onClick = { expanded = true },
+                modifier = Modifier.fillMaxWidth(),
+                shape = MaterialTheme.shapes.small,
+            ) {
+                Text(selectedTask?.headline ?: stringResource(Res.string.work_task_optional))
+            }
+            DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                DropdownMenuItem(
+                    text = { Text(stringResource(Res.string.work_task_optional)) },
+                    onClick = { onTaskSelected(null); expanded = false },
+                )
+                tasks.forEach { task ->
+                    DropdownMenuItem(
+                        text = { Text(task.headline) },
+                        onClick = { onTaskSelected(task.taskId); expanded = false },
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
 private fun PeriodHeader(
     periodRegistration: Boolean,
     date: String,
     periodDates: List<LocalDate>,
 ): String = when {
     !periodRegistration -> localizedWorkDateHeader(date)
-    periodDates.isEmpty() -> stringResource(Res.string.work_period_select_range)
+    periodDates.isEmpty() -> ""
     periodDates.size == 1 -> stringResource(
         Res.string.work_period_single_date,
         localizedWorkDateHeader(periodDates.single().toString()),

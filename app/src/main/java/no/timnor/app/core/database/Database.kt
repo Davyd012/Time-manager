@@ -7,14 +7,18 @@ import no.timnor.app.core.database.project.Project
 import no.timnor.app.core.database.project.ProjectDao
 import no.timnor.app.core.database.work.Work
 import no.timnor.app.core.database.work.WorkDao
+import no.timnor.app.core.database.sharedhours.SharedHoursRecord
+import no.timnor.app.core.database.sharedhours.SharedHoursRecordDao
 
 @Database(
-    entities = [Work::class, Project::class],
-    version = 1,
+    entities = [Work::class, Project::class, SharedHoursRecord::class],
+    version = 2,
 )
 @TypeConverters(Converters::class)
 abstract class Database : RoomDatabase() {
     abstract fun workDao(): WorkDao
 
     abstract fun projectDao(): ProjectDao
+
+    abstract fun sharedHoursRecordDao(): SharedHoursRecordDao
 }

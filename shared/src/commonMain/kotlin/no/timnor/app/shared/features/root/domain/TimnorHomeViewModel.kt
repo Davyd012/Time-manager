@@ -7,6 +7,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.datetime.LocalDateTime
@@ -30,9 +32,18 @@ import no.timnor.app.shared.domain.project.toggleProjectSelection
 import no.timnor.app.shared.domain.stopwatch.canChangeStopwatchProject
 import no.timnor.app.shared.platform.stopwatch.StopwatchPlatform
 import no.timnor.app.shared.platform.stopwatch.StopwatchSnapshot
+import no.timnor.app.shared.features.shared_hours.domain.PlannorTaskOption
+import no.timnor.app.core.repository.SharedWorkSyncIndicator
 
 data class TimnorHomeUiState(
     val projects: List<StoredProject> = emptyList(),
+    val linkedPlannorProjectNames: Map<Int, String> = emptyMap(),
+    val sharedWorkIds: Set<Int> = emptySet(),
+    val sharedWorkIndicators: Map<Int, SharedWorkSyncIndicator> = emptyMap(),
+    val linkedPlannorTasks: List<PlannorTaskOption> = emptyList(),
+    val selectedPlannorTaskId: Int? = null,
+    val stopwatchPlannorTasks: List<PlannorTaskOption> = emptyList(),
+    val selectedStopwatchPlannorTaskId: Int? = null,
     val works: List<StoredWork> = emptyList(),
     val stopwatch: StopwatchSnapshot = StopwatchSnapshot(),
     val selectedProjectId: Int? = null,
@@ -52,7 +63,19 @@ data class TimnorHomeUiState(
     /** Null selects every current project, matching the Android calendar filter semantics. */
     val selectedCalendarProjectIds: Set<Int>? = null,
     val error: TimnorHomeError? = null,
-)
+) {
+    val sharedWorkIndicatorsByProject: Map<Int, SharedWorkSyncIndicator>
+        get() {
+            val projectsByWorkId = works.associate { it.id to it.project }
+            return sharedWorkIndicators.mapNotNull { (workId, indicator) ->
+                projectsByWorkId[workId]?.let { it to indicator }
+            }.groupBy({ it.first }, { it.second })
+                .mapValues { (_, indicators) -> indicators.maxBy(SharedWorkSyncIndicator::ordinal) }
+        }
+
+    val editingWorkSyncIndicator: SharedWorkSyncIndicator?
+        get() = editingWorkId?.let(sharedWorkIndicators::get)
+}
 
 enum class TimnorHomeError { INVALID_PROJECT, INVALID_WORK, STORAGE, ACTIVE_STOPWATCH_PROJECT }
 
@@ -61,6 +84,11 @@ class TimnorHomeViewModel(
     private val persistence: TimnorPersistence,
     private val stopwatch: StopwatchPlatform,
     initialDate: LocalDate = currentLocalDate(),
+    private val loadLinkedPlannorProjects: suspend () -> Map<Int, String> = { emptyMap() },
+    private val observeSharedWorkIds: () -> Flow<Set<Int>> = { flowOf(emptySet()) },
+    private val observeSharedWorkIndicators: () -> Flow<Map<Int, SharedWorkSyncIndicator>> = { flowOf(emptyMap()) },
+    private val loadLinkedPlannorTasks: suspend (Int) -> List<PlannorTaskOption> = { emptyList() },
+    private val onSharedWorkChanged: () -> Unit = {},
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(
         TimnorHomeUiState(
@@ -71,6 +99,15 @@ class TimnorHomeViewModel(
     val state: StateFlow<TimnorHomeUiState> = mutableState.asStateFlow()
 
     init {
+        viewModelScope.launch {
+            observeSharedWorkIds().collect { ids -> mutableState.update { it.copy(sharedWorkIds = ids) } }
+        }
+        viewModelScope.launch {
+            observeSharedWorkIndicators().collect { indicators ->
+                mutableState.update { it.copy(sharedWorkIndicators = indicators) }
+            }
+        }
+        refreshLinkedProjectNames()
         viewModelScope.launch {
             persistence.observeProjects().collect { projects ->
                 mutableState.update { current ->
@@ -97,7 +134,18 @@ class TimnorHomeViewModel(
             }
         }
         viewModelScope.launch {
-            stopwatch.state.collect { timer -> mutableState.update { it.copy(stopwatch = timer) } }
+            stopwatch.state.collect { timer ->
+                val selectedProjectChanged = timer.selectedProject != mutableState.value.stopwatch.selectedProject
+                mutableState.update { it.copy(stopwatch = timer) }
+                if (selectedProjectChanged) loadTasksForStopwatchProject(timer.selectedProject)
+            }
+        }
+    }
+
+    fun refreshLinkedProjectNames() {
+        viewModelScope.launch {
+            val linked = runCatching { loadLinkedPlannorProjects() }.getOrDefault(emptyMap())
+            mutableState.update { it.copy(linkedPlannorProjectNames = linked) }
         }
     }
 
@@ -223,9 +271,12 @@ class TimnorHomeViewModel(
                 workMinutes = "0",
                 workDescription = "",
                 editingWorkId = null,
+                linkedPlannorTasks = emptyList(),
+                selectedPlannorTaskId = null,
                 error = null,
             )
         }
+        mutableState.value.workProjectId?.let(::loadTasksForLocalProject)
     }
 
     fun updateCalendarMonth(month: LocalDate) {
@@ -272,12 +323,40 @@ class TimnorHomeViewModel(
 
     fun selectProject(projectId: Int) {
         if (!canChangeStopwatchProject(mutableState.value.stopwatch.elapsedSeconds)) return
-        mutableState.update { it.copy(selectedProjectId = projectId, error = null) }
+        mutableState.update {
+            it.copy(
+                selectedProjectId = projectId,
+                stopwatchPlannorTasks = emptyList(),
+                selectedStopwatchPlannorTaskId = null,
+                error = null,
+            )
+        }
         stopwatch.selectProject(projectId)
+        loadTasksForStopwatchProject(projectId)
+    }
+
+    fun selectStopwatchPlannorTask(taskId: Int?) {
+        val current = mutableState.value
+        if (taskId != null && current.stopwatchPlannorTasks.none { it.taskId == taskId }) return
+        mutableState.update { it.copy(selectedStopwatchPlannorTaskId = taskId) }
     }
 
     fun selectWorkProject(projectId: Int) {
-        mutableState.update { it.copy(workProjectId = projectId, error = null) }
+        mutableState.update {
+            it.copy(
+                workProjectId = projectId,
+                linkedPlannorTasks = emptyList(),
+                selectedPlannorTaskId = null,
+                error = null,
+            )
+        }
+        loadTasksForLocalProject(projectId)
+    }
+
+    fun selectPlannorTask(taskId: Int?) {
+        val current = mutableState.value
+        if (taskId != null && current.linkedPlannorTasks.none { it.taskId == taskId }) return
+        mutableState.update { it.copy(selectedPlannorTaskId = taskId) }
     }
 
     fun addManualWork(
@@ -288,7 +367,7 @@ class TimnorHomeViewModel(
         description: String,
         startTime: String = "07:00",
     ) {
-        saveManualWork(null, projectId, date, hours, minutes, description, startTime)
+        saveManualWork(null, projectId, date, hours, minutes, description, startTime, taskId = null)
     }
 
     fun saveManualWork(
@@ -299,6 +378,7 @@ class TimnorHomeViewModel(
         minutes: String,
         description: String,
         startTime: String = "07:00",
+        taskId: Int? = null,
         onResult: (Boolean) -> Unit = {},
     ) {
         val draft = createManualWork(
@@ -313,7 +393,11 @@ class TimnorHomeViewModel(
         val secondsRemainder = existing?.time?.rem(60) ?: 0
         val work = draft?.let { entry ->
             val time = entry.time.toLong() + secondsRemainder
-            if (time > Int.MAX_VALUE) null else entry.copy(id = workId ?: entry.id, time = time.toInt())
+            if (time > Int.MAX_VALUE) null else entry.copy(
+                id = workId ?: entry.id,
+                time = time.toInt(),
+                task = taskId ?: 0,
+            )
         }
         if (work == null) {
             mutableState.update { it.copy(error = TimnorHomeError.INVALID_WORK) }
@@ -359,6 +443,7 @@ class TimnorHomeViewModel(
             minutes = form.workMinutes,
             description = form.workDescription,
             startTime = startTime,
+            taskId = form.selectedPlannorTaskId,
             onResult = onResult,
         )
     }
@@ -404,9 +489,12 @@ class TimnorHomeViewModel(
                 workHours = (work.time / 3600).toString(),
                 workMinutes = (work.time % 3600 / 60).toString(),
                 workDescription = work.description,
+                linkedPlannorTasks = emptyList(),
+                selectedPlannorTaskId = work.task.takeIf { it > 0 },
                 error = null,
             )
         }
+        loadTasksForLocalProject(work.project, work.task.takeIf { it > 0 })
     }
 
     fun cancelWorkEdit() {
@@ -418,13 +506,15 @@ class TimnorHomeViewModel(
                 workStartTime = "00:00",
                 workStartTimeManuallySet = false,
                 workDescription = "",
+                linkedPlannorTasks = emptyList(),
+                selectedPlannorTaskId = null,
             )
         }
     }
 
-    fun deleteWork(work: StoredWork, onResult: ((Boolean) -> Unit)? = null) {
+    fun deleteWork(work: StoredWork, onResult: ((Boolean) -> Unit)? = null, sharedDeletionConfirmed: Boolean = false) {
         performStorageAction(onResult) {
-            persistence.deleteWork(work)
+            persistence.deleteWork(work, sharedDeletionConfirmed)
             if (mutableState.value.editingWorkId == work.id) cancelWorkEdit()
         }
     }
@@ -452,7 +542,7 @@ class TimnorHomeViewModel(
             description = "",
             dateEpochSeconds = utcEpochSecondsFromLocalDateTime(localStart),
             project = projectId,
-            task = 0,
+            task = mutableState.value.selectedStopwatchPlannorTaskId ?: 0,
             time = timer.elapsedSeconds,
         )
         performStorageAction {
@@ -469,6 +559,7 @@ class TimnorHomeViewModel(
         viewModelScope.launch {
             try {
                 action()
+                onSharedWorkChanged()
                 mutableState.update { it.copy(error = null) }
                 onResult?.invoke(true)
             } catch (cancellation: CancellationException) {
@@ -476,6 +567,34 @@ class TimnorHomeViewModel(
             } catch (_: Exception) {
                 mutableState.update { it.copy(error = TimnorHomeError.STORAGE) }
                 onResult?.invoke(false)
+            }
+        }
+    }
+
+    private fun loadTasksForLocalProject(localProjectId: Int, selectedTaskId: Int? = null) {
+        viewModelScope.launch {
+            val tasks = runCatching { loadLinkedPlannorTasks(localProjectId) }.getOrDefault(emptyList())
+            mutableState.update { current ->
+                if (current.workProjectId != localProjectId) current
+                else current.copy(
+                    linkedPlannorTasks = tasks,
+                    selectedPlannorTaskId = (selectedTaskId ?: current.selectedPlannorTaskId)
+                        ?.takeIf { taskId -> tasks.any { it.taskId == taskId } },
+                )
+            }
+        }
+    }
+
+    private fun loadTasksForStopwatchProject(localProjectId: Int) {
+        viewModelScope.launch {
+            val tasks = runCatching { loadLinkedPlannorTasks(localProjectId) }.getOrDefault(emptyList())
+            mutableState.update { current ->
+                if (current.selectedProjectId != localProjectId) current
+                else current.copy(
+                    stopwatchPlannorTasks = tasks,
+                    selectedStopwatchPlannorTaskId = current.selectedStopwatchPlannorTaskId
+                        ?.takeIf { taskId -> tasks.any { it.taskId == taskId } },
+                )
             }
         }
     }

@@ -4,8 +4,12 @@ import SwiftUI
 import UniformTypeIdentifiers
 import UIKit
 import TimnorShared
+import Security
+import Network
 
 struct TimnorContentView: View {
+    @Environment(\.scenePhase) private var scenePhase
+    @StateObject private var connectivityMonitor = TimnorConnectivityMonitor()
     @State private var isExportPresented = false
     @State private var isXlsxExportPresented = false
     @State private var isImportPresented = false
@@ -26,7 +30,18 @@ struct TimnorContentView: View {
     @State private var documentEffectHandler = TimnorIosDocumentEffectHandler()
 
     var body: some View {
-        TimnorComposeHost(documentHandler: documentEffectHandler)
+        TimnorComposeHost(
+            documentHandler: documentEffectHandler,
+            sessionStorage: IosPlannorSessionStorage(),
+        )
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .active {
+                IosPlannorSyncBridge.shared.retrySync()
+            }
+        }
+        .onChange(of: connectivityMonitor.reconnectGeneration) { _, _ in
+            IosPlannorSyncBridge.shared.retrySync()
+        }
         .fileExporter(
             isPresented: $isExportPresented,
             document: backupDocument,
@@ -264,12 +279,15 @@ struct TimnorContentView: View {
                     return
                 }
                 let counts = summary.split(separator: "|")
-                guard counts.count == 2 else {
+                guard counts.count == 2 || counts.count == 3 else {
                     statusMessage = "Ugyldig sikkerhetskopi"
                     return
                 }
                 pendingBackupContents = contents
-                restoreSummary = "\(counts[0]) prosjekter og \(counts[1]) registreringer"
+                let sharedRecordSummary = counts.count == 3 && String(counts[2]) != "0"
+                    ? " og \(counts[2]) delte synkroniseringsposter"
+                    : ""
+                restoreSummary = "\(counts[0]) prosjekter og \(counts[1]) registreringer\(sharedRecordSummary)"
                 isRestoreConfirmationPresented = true
             }
         } catch {
@@ -285,11 +303,40 @@ struct TimnorContentView: View {
     }
 }
 
+@MainActor
+private final class TimnorConnectivityMonitor: ObservableObject {
+    @Published private(set) var reconnectGeneration = 0
+    private let monitor = NWPathMonitor()
+    private var isConnected = false
+
+    init() {
+        monitor.pathUpdateHandler = { [weak self] path in
+            let connected = path.status == .satisfied
+            DispatchQueue.main.async {
+                guard let self else { return }
+                if connected && !self.isConnected {
+                    self.reconnectGeneration += 1
+                }
+                self.isConnected = connected
+            }
+        }
+        monitor.start(queue: DispatchQueue(label: "no.timnor.ios.connectivity"))
+    }
+
+    deinit {
+        monitor.cancel()
+    }
+}
+
 private struct TimnorComposeHost: UIViewControllerRepresentable {
     let documentHandler: TimnorIosDocumentEffectHandler
+    let sessionStorage: IosPlannorSessionStorage
 
     func makeUIViewController(context: Context) -> UIViewController {
-        let controller = MainViewControllerKt.MainViewController(documentHandler: documentHandler)
+        let controller = MainViewControllerKt.MainViewController(
+            documentHandler: documentHandler,
+            sessionStorage: sessionStorage,
+        )
         let edgeBack = UIScreenEdgePanGestureRecognizer(
             target: context.coordinator,
             action: #selector(Coordinator.handleEdgeBack(_:)),
@@ -324,6 +371,61 @@ private struct TimnorComposeHost: UIViewControllerRepresentable {
         func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
             IosTimnorNavigationBridge.shared.canHandleBack()
         }
+    }
+}
+
+private final class IosPlannorSessionStorage: NSObject, PlannorSessionStorage {
+    private struct SessionValue: Codable {
+        let accessToken: String
+        let refreshToken: String
+        let accountId: Int32
+        let username: String
+    }
+
+    private var baseQuery: [String: Any] {
+        [
+            kSecClass as String: kSecClassGenericPassword,
+            kSecAttrService as String: Bundle.main.bundleIdentifier ?? "no.timnor.ios",
+            kSecAttrAccount as String: "plannor-session",
+        ]
+    }
+
+    func read() -> PlannorSession? {
+        var query = baseQuery
+        query[kSecReturnData as String] = true
+        query[kSecMatchLimit as String] = kSecMatchLimitOne
+        var item: CFTypeRef?
+        guard SecItemCopyMatching(query as CFDictionary, &item) == errSecSuccess,
+              let data = item as? Data,
+              let stored = try? JSONDecoder().decode(SessionValue.self, from: data) else {
+            return nil
+        }
+        return PlannorSession(
+            accessToken: stored.accessToken,
+            refreshToken: stored.refreshToken,
+            accountId: stored.accountId,
+            username: stored.username,
+        )
+    }
+
+    func write(session: PlannorSession) {
+        let stored = SessionValue(
+            accessToken: session.accessToken,
+            refreshToken: session.refreshToken,
+            accountId: session.accountId,
+            username: session.username,
+        )
+        guard let data = try? JSONEncoder().encode(stored) else { preconditionFailure("Unable to encode Plannor session") }
+        SecItemDelete(baseQuery as CFDictionary)
+        var item = baseQuery
+        item[kSecValueData as String] = data
+        item[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
+        precondition(SecItemAdd(item as CFDictionary, nil) == errSecSuccess, "Unable to save Plannor session to Keychain")
+    }
+
+    func clear() {
+        let status = SecItemDelete(baseQuery as CFDictionary)
+        precondition(status == errSecSuccess || status == errSecItemNotFound, "Unable to clear Plannor session from Keychain")
     }
 }
 

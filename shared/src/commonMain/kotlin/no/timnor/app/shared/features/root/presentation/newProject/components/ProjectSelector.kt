@@ -22,12 +22,20 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import no.timnor.app.shared.data.persistence.StoredProject
+import no.timnor.app.core.repository.SharedWorkSyncIndicator
+import no.timnor.app.shared.features.shared_hours.presentation.SharedWorkSyncLabel
+import no.timnor.app.shared.generated.resources.Res
+import no.timnor.app.shared.generated.resources.plannor_linked_project_label
+import no.timnor.app.shared.generated.resources.plannor_linked_project_unavailable
 import no.timnor.app.shared.platform.motion.rememberSystemAnimationsEnabled
 import no.timnor.app.shared.ui.theme.timnorSpacing
+import org.jetbrains.compose.resources.stringResource
 
 @Composable
 internal fun ProjectSelector(
     projects: List<StoredProject>,
+    linkedPlannorProjectNames: Map<Int, String> = emptyMap(),
+    sharedProjectIndicators: Map<Int, SharedWorkSyncIndicator> = emptyMap(),
     selectedProjectId: Int?,
     onProjectSelected: (Int) -> Unit,
     modifier: Modifier = Modifier,
@@ -62,18 +70,33 @@ internal fun ProjectSelector(
                 contentColor = contentColor.value,
                 border = if (isSelected) null else BorderStroke(1.dp, colors.outlineVariant),
             ) {
-                Text(
-                    project.name,
-                    style = MaterialTheme.typography.titleMedium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                androidx.compose.foundation.layout.Column(
                     modifier = Modifier
                         .widthIn(max = MaterialTheme.timnorSpacing.extraLarge * 6)
                         .padding(
                             horizontal = MaterialTheme.timnorSpacing.medium + MaterialTheme.timnorSpacing.extraSmall / 2,
                             vertical = MaterialTheme.timnorSpacing.small + MaterialTheme.timnorSpacing.extraSmall,
                         ),
-                )
+                ) {
+                    Text(
+                        project.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    linkedPlannorProjectNames[project.id]?.let { linkedName ->
+                        Text(
+                            if (linkedName.isBlank()) stringResource(Res.string.plannor_linked_project_unavailable)
+                            else stringResource(Res.string.plannor_linked_project_label, linkedName),
+                            style = MaterialTheme.typography.labelSmall,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                    sharedProjectIndicators[project.id]?.let { indicator ->
+                        SharedWorkSyncLabel(indicator)
+                    }
+                }
             }
         }
     }

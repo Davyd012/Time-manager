@@ -144,6 +144,7 @@ internal fun TimnorMonthExportDialog(
                     projects.forEach { project ->
                         FilterChip(
                             selected = project.id in selectedProjectIds,
+                            modifier = Modifier.testTag("month-export-project-${project.id}"),
                             onClick = {
                                 selectedProjectIds = if (project.id in selectedProjectIds) {
                                     selectedProjectIds - project.id

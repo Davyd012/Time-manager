@@ -20,6 +20,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.DividerDefaults
 import androidx.compose.material3.Text
+import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -31,11 +32,18 @@ import androidx.compose.ui.unit.dp
 import kotlinx.datetime.LocalDate
 import no.timnor.app.shared.data.persistence.StoredProject
 import no.timnor.app.shared.data.persistence.StoredWork
+import no.timnor.app.core.repository.SharedWorkSyncIndicator
+import no.timnor.app.shared.features.shared_hours.presentation.SharedWorkSyncLabel
 import no.timnor.app.shared.domain.time.utcLocalDateTimeFromEpochSeconds
 import no.timnor.app.shared.generated.resources.Res
 import no.timnor.app.shared.generated.resources.unknown_project
+import no.timnor.app.shared.generated.resources.plannor_linked_project_label
+import no.timnor.app.shared.generated.resources.plannor_project_marker_description
+import no.timnor.app.shared.generated.resources.plannor_link_24
 import no.timnor.app.shared.platform.locale.localizedDecimalSeparator
 import no.timnor.app.shared.ui.theme.timnorSpacing
+import org.jetbrains.compose.resources.painterResource
+import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -46,6 +54,8 @@ internal fun MonthViewTimeline(
     shape: Shape? = null,
     showDuration: Boolean = true,
     showProjectMarker: Boolean = false,
+    linkedPlannorProjectNames: Map<Int, String> = emptyMap(),
+    sharedWorkIndicators: Map<Int, SharedWorkSyncIndicator> = emptyMap(),
     nestedScrollConnection: NestedScrollConnection? = null,
     onSelectWork: (StoredWork) -> Unit,
 ) {
@@ -77,8 +87,10 @@ internal fun MonthViewTimeline(
                         hour = hour,
                         works = entries,
                         projectName = { work -> projectNames[work.project] ?: unknownProject },
+                        linkedPlannorProjectName = { work -> linkedPlannorProjectNames[work.project] },
                         showDuration = showDuration,
                         showProjectMarker = showProjectMarker,
+                        sharedWorkIndicators = sharedWorkIndicators,
                         onSelectWork = onSelectWork,
                     )
                 }
@@ -102,8 +114,10 @@ private fun MonthViewTimelineGroup(
     hour: Int,
     works: List<StoredWork>,
     projectName: (StoredWork) -> String,
+    linkedPlannorProjectName: (StoredWork) -> String?,
     showDuration: Boolean,
     showProjectMarker: Boolean,
+    sharedWorkIndicators: Map<Int, SharedWorkSyncIndicator>,
     onSelectWork: (StoredWork) -> Unit,
 ) {
     val homeRowSpacing = MaterialTheme.timnorSpacing.extraSmall + MaterialTheme.timnorSpacing.extraSmall / 4
@@ -179,12 +193,32 @@ private fun MonthViewTimelineGroup(
                                 bottom = if (showProjectMarker) homeRowSpacing else MaterialTheme.timnorSpacing.small,
                             ),
                         ) {
+                            val linkedName = linkedPlannorProjectName(work)
                             Text(
                                 projectName(work),
                                 style = MaterialTheme.typography.titleMedium,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                             )
+                            linkedName?.let { name ->
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(MaterialTheme.timnorSpacing.extraSmall),
+                                ) {
+                                    Icon(
+                                        painter = painterResource(Res.drawable.plannor_link_24),
+                                        contentDescription = stringResource(Res.string.plannor_project_marker_description),
+                                        tint = MaterialTheme.colorScheme.secondary,
+                                    )
+                                    Text(
+                                        stringResource(Res.string.plannor_linked_project_label, name),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                    )
+                                }
+                            }
                             if (work.description.isNotBlank()) {
                                 Text(
                                     work.description,
@@ -192,6 +226,9 @@ private fun MonthViewTimelineGroup(
                                     maxLines = 2,
                                     overflow = TextOverflow.Ellipsis,
                                 )
+                            }
+                            sharedWorkIndicators[work.id]?.let { indicator ->
+                                SharedWorkSyncLabel(indicator)
                             }
                         }
                         workTimelineDurationLabel(work.time, showDuration, localizedDecimalSeparator())?.let { durationLabel ->

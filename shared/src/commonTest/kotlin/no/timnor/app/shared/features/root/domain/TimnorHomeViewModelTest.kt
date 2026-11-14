@@ -20,6 +20,7 @@ import no.timnor.app.shared.data.persistence.TimnorDataSnapshot
 import no.timnor.app.shared.domain.time.utcEpochSecondsFromLocalDateTime
 import no.timnor.app.shared.platform.stopwatch.StopwatchPlatform
 import no.timnor.app.shared.platform.stopwatch.StopwatchSnapshot
+import no.timnor.app.shared.features.shared_hours.domain.PlannorTaskOption
 import kotlin.time.Clock
 import kotlin.time.Instant
 import kotlin.test.Test
@@ -203,6 +204,38 @@ class TimnorHomeViewModelTest {
     }
 
     @Test
+    fun stopwatchCanOptionallyAttributeLinkedWorkToAPlannorTask() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val persistence = FakeTimnorPersistence()
+            val stopwatch = FakeStopwatch()
+            val viewModel = TimnorHomeViewModel(
+                persistence = persistence,
+                stopwatch = stopwatch,
+                loadLinkedPlannorTasks = { localProjectId ->
+                    if (localProjectId == 1) listOf(PlannorTaskOption(21, 42, "Review plans")) else emptyList()
+                },
+            )
+            runCurrent()
+            viewModel.addProject("Linked project")
+            runCurrent()
+            viewModel.selectProject(1)
+            runCurrent()
+            assertEquals(42, viewModel.state.value.stopwatchPlannorTasks.single().taskId)
+            viewModel.selectStopwatchPlannorTask(42)
+            stopwatch.setElapsed(900, projectId = 1)
+            runCurrent()
+
+            viewModel.saveStopwatch()
+            runCurrent()
+
+            assertEquals(42, persistence.works.value.single().task)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
     fun editingWorkDoesNotChangeStopwatchProjectSelection() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         try {
@@ -379,7 +412,7 @@ class TimnorHomeViewModelTest {
             persistence.failWorkDeletes = true
             var result: Boolean? = null
 
-            viewModel.deleteWork(work) { result = it }
+            viewModel.deleteWork(work, onResult = { result = it })
             runCurrent()
 
             assertEquals(false, result)
@@ -563,6 +596,39 @@ class TimnorHomeViewModelTest {
             assertFalse(viewModel.state.value.workStartTimeManuallySet)
             viewModel.updateWorkStartTime("09:20")
             assertTrue(viewModel.state.value.workStartTimeManuallySet)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
+    fun manualWorkCanSelectAndRetainAnOptionalLinkedTask() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val persistence = FakeTimnorPersistence()
+            val viewModel = TimnorHomeViewModel(
+                persistence = persistence,
+                stopwatch = FakeStopwatch(),
+                loadLinkedPlannorTasks = { localProjectId ->
+                    if (localProjectId == 1) listOf(PlannorTaskOption(7, 91, "Prepare plan")) else emptyList()
+                },
+            )
+            runCurrent()
+            viewModel.addProject("Linked project")
+            runCurrent()
+            viewModel.beginManualWork()
+            runCurrent()
+            assertEquals(listOf(91), viewModel.state.value.linkedPlannorTasks.map { it.taskId })
+
+            viewModel.selectPlannorTask(91)
+            viewModel.updateWorkHours("1")
+            viewModel.submitManualWork()
+            runCurrent()
+            assertEquals(91, persistence.works.value.single().task)
+
+            viewModel.editWork(persistence.works.value.single())
+            runCurrent()
+            assertEquals(91, viewModel.state.value.selectedPlannorTaskId)
         } finally {
             Dispatchers.resetMain()
         }

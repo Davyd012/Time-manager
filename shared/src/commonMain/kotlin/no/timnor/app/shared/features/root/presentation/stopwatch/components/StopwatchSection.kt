@@ -3,6 +3,7 @@ package no.timnor.app.shared.features.root.presentation.stopwatch.components
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,6 +16,8 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.material3.Card
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LargeFloatingActionButton
 import androidx.compose.material3.ListItem
@@ -22,6 +25,7 @@ import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -33,6 +37,9 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import no.timnor.app.shared.data.persistence.StoredProject
+import no.timnor.app.shared.features.shared_hours.domain.PlannorTaskOption
+import no.timnor.app.core.repository.SharedWorkSyncIndicator
+import no.timnor.app.shared.features.shared_hours.presentation.SharedWorkSyncLabel
 import no.timnor.app.shared.features.root.domain.TimnorHomeError
 import no.timnor.app.shared.domain.stopwatch.canChangeStopwatchProject
 import no.timnor.app.shared.domain.time.formatStopwatchTime
@@ -51,6 +58,9 @@ import no.timnor.app.shared.generated.resources.stopwatch_running_status
 import no.timnor.app.shared.generated.resources.stopwatch_start
 import no.timnor.app.shared.generated.resources.stopwatch_resume
 import no.timnor.app.shared.generated.resources.work
+import no.timnor.app.shared.generated.resources.plannor_linked_project_label
+import no.timnor.app.shared.generated.resources.work_task_optional
+import no.timnor.app.shared.generated.resources.work_task_none
 import no.timnor.app.shared.ui.theme.timnorSpacing
 import no.timnor.app.shared.platform.motion.rememberSystemAnimationsEnabled
 import org.jetbrains.compose.resources.painterResource
@@ -62,8 +72,13 @@ internal fun StopwatchSection(
     elapsedSeconds: Int,
     isRunning: Boolean,
     selectedProjectId: Int,
+    linkedPlannorProjectNames: Map<Int, String> = emptyMap(),
+    sharedProjectIndicators: Map<Int, SharedWorkSyncIndicator> = emptyMap(),
+    plannorTasks: List<PlannorTaskOption> = emptyList(),
+    selectedPlannorTaskId: Int? = null,
     error: TimnorHomeError?,
     onSelectProject: (Int) -> Unit,
+    onSelectPlannorTask: (Int?) -> Unit,
     onStartPause: () -> Unit,
     onSave: () -> Unit,
     onCreateProject: () -> Unit,
@@ -111,13 +126,24 @@ internal fun StopwatchSection(
                     )
                 },
                 supportingContent = {
-                    Text(
-                        text = stringResource(
-                            if (selectedProject == null) Res.string.select_project_before_start
-                            else Res.string.active_project_label,
-                        ),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    Column {
+                        Text(
+                            text = stringResource(
+                                if (selectedProject == null) Res.string.select_project_before_start
+                                else Res.string.active_project_label,
+                            ),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        selectedProject?.let { linkedPlannorProjectNames[it.id] }?.let { linkedName ->
+                            Text(
+                                stringResource(Res.string.plannor_linked_project_label, linkedName),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                        selectedProject?.let { sharedProjectIndicators[it.id] }?.let { indicator ->
+                            SharedWorkSyncLabel(indicator)
+                        }
+                    }
                 },
                 leadingContent = {
                     Icon(
@@ -136,6 +162,13 @@ internal fun StopwatchSection(
                 colors = ListItemDefaults.colors(
                     containerColor = MaterialTheme.colorScheme.surface,
                 ),
+            )
+        }
+        if (selectedProject != null && linkedPlannorProjectNames.containsKey(selectedProject.id) && plannorTasks.isNotEmpty()) {
+            StopwatchTaskPicker(
+                tasks = plannorTasks,
+                selectedTaskId = selectedPlannorTaskId,
+                onSelectTask = onSelectPlannorTask,
             )
         }
         Spacer(Modifier.weight(1f))
@@ -191,6 +224,8 @@ internal fun StopwatchSection(
         StopwatchProjectPickerSheet(
             projects = projects,
             selectedProjectId = selectedProjectId,
+            linkedPlannorProjectNames = linkedPlannorProjectNames,
+            sharedProjectIndicators = sharedProjectIndicators,
             error = error,
             onSelectProject = { projectId ->
                 onSelectProject(projectId)
@@ -207,5 +242,32 @@ internal fun StopwatchSection(
             },
             onDismiss = { showProjectPicker = false },
         )
+    }
+}
+
+@Composable
+private fun StopwatchTaskPicker(
+    tasks: List<PlannorTaskOption>,
+    selectedTaskId: Int?,
+    onSelectTask: (Int?) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    val selectedTask = tasks.firstOrNull { it.taskId == selectedTaskId }
+    Box(modifier = Modifier.fillMaxWidth()) {
+        OutlinedButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth()) {
+            Text(selectedTask?.headline ?: stringResource(Res.string.work_task_optional))
+        }
+        DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            DropdownMenuItem(
+                text = { Text(stringResource(Res.string.work_task_none)) },
+                onClick = { onSelectTask(null); expanded = false },
+            )
+            tasks.forEach { task ->
+                DropdownMenuItem(
+                    text = { Text(task.headline) },
+                    onClick = { onSelectTask(task.taskId); expanded = false },
+                )
+            }
+        }
     }
 }
