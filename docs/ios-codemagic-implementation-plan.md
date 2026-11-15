@@ -4,6 +4,8 @@ Codemagic validation build `fb9c710` reached the Xcode framework build but faile
 
 Build `dbb215e` passed the framework build and failed Swift compilation: the restore completion handler expected one error argument, not two. The Swift call now matches that signature; a fresh Xcode build is needed to verify it.
 
+The gated TestFlight workflow uploads its signed IPA to App Store Connect and requests TestFlight beta review, using marketing version 1.0 and the latest TestFlight build number plus one. It does not submit for App Store review. Assign testers in App Store Connect. Avoid concurrent uploads, which could select the same build number. The signed archive and upload remain unverified until the workflow runs.
+
 Status: implementation in progress as of 2026-11-15. Timnor-specific manual Codemagic workflows and audit fixes are in source. Windows Kotlin/Native framework compilation passes after the fixes below. The first Codemagic Xcode build failed as described above; signing, iOS app execution, and upload remain unverified. Earlier handoff entries are chronological and may describe older source.
 
 ## Current implementation update — 2026-11-15

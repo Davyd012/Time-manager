@@ -52,7 +52,7 @@ workflows:
       - ios-validation-*.log
 
   ios-testflight-internal-preparation:
-    name: Timnor Internal TestFlight Preparation (gated)
+    name: Timnor Internal TestFlight Upload (gated)
     instance_type: mac_mini_m2
     max_build_duration: 120
     integrations:
@@ -83,16 +83,22 @@ workflows:
           set -euo pipefail
           cd "$CM_BUILD_DIR/iosApp"
           xcode-project use-profiles \
-            --project "$CM_BUILD_DIR/$XCODE_PROJECT" \
-            --custom-export-options='{"testFlightInternalTestingOnly": true}'
-      - name: Build signed IPA for internal distribution review
+            --project "$CM_BUILD_DIR/$XCODE_PROJECT"
+      - name: Build signed IPA for internal TestFlight
         script: |
           set -euo pipefail
           cd "$CM_BUILD_DIR"
+          latest_build_number="$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID")"
+          latest_build_number="${latest_build_number:-0}"
+          if ! [[ "$latest_build_number" =~ ^[0-9]+$ ]]; then
+            echo "Expected a numeric TestFlight build number, got: $latest_build_number"
+            exit 1
+          fi
+          next_build_number=$((10#$latest_build_number + 1))
           xcode-project build-ipa \
             --project "$XCODE_PROJECT" \
             --scheme "$XCODE_SCHEME" \
-            --archive-flags="-destination 'generic/platform=iOS'"
+            --archive-flags="-destination 'generic/platform=iOS' MARKETING_VERSION=1.0 CURRENT_PROJECT_VERSION=$next_build_number"
       - name: Verify IPA identity
         script: |
           set -euo pipefail
@@ -105,8 +111,13 @@ workflows:
           test -n "$app_info"
           bundle_identifier="$(/usr/libexec/PlistBuddy -c 'Print:CFBundleIdentifier' "$app_info")"
           test "$bundle_identifier" = "no.timnor.ios"
+          test "$(/usr/libexec/PlistBuddy -c 'Print:CFBundleShortVersionString' "$app_info")" = "1.0"
+          /usr/libexec/PlistBuddy -c 'Print:CFBundleVersion' "$app_info"
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
-    # Publishing intentionally omitted until Apple identity, signing, versions,
-    # build-number policy, and internal tester scope are confirmed.
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+        submit_to_app_store: false
