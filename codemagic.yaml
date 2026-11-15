@@ -42,6 +42,7 @@ workflows:
             -scheme "$XCODE_SCHEME" \
             -configuration Debug \
             -destination 'generic/platform=iOS Simulator' \
+            ARCHS=arm64 \
             CODE_SIGNING_ALLOWED=NO \
             build 2>&1 | tee "$CM_BUILD_DIR/ios-validation-xcodebuild.log"
     artifacts:
