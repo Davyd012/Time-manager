@@ -296,7 +296,7 @@ struct TimnorContentView: View {
     }
 
     private func restoreBackup(contents: String) {
-        IosTimnorPlatform.shared.restoreBackupV1(contents: contents) { _, error in
+        IosTimnorPlatform.shared.restoreBackupV1(contents: contents) { error in
             statusMessage = error == nil ? "Sikkerhetskopi gjenopprettet" : "Gjenopprettingen mislyktes"
             pendingBackupContents = nil
         }

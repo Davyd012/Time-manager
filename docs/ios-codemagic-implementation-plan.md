@@ -2,6 +2,8 @@
 
 Codemagic validation build `fb9c710` reached the Xcode framework build but failed because the generic simulator destination requested both arm64 and x86_64, while shared configures only the arm64 simulator target. The validation command now explicitly builds arm64. A fresh Codemagic run is needed to verify the Xcode build and any subsequent failures.
 
+Build `dbb215e` passed the framework build and failed Swift compilation: the restore completion handler expected one error argument, not two. The Swift call now matches that signature; a fresh Xcode build is needed to verify it.
+
 Status: implementation in progress as of 2026-11-15. Timnor-specific manual Codemagic workflows and audit fixes are in source. Windows Kotlin/Native framework compilation passes after the fixes below. The first Codemagic Xcode build failed as described above; signing, iOS app execution, and upload remain unverified. Earlier handoff entries are chronological and may describe older source.
 
 ## Current implementation update — 2026-11-15
