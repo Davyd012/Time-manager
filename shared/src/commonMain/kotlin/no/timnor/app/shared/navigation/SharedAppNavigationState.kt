@@ -4,9 +4,9 @@ package no.timnor.app.shared.navigation
 enum class SharedAppTab { Home, Stopwatch }
 
 /** Routes kept on the Home tab while the user visits other top-level tabs. */
-internal enum class SharedHomeRoute { Home, MonthView, Settings }
+internal enum class SharedHomeRoute { Home, MonthView, Settings, Backup }
 
-internal enum class SharedAppDestination { Home, Stopwatch, MonthView, Settings }
+internal enum class SharedAppDestination { Home, Stopwatch, MonthView, Settings, Backup }
 
 /** Matches the legacy bottom bar's selected and unselected content contrast. */
 internal fun sharedNavigationContentAlpha(selected: Boolean): Float = if (selected) 1f else 0.55f
@@ -22,6 +22,7 @@ internal data class SharedAppNavigationState(
                 SharedHomeRoute.Home -> SharedAppDestination.Home
                 SharedHomeRoute.MonthView -> SharedAppDestination.MonthView
                 SharedHomeRoute.Settings -> SharedAppDestination.Settings
+                SharedHomeRoute.Backup -> SharedAppDestination.Backup
             }
         }
 
@@ -42,16 +43,21 @@ internal data class SharedAppNavigationState(
         )
     }
 
+    fun backToSettings(): SharedAppNavigationState = copy(
+        selectedTab = SharedAppTab.Home,
+        homeRoute = SharedHomeRoute.Settings,
+    )
+
     fun backToHomeRoot(): SharedAppNavigationState = copy(
         selectedTab = SharedAppTab.Home,
         homeRoute = SharedHomeRoute.Home,
     )
 
     /** Returns the next state for a platform Back action, or null when the shell is at a root. */
-    fun onPlatformBack(): SharedAppNavigationState? =
-        if (selectedTab == SharedAppTab.Home && homeRoute != SharedHomeRoute.Home) {
-            backToHomeRoot()
-        } else {
-            null
-        }
+    fun onPlatformBack(): SharedAppNavigationState? = when {
+        selectedTab != SharedAppTab.Home -> null
+        homeRoute == SharedHomeRoute.Backup -> backToSettings()
+        homeRoute != SharedHomeRoute.Home -> backToHomeRoot()
+        else -> null
+    }
 }

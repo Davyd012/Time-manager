@@ -116,8 +116,9 @@ internal fun CalendarMonthContent(
             .groupBy { utcLocalDateTimeFromEpochSeconds(it.dateEpochSeconds).date }
             .mapValues { (_, entries) -> entries.sumOf(StoredWork::time) }
     }
-    val weekSecondsByDate = remember(works) {
-        works.groupBy { utcLocalDateTimeFromEpochSeconds(it.dateEpochSeconds).date }
+    val weekSecondsByDate = remember(works, projects, selectedProjectIds) {
+        visibleWorks(works, projects, selectedProjectIds)
+            .groupBy { utcLocalDateTimeFromEpochSeconds(it.dateEpochSeconds).date }
             .mapValues { (_, entries) -> entries.sumOf(StoredWork::time) }
     }
     val monthSeconds = remember(visibleMonthWorks) { visibleMonthWorks.sumOf { it.time.toLong() } }
@@ -196,8 +197,8 @@ internal fun CalendarMonthContent(
                 modifier = Modifier.semantics { contentDescription = previousMonthLabel },
                 enabled = interactive,
                 colors = IconButtonDefaults.outlinedIconButtonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    contentColor = MaterialTheme.colorScheme.onSurface,
                 ),
             ) {
                 Icon(painterResource(Res.drawable.arrow_back), contentDescription = null)
@@ -231,8 +232,8 @@ internal fun CalendarMonthContent(
                 modifier = Modifier.semantics { contentDescription = nextMonthLabel },
                 enabled = interactive,
                 colors = IconButtonDefaults.outlinedIconButtonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    contentColor = MaterialTheme.colorScheme.onSurface,
                 ),
             ) {
                 Icon(painterResource(Res.drawable.arrow_right), contentDescription = null)
@@ -241,8 +242,8 @@ internal fun CalendarMonthContent(
         }
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            color = MaterialTheme.colorScheme.primary,
-            contentColor = MaterialTheme.colorScheme.onPrimary,
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            contentColor = MaterialTheme.colorScheme.onSurface,
             shape = MaterialTheme.shapes.large,
             border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
         ) {

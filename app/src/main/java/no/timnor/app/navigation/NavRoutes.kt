@@ -41,6 +41,30 @@ sealed interface AppRoute : NavKey {
     @SerialName("org.examples.time_manager.navigation.AppRoute.Settings")
     @Serializable
     data object Settings : AppRoute
+
+    @SerialName("org.examples.time_manager.navigation.AppRoute.PlannorAccount")
+    @Serializable
+    data object PlannorAccount : AppRoute
+
+    @SerialName("org.examples.time_manager.navigation.AppRoute.Projects")
+    @Serializable
+    data object Projects : AppRoute
+
+    @SerialName("org.examples.time_manager.navigation.AppRoute.ShareTime")
+    @Serializable
+    data object ShareTime : AppRoute
+
+    @SerialName("org.examples.time_manager.navigation.AppRoute.CreateSharedTime")
+    @Serializable
+    data object CreateSharedTime : AppRoute
+
+    @SerialName("org.examples.time_manager.navigation.AppRoute.AllocationsReview")
+    @Serializable
+    data object AllocationsReview : AppRoute
+
+    @SerialName("org.examples.time_manager.navigation.AppRoute.BackupRestore")
+    @Serializable
+    data object BackupRestore : AppRoute
 }
 
 sealed interface TopLevelRoute : NavKey

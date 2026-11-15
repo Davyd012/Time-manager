@@ -66,7 +66,7 @@ internal fun MonthViewEmptyState(
                 painter = rememberLottiePainter(composition = composition, progress = { progress }),
                 contentDescription = null,
                 modifier = Modifier
-                    .size(MaterialTheme.timnorSpacing.extraLarge * 12)
+                    .size(MaterialTheme.timnorSpacing.extraLarge * 8)
                     .testTag("home-empty-state-illustration"),
             )
             Text(

@@ -6,17 +6,17 @@ import kotlin.test.assertTrue
 
 class CalendarExpansionTargetTest {
     @Test
-    fun settlesByProgressWhenVelocityIsBelowThreshold() {
+    fun settlesAfterOneFifthTravelWhenVelocityIsBelowThreshold() {
         assertFalse(
             calendarExpansionTarget(
-                progress = 0.49f,
+                progress = 0.19f,
                 velocityPxPerSecond = 0f,
                 velocityThresholdPxPerSecond = 1_000f,
             ),
         )
         assertTrue(
             calendarExpansionTarget(
-                progress = 0.5f,
+                progress = 0.2f,
                 velocityPxPerSecond = 0f,
                 velocityThresholdPxPerSecond = 1_000f,
             ),

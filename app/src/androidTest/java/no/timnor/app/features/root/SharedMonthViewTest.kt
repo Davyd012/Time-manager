@@ -8,10 +8,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.performClick
 import kotlinx.datetime.LocalDate
 import kotlinx.coroutines.flow.Flow
@@ -50,7 +52,7 @@ class SharedMonthViewTest {
     }
 
     @Test
-    fun monthWeekdayLabelsMatchLegacyDayOfWeekAbbreviations() {
+    fun monthWeekdayLabelsUseNorwegianAbbreviations() {
         val selectedDate = LocalDate(2026, 11, 1)
         val viewModel = TimnorHomeViewModel(EmptyPersistence(), IdleStopwatch(), selectedDate)
         composeRule.setContent {
@@ -60,8 +62,8 @@ class SharedMonthViewTest {
             }
         }
 
-        composeRule.onNodeWithTag("month-day-2").assertTextContains("MON")
-        composeRule.onNodeWithText("Man").assertDoesNotExist()
+        composeRule.onNodeWithTag("month-day-2").assertTextContains("Man")
+        composeRule.onAllNodesWithText("Man").assertCountEquals(2)
     }
 
     @Test

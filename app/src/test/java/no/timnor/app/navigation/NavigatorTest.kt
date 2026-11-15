@@ -16,6 +16,11 @@ class NavigatorTest {
         assertEquals("org.examples.time_manager.navigation.AppRoute.Stopwatch", AppRoute.Stopwatch.serializer().descriptor.serialName)
         assertEquals("org.examples.time_manager.navigation.AppRoute.MonthView", AppRoute.MonthView.serializer().descriptor.serialName)
         assertEquals("org.examples.time_manager.navigation.AppRoute.Settings", AppRoute.Settings.serializer().descriptor.serialName)
+        assertEquals("org.examples.time_manager.navigation.AppRoute.PlannorAccount", AppRoute.PlannorAccount.serializer().descriptor.serialName)
+        assertEquals("org.examples.time_manager.navigation.AppRoute.Projects", AppRoute.Projects.serializer().descriptor.serialName)
+        assertEquals("org.examples.time_manager.navigation.AppRoute.ShareTime", AppRoute.ShareTime.serializer().descriptor.serialName)
+        assertEquals("org.examples.time_manager.navigation.AppRoute.AllocationsReview", AppRoute.AllocationsReview.serializer().descriptor.serialName)
+        assertEquals("org.examples.time_manager.navigation.AppRoute.BackupRestore", AppRoute.BackupRestore.serializer().descriptor.serialName)
     }
 
     @Test
@@ -63,6 +68,22 @@ class NavigatorTest {
         PageNavigator(navigator).select(AppRoute.Stopwatch)
         assertTrue(navigator.goBack())
         assertEquals(AppRoute.Home, state.selectedTopLevelRoute)
+    }
+
+    @Test
+    fun settingsDestinationsPushAndPopWithoutReplacingTheSettingsOverview() {
+        val state = navigationState()
+        val navigator = Navigator(state)
+
+        navigator.openSettings()
+        navigator.openSettingsDestination(AppRoute.Projects)
+        navigator.openSettingsDestination(AppRoute.PlannorAccount)
+
+        assertEquals(AppRoute.PlannorAccount, state.homeStack.last())
+        assertTrue(navigator.goBack())
+        assertEquals(AppRoute.Projects, state.homeStack.last())
+        assertTrue(navigator.goBack())
+        assertEquals(AppRoute.Settings, state.homeStack.last())
     }
 
     @Test

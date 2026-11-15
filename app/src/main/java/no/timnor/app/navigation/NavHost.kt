@@ -1,7 +1,9 @@
 package no.timnor.app.navigation
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -24,8 +26,11 @@ import androidx.navigation3.ui.NavDisplay
 import no.timnor.app.R
 import no.timnor.app.di.DIContainer
 import no.timnor.app.features.settings.SharedSettingsScreen
+import no.timnor.app.features.settings.AndroidSettingsOverview
+import no.timnor.app.features.settings.PlannorSettingsScreen
 import no.timnor.app.features.settings.AndroidTimnorDocumentEffectHandler
 import no.timnor.app.features.sharedhours.PlannorConnectionViewModel
+import no.timnor.app.features.sharedhours.PlannorSettingsDestination
 import no.timnor.app.shared.features.settings.domain.TimnorSettingsViewModel
 import no.timnor.app.shared.features.root.domain.TimnorHomeViewModel
 import no.timnor.app.shared.features.root.presentation.home.TimnorHomeScreen
@@ -122,12 +127,71 @@ fun AppNavHost(
                 )
             }
             entry<AppRoute.Settings> {
+                AndroidSettingsOverview(
+                    state = plannorState,
+                    onBack = { navigator.goBack() },
+                    onOpen = { destination ->
+                        navigator.openSettingsDestination(
+                            when (destination) {
+                                PlannorSettingsDestination.Account -> AppRoute.PlannorAccount
+                                PlannorSettingsDestination.Projects -> AppRoute.Projects
+                                PlannorSettingsDestination.ShareTime -> AppRoute.ShareTime
+                                PlannorSettingsDestination.CreateTime -> AppRoute.CreateSharedTime
+                                PlannorSettingsDestination.AllocationsReview -> AppRoute.AllocationsReview
+                            },
+                        )
+                    },
+                    onBackup = { navigator.openSettingsDestination(AppRoute.BackupRestore) },
+                )
+            }
+            entry<AppRoute.BackupRestore> {
                 SharedSettingsScreen(
                     viewModel = settingsViewModel,
-                    plannorViewModel = plannorConnectionViewModel,
                     onBack = { navigator.goBack() },
                     onGoToTimer = { navigator.select(AppRoute.Stopwatch) },
                     onRestored = {},
+                )
+            }
+            entry<AppRoute.PlannorAccount> {
+                PlannorSettingsScreen(
+                    plannorConnectionViewModel,
+                    PlannorSettingsDestination.Account,
+                    onBack = { navigator.goBack() },
+                    onConnectRequired = { navigator.openSettingsDestination(AppRoute.PlannorAccount) },
+                    onOpenProjects = { navigator.openSettingsDestination(AppRoute.Projects) },
+                    onCreateTime = { navigator.openSettingsDestination(AppRoute.CreateSharedTime) },
+                )
+            }
+            entry<AppRoute.Projects> {
+                PlannorSettingsScreen(
+                    plannorConnectionViewModel,
+                    PlannorSettingsDestination.Projects,
+                    onBack = { navigator.goBack() },
+                    onConnectRequired = { navigator.openSettingsDestination(AppRoute.PlannorAccount) },
+                )
+            }
+            entry<AppRoute.ShareTime> {
+                PlannorSettingsScreen(
+                    plannorConnectionViewModel,
+                    PlannorSettingsDestination.ShareTime,
+                    onBack = { navigator.goBack() },
+                    onConnectRequired = { navigator.openSettingsDestination(AppRoute.PlannorAccount) },
+                )
+            }
+            entry<AppRoute.CreateSharedTime> {
+                PlannorSettingsScreen(
+                    plannorConnectionViewModel,
+                    PlannorSettingsDestination.CreateTime,
+                    onBack = { navigator.goBack() },
+                    onConnectRequired = { navigator.openSettingsDestination(AppRoute.PlannorAccount) },
+                )
+            }
+            entry<AppRoute.AllocationsReview> {
+                PlannorSettingsScreen(
+                    plannorConnectionViewModel,
+                    PlannorSettingsDestination.AllocationsReview,
+                    onBack = { navigator.goBack() },
+                    onConnectRequired = { navigator.openSettingsDestination(AppRoute.PlannorAccount) },
                 )
             }
         },
@@ -166,10 +230,17 @@ fun AppNavHost(
             )
         },
     ) { paddingValues ->
+        val statusBarSurface = if (navigationState.selectedTopLevelRoute == AppRoute.Home) {
+            MaterialTheme.colorScheme.surface
+        } else {
+            MaterialTheme.colorScheme.background
+        }
         NavDisplay(
             entries = entries,
             onBack = { if (!navigator.goBack()) onExit() },
-            modifier = Modifier.padding(bottom = paddingValues.calculateBottomPadding()),
+            modifier = Modifier
+                .background(statusBarSurface)
+                .padding(bottom = paddingValues.calculateBottomPadding()),
         )
     }
 }

@@ -3,19 +3,20 @@ package no.timnor.app.shared.features.settings.presentation
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.Surface
 import androidx.compose.material3.TopAppBar
@@ -29,6 +30,9 @@ import androidx.compose.ui.semantics.semantics
 import no.timnor.app.shared.generated.resources.Res
 import no.timnor.app.shared.generated.resources.back_to_home
 import no.timnor.app.shared.generated.resources.arrow_back
+import no.timnor.app.shared.generated.resources.backup_download
+import no.timnor.app.shared.generated.resources.backup_upload
+import no.timnor.app.shared.generated.resources.info
 import no.timnor.app.shared.generated.resources.cancel
 import no.timnor.app.shared.generated.resources.backup_checking
 import no.timnor.app.shared.generated.resources.backup_created_at
@@ -37,6 +41,13 @@ import no.timnor.app.shared.generated.resources.backup_failure
 import no.timnor.app.shared.generated.resources.backup_invalid
 import no.timnor.app.shared.generated.resources.backup_restore_description
 import no.timnor.app.shared.generated.resources.backup_restore_section
+import no.timnor.app.shared.generated.resources.backup_title
+import no.timnor.app.shared.generated.resources.backup_intro
+import no.timnor.app.shared.generated.resources.backup_create_description
+import no.timnor.app.shared.generated.resources.backup_restore_heading
+import no.timnor.app.shared.generated.resources.backup_restore_short_description
+import no.timnor.app.shared.generated.resources.backup_choose_file
+import no.timnor.app.shared.generated.resources.backup_cancel
 import no.timnor.app.shared.generated.resources.backup_project_count_one
 import no.timnor.app.shared.generated.resources.backup_project_count_other
 import no.timnor.app.shared.generated.resources.backup_restoring
@@ -70,6 +81,7 @@ import no.timnor.app.shared.features.settings.domain.TimnorSettingsUiState
 import no.timnor.app.shared.platform.locale.formatLocalizedDateTime
 import kotlin.time.Instant
 import org.jetbrains.compose.resources.stringResource
+import org.jetbrains.compose.resources.painterResource
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -82,17 +94,17 @@ fun TimnorSettingsSection(
     onConfirmRestore: () -> Unit,
     onCancelRestore: () -> Unit,
     onGoToStopwatch: () -> Unit,
-    additionalContent: @Composable ColumnScope.() -> Unit = {},
+    backLabelOverride: String? = null,
 ) {
-    val backLabel = stringResource(Res.string.back_to_home)
+    val backLabel = backLabelOverride ?: stringResource(Res.string.back_to_home)
     Surface(
         modifier = modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.surface,
-        contentColor = MaterialTheme.colorScheme.onSurface,
+        color = MaterialTheme.colorScheme.background,
+        contentColor = MaterialTheme.colorScheme.onBackground,
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             TopAppBar(
-            title = { Text(stringResource(Res.string.settings_title)) },
+            title = { Text(stringResource(Res.string.backup_title)) },
             navigationIcon = {
                 IconButton(
                     onClick = onBack,
@@ -111,16 +123,59 @@ fun TimnorSettingsSection(
                 .padding(horizontal = MaterialTheme.timnorSpacing.medium, vertical = MaterialTheme.timnorSpacing.medium),
             verticalArrangement = Arrangement.spacedBy(MaterialTheme.timnorSpacing.medium),
             ) {
-        additionalContent()
-        Text(stringResource(Res.string.backup_restore_section), style = MaterialTheme.typography.titleMedium)
-        Text(stringResource(Res.string.backup_restore_description), style = MaterialTheme.typography.bodyMedium)
-        Button(onClick = onCreateBackup, enabled = !state.busy, modifier = Modifier.fillMaxWidth()) {
+        state.message?.let { message ->
+            Text(
+                stringResource(
+                    when (message) {
+                        TimnorSettingsMessage.BackupSaved -> Res.string.backup_success
+                        TimnorSettingsMessage.BackupShared -> Res.string.backup_shared
+                        TimnorSettingsMessage.SpreadsheetSaved -> Res.string.spreadsheet_success
+                        TimnorSettingsMessage.InvalidBackup -> Res.string.backup_invalid
+                        TimnorSettingsMessage.UnsupportedBackupVersion -> Res.string.backup_unsupported
+                        TimnorSettingsMessage.BackupUnreadable -> Res.string.backup_unreadable
+                        TimnorSettingsMessage.RestoreSucceeded -> Res.string.restore_success
+                        TimnorSettingsMessage.RestoreFailed -> Res.string.restore_failure
+                        TimnorSettingsMessage.DocumentFailed -> Res.string.document_failure
+                        TimnorSettingsMessage.TimerActive -> Res.string.timer_restore_block_message
+                    },
+                ),
+                color = if (message == TimnorSettingsMessage.DocumentFailed ||
+                    message == TimnorSettingsMessage.InvalidBackup ||
+                    message == TimnorSettingsMessage.UnsupportedBackupVersion ||
+                    message == TimnorSettingsMessage.BackupUnreadable ||
+                    message == TimnorSettingsMessage.RestoreFailed
+                ) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onBackground,
+            )
+        }
+        Text(stringResource(Res.string.backup_intro), style = MaterialTheme.typography.bodyLarge)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(MaterialTheme.timnorSpacing.small)) {
+            Icon(painterResource(Res.drawable.backup_download), contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(Res.string.create_backup), style = MaterialTheme.typography.titleMedium)
+        }
+        Text(stringResource(Res.string.backup_create_description), style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Button(onClick = onCreateBackup, enabled = !state.busy, modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.buttonColors(disabledContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant)) {
             Text(stringResource(Res.string.create_backup))
         }
-        Button(onClick = onRestoreBackup, enabled = !state.busy, modifier = Modifier.fillMaxWidth()) {
-            Text(stringResource(Res.string.restore_backup))
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(MaterialTheme.timnorSpacing.small)) {
+            Icon(painterResource(Res.drawable.backup_upload), contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(Res.string.backup_restore_heading), style = MaterialTheme.typography.titleMedium)
         }
-        Text(stringResource(Res.string.backup_storage_note), style = MaterialTheme.typography.bodySmall)
+        Text(stringResource(Res.string.backup_restore_short_description), style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+        OutlinedButton(onClick = onRestoreBackup, enabled = !state.busy, modifier = Modifier.fillMaxWidth()) {
+            Text(stringResource(Res.string.backup_choose_file))
+        }
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(MaterialTheme.timnorSpacing.small)) {
+            Icon(painterResource(Res.drawable.info), contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(Res.string.backup_storage_note), style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
         state.progress?.let { progress ->
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -139,31 +194,7 @@ fun TimnorSettingsSection(
                 )
             }
         }
-        state.message?.let { message ->
-            Text(
-                    stringResource(
-                        when (message) {
-                        TimnorSettingsMessage.BackupSaved -> Res.string.backup_success
-                        TimnorSettingsMessage.BackupShared -> Res.string.backup_shared
-                        TimnorSettingsMessage.SpreadsheetSaved -> Res.string.spreadsheet_success
-                        TimnorSettingsMessage.InvalidBackup -> Res.string.backup_invalid
-                        TimnorSettingsMessage.UnsupportedBackupVersion -> Res.string.backup_unsupported
-                        TimnorSettingsMessage.BackupUnreadable -> Res.string.backup_unreadable
-                        TimnorSettingsMessage.RestoreSucceeded -> Res.string.restore_success
-                        TimnorSettingsMessage.RestoreFailed -> Res.string.restore_failure
-                        TimnorSettingsMessage.DocumentFailed -> Res.string.document_failure
-                        TimnorSettingsMessage.TimerActive -> Res.string.timer_restore_block_message
-                        },
-                    ),
-                    color = if (message == TimnorSettingsMessage.DocumentFailed ||
-                        message == TimnorSettingsMessage.InvalidBackup ||
-                        message == TimnorSettingsMessage.UnsupportedBackupVersion ||
-                        message == TimnorSettingsMessage.BackupUnreadable ||
-                        message == TimnorSettingsMessage.RestoreFailed
-                    ) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurface,
-                )
-            }
-        }
+    }
     }
     }
 
@@ -204,7 +235,7 @@ fun TimnorSettingsSection(
             },
             dismissButton = {
                 TextButton(onClick = onCancelRestore, enabled = !state.busy) {
-                    Text(stringResource(Res.string.cancel))
+                    Text(stringResource(Res.string.backup_cancel))
                 }
             },
         )
@@ -220,7 +251,7 @@ fun TimnorSettingsSection(
                     Text(stringResource(Res.string.go_to_timer))
                 }
             },
-            dismissButton = { TextButton(onClick = onCancelRestore) { Text(stringResource(Res.string.cancel)) } },
+            dismissButton = { TextButton(onClick = onCancelRestore) { Text(stringResource(Res.string.backup_cancel)) } },
         )
     }
 }

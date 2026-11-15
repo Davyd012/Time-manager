@@ -25,6 +25,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.dp
 import no.timnor.app.shared.generated.resources.Res
 import no.timnor.app.shared.generated.resources.clock_outline
@@ -51,7 +52,7 @@ fun SharedNavigationBar(
 
     Surface(
         modifier = modifier.fillMaxWidth(),
-        color = colors.primary,
+        color = colors.surfaceContainerLow,
         tonalElevation = 0.dp,
     ) {
         Row(
@@ -88,7 +89,11 @@ private fun NavigationBarItem(
 ) {
     val colors = MaterialTheme.colorScheme
     val spacing = MaterialTheme.timnorSpacing
-    val contentColor = colors.onPrimary.copy(alpha = sharedNavigationContentAlpha(selected))
+    val contentColor = when {
+        selected && colors.surface.luminance() < 0.5f -> colors.primaryContainer
+        selected -> colors.primary
+        else -> colors.onSurfaceVariant
+    }
 
     Column(
         modifier = modifier

@@ -41,6 +41,27 @@ class SharedAppNavigationStateTest {
     }
 
     @Test
+    fun backupIsNestedInsideSettingsAndBackReturnsOneScreenAtATime() {
+        val settings = SharedAppNavigationState().openHomeRoute(SharedHomeRoute.Settings)
+        val backup = settings.openHomeRoute(SharedHomeRoute.Backup)
+
+        assertEquals(SharedAppDestination.Backup, backup.destination)
+        assertEquals(SharedAppDestination.Settings, backup.onPlatformBack()?.destination)
+        assertEquals(SharedAppDestination.Home, settings.onPlatformBack()?.destination)
+    }
+
+    @Test
+    fun switchingTabsPreservesTheCurrentSettingsDestination() {
+        val backup = SharedAppNavigationState()
+            .openHomeRoute(SharedHomeRoute.Settings)
+            .openHomeRoute(SharedHomeRoute.Backup)
+
+        val stopwatch = backup.selectTab(SharedAppTab.Stopwatch)
+        assertEquals(SharedAppDestination.Stopwatch, stopwatch.destination)
+        assertEquals(SharedAppDestination.Backup, stopwatch.selectTab(SharedAppTab.Home).destination)
+    }
+
+    @Test
     fun navigationContentAlphaMatchesLegacySelectedAndUnselectedStates() {
         assertEquals(1f, sharedNavigationContentAlpha(selected = true))
         assertEquals(0.55f, sharedNavigationContentAlpha(selected = false))

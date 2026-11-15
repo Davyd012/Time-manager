@@ -1,7 +1,6 @@
 package no.timnor.app.shared.navigation
 
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -17,13 +16,21 @@ import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import no.timnor.app.shared.generated.resources.Res
+import no.timnor.app.shared.generated.resources.back_to_home
+import no.timnor.app.shared.generated.resources.backup_restore_section
+import no.timnor.app.shared.generated.resources.settings_backup_summary
+import no.timnor.app.shared.generated.resources.icon_import_export
+import no.timnor.app.shared.generated.resources.settings_title
 import no.timnor.app.shared.features.month_view.presentation.TimnorMonthViewScreen
 import no.timnor.app.shared.features.root.domain.TimnorHomeViewModel
 import no.timnor.app.shared.features.root.presentation.home.TimnorHomeScreen
 import no.timnor.app.shared.features.root.presentation.stopwatch.TimnorStopwatchScreen
 import no.timnor.app.shared.features.settings.presentation.TimnorSettingsSection
+import no.timnor.app.shared.features.settings.presentation.TimnorSettingsOverview
+import no.timnor.app.shared.features.settings.presentation.TimnorSettingsEntry
 import no.timnor.app.shared.features.settings.domain.TimnorSettingsEffect
 import no.timnor.app.shared.features.settings.domain.TimnorSettingsViewModel
+import org.jetbrains.compose.resources.stringResource
 
 /** Shared application shell. Screen state and business actions remain in the feature ViewModel. */
 @Composable
@@ -32,7 +39,6 @@ fun TimnorApp(
     settingsViewModel: TimnorSettingsViewModel,
     onSettingsEffect: suspend (TimnorSettingsEffect) -> Unit = {},
     onPlatformBackHandlerChanged: (canGoBack: Boolean, handleBack: () -> Unit) -> Unit = { _, _ -> },
-    additionalSettingsContent: @Composable ColumnScope.() -> Unit = {},
 ) {
     var selectedTab by rememberSaveable { mutableStateOf(SharedAppTab.Home) }
     var homeRoute by rememberSaveable { mutableStateOf(SharedHomeRoute.Home) }
@@ -124,11 +130,35 @@ fun TimnorApp(
                     },
                 )
                 SharedAppDestination.Settings -> {
+                    TimnorSettingsOverview(
+                        entries = listOf(
+                            TimnorSettingsEntry(
+                                key = "backup",
+                                title = stringResource(Res.string.backup_restore_section),
+                                summary = stringResource(Res.string.settings_backup_summary),
+                                icon = org.jetbrains.compose.resources.painterResource(Res.drawable.icon_import_export),
+                                onClick = {
+                                    val next = navigationState.openHomeRoute(SharedHomeRoute.Backup)
+                                    selectedTab = next.selectedTab
+                                    homeRoute = next.homeRoute
+                                },
+                            ),
+                        ),
+                        modifier = Modifier.padding(insets),
+                        backLabel = stringResource(Res.string.back_to_home),
+                        onBack = {
+                            val next = navigationState.backToHomeRoot()
+                            selectedTab = next.selectedTab
+                            homeRoute = next.homeRoute
+                        },
+                    )
+                }
+                SharedAppDestination.Backup -> {
                     TimnorSettingsSection(
                         state = settingsState,
                         modifier = Modifier.padding(insets),
                         onBack = {
-                            val next = navigationState.backToHomeRoot()
+                            val next = navigationState.openHomeRoute(SharedHomeRoute.Settings)
                             selectedTab = next.selectedTab
                             homeRoute = next.homeRoute
                         },
@@ -137,7 +167,7 @@ fun TimnorApp(
                         onConfirmRestore = settingsViewModel::restoreBackup,
                         onCancelRestore = settingsViewModel::cancelRestorePreview,
                         onGoToStopwatch = { selectedTab = SharedAppTab.Stopwatch },
-                        additionalContent = additionalSettingsContent,
+                        backLabelOverride = stringResource(Res.string.settings_title),
                     )
                 }
             }

@@ -2,6 +2,7 @@ package no.timnor.app.features.sharedhours
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DatePicker
@@ -9,6 +10,7 @@ import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
@@ -23,6 +25,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 import no.timnor.app.R
 import no.timnor.app.shared.ui.theme.timnorSpacing
 import java.time.Instant
@@ -120,4 +124,35 @@ internal fun SharedDurationControl(valueMinutes: String, onDurationSelected: (St
 private fun durationLabel(minutes: Int): String = when {
     minutes >= 60 -> stringResource(R.string.plannor_shared_time_duration_hours, minutes / 60, minutes % 60)
     else -> stringResource(R.string.plannor_shared_time_duration_minutes, minutes)
+}
+
+/** Duration picker for existing records, which may exceed the 24-hour clock range. */
+@Composable
+internal fun ExistingDurationControl(seconds: Long, onDurationSelected: (Long) -> Unit) {
+    var showPicker by remember { mutableStateOf(false) }
+    OutlinedButton(onClick = { showPicker = true }, modifier = Modifier.fillMaxWidth()) {
+        Row(horizontalArrangement = Arrangement.spacedBy(MaterialTheme.timnorSpacing.small)) {
+            Text(stringResource(R.string.plannor_shared_time_duration))
+            Text(durationText(seconds))
+        }
+    }
+    if (showPicker) {
+        var hours by remember(seconds) { mutableStateOf((seconds / 3600).toString()) }
+        var minutes by remember(seconds) { mutableStateOf(((seconds % 3600) / 60).toString()) }
+        val selected = hours.toLongOrNull()?.let { h -> minutes.toLongOrNull()?.takeIf { it in 0..59 }?.let { h * 3600 + it * 60 } }
+        AlertDialog(onDismissRequest = { showPicker = false },
+            title = { Text(stringResource(R.string.plannor_shared_time_duration)) },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.timnorSpacing.small)) {
+                    OutlinedTextField(value = hours, onValueChange = { hours = it.filter(Char::isDigit).take(6) },
+                        label = { Text(stringResource(R.string.duration_hours)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true)
+                    OutlinedTextField(value = minutes, onValueChange = { minutes = it.filter(Char::isDigit).take(2) },
+                        label = { Text(stringResource(R.string.duration_minutes)) }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true,
+                        isError = minutes.toIntOrNull()?.let { it > 59 } == true)
+                }
+            },
+            confirmButton = { TextButton(onClick = { selected?.let(onDurationSelected); showPicker = false },
+                enabled = selected != null && selected in 1..9_999_999_999L) { Text(stringResource(R.string.plannor_shared_time_confirm)) } },
+            dismissButton = { TextButton(onClick = { showPicker = false }) { Text(stringResource(R.string.plannor_import_cancel)) } })
+    }
 }

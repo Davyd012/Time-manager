@@ -35,7 +35,13 @@ import no.timnor.app.shared.generated.resources.icon_import_export
 import no.timnor.app.shared.generated.resources.icon_settings
 import no.timnor.app.shared.generated.resources.month_add_hours
 import no.timnor.app.shared.generated.resources.settings_title
-import no.timnor.app.shared.platform.locale.formatLocalizedWeekday
+import no.timnor.app.shared.generated.resources.calendar_weekday_friday_full
+import no.timnor.app.shared.generated.resources.calendar_weekday_monday_full
+import no.timnor.app.shared.generated.resources.calendar_weekday_saturday_full
+import no.timnor.app.shared.generated.resources.calendar_weekday_sunday_full
+import no.timnor.app.shared.generated.resources.calendar_weekday_thursday_full
+import no.timnor.app.shared.generated.resources.calendar_weekday_tuesday_full
+import no.timnor.app.shared.generated.resources.calendar_weekday_wednesday_full
 import no.timnor.app.shared.ui.theme.timnorSpacing
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
@@ -53,7 +59,17 @@ internal fun HomeHeaderBar(
     onAddWork: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val weekday = formatLocalizedWeekday(selectedDate)
+    val weekday = stringResource(
+        when (selectedDate.dayOfWeek) {
+            kotlinx.datetime.DayOfWeek.MONDAY -> Res.string.calendar_weekday_monday_full
+            kotlinx.datetime.DayOfWeek.TUESDAY -> Res.string.calendar_weekday_tuesday_full
+            kotlinx.datetime.DayOfWeek.WEDNESDAY -> Res.string.calendar_weekday_wednesday_full
+            kotlinx.datetime.DayOfWeek.THURSDAY -> Res.string.calendar_weekday_thursday_full
+            kotlinx.datetime.DayOfWeek.FRIDAY -> Res.string.calendar_weekday_friday_full
+            kotlinx.datetime.DayOfWeek.SATURDAY -> Res.string.calendar_weekday_saturday_full
+            kotlinx.datetime.DayOfWeek.SUNDAY -> Res.string.calendar_weekday_sunday_full
+        },
+    )
     val fontScale = LocalDensity.current.fontScale.coerceAtLeast(1f)
     val headerTopPadding = MaterialTheme.timnorSpacing.extraSmall
     val collapsedHeaderHeight = (MaterialTheme.timnorSpacing.extraLarge * 2 + headerTopPadding) * fontScale
@@ -122,7 +138,7 @@ internal fun calendarExpansionTarget(
 ): Boolean = when {
     velocityPxPerSecond >= abs(velocityThresholdPxPerSecond) -> true
     velocityPxPerSecond <= -abs(velocityThresholdPxPerSecond) -> false
-    else -> progress >= 0.5f
+    else -> progress >= 0.2f
 }
 
 internal fun isHomeWeekRowInteractive(expansionProgress: Float): Boolean = expansionProgress < 0.5f

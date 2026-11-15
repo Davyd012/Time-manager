@@ -82,8 +82,6 @@ internal fun CalendarSection(
     val toolbarSlotHeight = (MaterialTheme.timnorSpacing.extraLarge * 2 + MaterialTheme.timnorSpacing.extraSmall) * fontScale
     val toolbarVisibility = ((expansionProgress - 0.45f) / 0.30f).coerceIn(0f, 1f)
     var showFilterSheet by remember { mutableStateOf(false) }
-    var selectedGridDateText by rememberSaveable { mutableStateOf<String?>(null) }
-    val selectedGridDate = selectedGridDateText?.let(LocalDate::parse)
     val weekdays = listOf(
         stringResource(Res.string.calendar_weekday_monday),
         stringResource(Res.string.calendar_weekday_tuesday),
@@ -137,7 +135,7 @@ internal fun CalendarSection(
         CalendarProgressContent(
             month = month,
             selectedDate = selectedDate,
-            selectedGridDate = selectedGridDate,
+            selectedGridDate = null,
             works = works,
             projects = projects,
             selectedProjectIds = selectedProjectIds,
@@ -147,7 +145,7 @@ internal fun CalendarSection(
             expandedContentEnabled = contentInteractive,
             onMonthChange = ::requestMonthChange,
             onSelectDate = onSelectDate,
-            onSelectGridDate = { selectedGridDateText = it.toString() },
+            onSelectGridDate = onSelectDate,
             onMonthView = onMonthView,
             onToggleExpanded = onToggleExpanded,
             onShareMonth = onShareMonth,

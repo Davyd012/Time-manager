@@ -1,7 +1,10 @@
 package no.timnor.app.features.root
 
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.width
 import android.graphics.Bitmap
 import android.content.ContentValues
 import android.os.Environment
@@ -21,6 +24,7 @@ import androidx.compose.ui.test.assertTextContains
 import androidx.compose.ui.test.assertHeightIsEqualTo
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertWidthIsEqualTo
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
@@ -59,9 +63,7 @@ import org.junit.Test
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
-import java.time.DayOfWeek
-import java.time.format.TextStyle
-import java.util.Locale
+import kotlin.math.abs
 
 class SharedCalendarGestureTest {
     @get:Rule
@@ -431,11 +433,11 @@ class SharedCalendarGestureTest {
             if (stage == 0.30f) {
                 assertEquals("Only one weekday row should be visible during the morph", 1,
                     composeRule.onAllNodesWithText("Man").fetchSemanticsNodes().size)
-                listOf("MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN").forEach { legacyLabel ->
+                listOf("Man", "Tir", "Ons", "Tor", "Fre", "Lør", "Søn").forEach { weekdayLabel ->
                     assertEquals(
-                        "Legacy week label $legacyLabel should be absent at p=.30",
-                        0,
-                        composeRule.onAllNodesWithText(legacyLabel, useUnmergedTree = true).fetchSemanticsNodes().size,
+                        "Exactly one localized weekday label $weekdayLabel should be visible at p=.30",
+                        1,
+                        composeRule.onAllNodesWithText(weekdayLabel, useUnmergedTree = true).fetchSemanticsNodes().size,
                     )
                 }
             }
@@ -741,7 +743,7 @@ class SharedCalendarGestureTest {
     }
 
     @Test
-    fun selectingMonthGridDayOnlyChangesGridHighlightLikeLegacy() {
+    fun selectingMonthGridDayUpdatesSelectedDateAndHomeContent() {
         val viewModel = TimnorHomeViewModel(EmptyPersistence(), IdleStopwatch(), LocalDate(2026, 11, 10))
         var monthViewOpened = false
         composeRule.setContent {
@@ -761,13 +763,13 @@ class SharedCalendarGestureTest {
 
         composeRule.onNodeWithTag("calendar-month-day-2026-11-12").assertIsSelected()
         composeRule.runOnIdle {
-            assertEquals(LocalDate(2026, 11, 10), viewModel.state.value.selectedCalendarDate)
+            assertEquals(LocalDate(2026, 11, 12), viewModel.state.value.selectedCalendarDate)
             assertFalse(monthViewOpened)
         }
     }
 
     @Test
-    fun regularWeekStripShowsZeroHoursForInMonthDay() {
+    fun swipingCompactCalendarChangesWeekAndSelectedDate() {
         val viewModel = TimnorHomeViewModel(EmptyPersistence(), IdleStopwatch(), LocalDate(2026, 11, 10))
         composeRule.setContent {
             val state by viewModel.state.collectAsState()
@@ -776,18 +778,48 @@ class SharedCalendarGestureTest {
             }
         }
 
-        val dayCell = composeRule.onNodeWithTag("calendar-month-day-2026-11-09")
-        val cellBounds = dayCell.fetchSemanticsNode().boundsInRoot
-        val cellWidthDp = with(composeRule.density) { cellBounds.width.toDp().value }
-        val cellHeightDp = with(composeRule.density) { cellBounds.height.toDp().value }
-        composeRule.runOnIdle { assertTrue("Collapsed date cell clips its three text rows", cellHeightDp >= 56f) }
-        if (cellWidthDp >= 48f) {
-            dayCell.assertTextContains("0")
+        composeRule.onNodeWithTag("calendar-morph-grid").performTouchInput {
+            swipe(start = center, end = Offset(center.x - width * 0.6f, center.y), durationMillis = 220)
         }
+        composeRule.waitUntil(5_000) {
+            viewModel.state.value.selectedCalendarDate == LocalDate(2026, 11, 17)
+        }
+        composeRule.onNodeWithTag("calendar-month-day-2026-11-17").assertIsSelected()
     }
 
     @Test
-    fun homeHeaderUsesHostLocaleWeekdayLikeLegacyHeader() {
+    fun compactWeekStripSpacesSevenDaysWithoutClippingOnNarrowScreens() {
+        val viewModel = TimnorHomeViewModel(EmptyPersistence(), IdleStopwatch(), LocalDate(2026, 11, 10))
+        composeRule.setContent {
+            val state by viewModel.state.collectAsState()
+            TimnorTheme(darkTheme = false) {
+                Box(Modifier.width(320.dp).height(800.dp)) {
+                    TimnorHomeScreen(state = state, viewModel = viewModel, homeReselectionCount = 0, onMonthView = {})
+                }
+            }
+        }
+
+        val dates = (9..15).map { day ->
+            val dayOfMonth = day.toString().padStart(2, '0')
+            composeRule.onNodeWithTag("calendar-month-day-2026-11-$dayOfMonth").fetchSemanticsNode().boundsInRoot
+        }
+        val calendarBounds = composeRule.onNodeWithTag("calendar-month-content").fetchSemanticsNode().boundsInRoot
+        val widthsDp = dates.map { with(composeRule.density) { it.width.toDp().value } }
+        val gapsDp = dates.zipWithNext { first, second ->
+            with(composeRule.density) { (second.left - first.right).toDp().value }
+        }
+        composeRule.runOnIdle {
+            assertEquals("The week strip should show all seven dates", 7, dates.size)
+            assertTrue("Day chips should have consistent widths", widthsDp.maxOrNull()!! - widthsDp.minOrNull()!! <= 1f)
+            assertTrue("Adjacent day chips should have a 4dp gap", gapsDp.all { abs(it - 4f) <= 0.6f })
+            assertTrue("The first day chip should stay inside the calendar padding", dates.first().left > calendarBounds.left)
+            assertTrue("The last day chip should stay inside the calendar padding", dates.last().right < calendarBounds.right)
+        }
+        composeRule.onAllNodesWithText("0t").assertCountEquals(0)
+    }
+
+    @Test
+    fun homeHeaderUsesNorwegianFullWeekday() {
         val date = LocalDate(2026, 11, 10)
         val viewModel = TimnorHomeViewModel(EmptyPersistence(), IdleStopwatch(), date)
         composeRule.setContent {
@@ -796,15 +828,8 @@ class SharedCalendarGestureTest {
                 TimnorHomeScreen(state = state, viewModel = viewModel, homeReselectionCount = 0, onMonthView = {})
             }
         }
-        val locale = composeRule.activity.resources.configuration.locales[0] ?: Locale.getDefault()
-        val expected = DayOfWeek.of(date.dayOfWeek.ordinal + 1)
-            .getDisplayName(TextStyle.FULL, locale)
-            .replaceFirstChar { character ->
-                if (character.isLowerCase()) character.titlecase(locale) else character.toString()
-            }
-
-        composeRule.onNodeWithTag("home-header").assertTextContains(expected)
-        composeRule.onNodeWithTag("calendar-month-day-2026-11-10").assertTextContains(date.dayOfWeek.name.take(3))
+        composeRule.onNodeWithTag("home-header").assertTextContains("Tirsdag")
+        composeRule.onNodeWithTag("calendar-month-day-2026-11-10").assertTextContains("Tir")
     }
 
     @Test
@@ -818,7 +843,7 @@ class SharedCalendarGestureTest {
             }
         }
 
-        composeRule.onNodeWithTag("calendar-month-day-2026-11-01").assertTextContains("SUN")
+        composeRule.onNodeWithTag("calendar-month-day-2026-11-01").assertTextContains("Søn")
         composeRule.onNodeWithTag("calendar-date-2026-10-26").assertTextContains("Man")
     }
 

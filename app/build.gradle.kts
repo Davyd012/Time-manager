@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.util.Properties
 
 @Suppress("DSL_SCOPE_VIOLATION") // TODO: Remove once KTIJ-19369 is fixed
 plugins {
@@ -21,6 +22,13 @@ object Version {
     const val versionName = "1.0.$versionCode"
 }
 
+val releaseSigningPropertiesFile = rootProject.file("app/signing.properties")
+val releaseSigningProperties = Properties().apply {
+    if (releaseSigningPropertiesFile.exists()) {
+        releaseSigningPropertiesFile.inputStream().use(::load)
+    }
+}
+
 android {
     namespace = "no.timnor.app"
     compileSdk = 37
@@ -39,6 +47,17 @@ android {
         }
     }
 
+    if (releaseSigningPropertiesFile.exists()) {
+        signingConfigs {
+            create("release") {
+                storeFile = file(requireNotNull(releaseSigningProperties.getProperty("storeFile")))
+                storePassword = requireNotNull(releaseSigningProperties.getProperty("storePassword"))
+                keyAlias = requireNotNull(releaseSigningProperties.getProperty("keyAlias"))
+                keyPassword = requireNotNull(releaseSigningProperties.getProperty("keyPassword"))
+            }
+        }
+    }
+
     buildTypes {
         debug {
             isMinifyEnabled = false
@@ -54,7 +73,9 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
-            signingConfig = signingConfigs.getByName("debug")
+            if (releaseSigningPropertiesFile.exists()) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
     compileOptions {
@@ -92,6 +113,7 @@ dependencies {
     testImplementation(libs.ktor.serialization.kotlinx.json)
     androidTestImplementation(libs.androidx.test.ext.junit)
     androidTestImplementation(libs.room.testing)
+    androidTestImplementation(libs.ktor.client.mock)
     androidTestImplementation(libs.espresso.core)
     androidTestImplementation(platform(libs.compose.bom))
     androidTestImplementation(libs.ui.test.junit4)

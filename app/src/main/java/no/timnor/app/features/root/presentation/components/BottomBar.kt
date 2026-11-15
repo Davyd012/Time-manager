@@ -31,7 +31,7 @@ fun BottomBar(
 
     Surface(
         modifier = modifier.fillMaxWidth().testTag("app-bottom-navigation"),
-        color = colors.primary,
+        color = colors.surface,
         tonalElevation = 0.dp,
     ) {
         Row(

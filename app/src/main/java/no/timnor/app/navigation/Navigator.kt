@@ -21,8 +21,21 @@ class Navigator(private val state: NavigationState) {
     }
 
     fun openSettings() {
+        openSettingsDestination(AppRoute.Settings)
+    }
+
+    fun openSettingsDestination(route: AppRoute) {
+        require(route in setOf(
+            AppRoute.Settings,
+            AppRoute.PlannorAccount,
+            AppRoute.Projects,
+            AppRoute.ShareTime,
+            AppRoute.CreateSharedTime,
+            AppRoute.AllocationsReview,
+            AppRoute.BackupRestore,
+        ))
         val stack = state.homeStack
-        if (stack.lastOrNull() != AppRoute.Settings) stack.add(AppRoute.Settings)
+        if (stack.lastOrNull() != route) stack.add(route)
         state.select(AppRoute.Home)
     }
 

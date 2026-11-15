@@ -7,24 +7,40 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.Layout
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.dp
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.DateTimeUnit
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.plus
+import kotlinx.datetime.todayIn
+import kotlinx.coroutines.launch
+import kotlin.time.Clock
 import no.timnor.app.shared.domain.calendar.interpolateCalendarCoordinate
 import no.timnor.app.shared.domain.calendar.monthGridDates
 import no.timnor.app.shared.domain.calendar.monthGridDateRow
@@ -35,6 +51,7 @@ import no.timnor.app.shared.domain.calendar.formatCalendarDayHours
 import no.timnor.app.shared.generated.resources.Res
 import no.timnor.app.shared.generated.resources.calendar_hour_abbreviation
 import no.timnor.app.shared.ui.theme.timnorSpacing
+import no.timnor.app.shared.platform.motion.rememberSystemAnimationsEnabled
 import org.jetbrains.compose.resources.stringResource
 
 private data class CalendarCellGeometry(
@@ -66,6 +83,12 @@ internal fun CalendarMonthGrid(
 ) {
     val p = expansionProgress.coerceIn(0f, 1f)
     val monthStyle = p >= 0.5f
+    val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
+    val weekOffset = remember { Animatable(0f) }
+    val weekWidthPx = remember { androidx.compose.runtime.mutableIntStateOf(0) }
+    val coroutineScope = rememberCoroutineScope()
+    val animationsEnabled = rememberSystemAnimationsEnabled()
+    val swipeThresholdPx = with(LocalDensity.current) { (MaterialTheme.timnorSpacing.extraLarge * 2).toPx() }
     val monthNumber = month.month.ordinal + 1
     val year = month.year
     val gridDates = remember(year, monthNumber) { monthGridDates(year, monthNumber) }
@@ -91,26 +114,63 @@ internal fun CalendarMonthGrid(
     }
     val fontScale = androidx.compose.ui.platform.LocalDensity.current.fontScale.coerceAtLeast(1f)
     val collapsedCellHeight = MaterialTheme.timnorSpacing.extraLarge * 2 * fontScale
-    val expandedCellHeight = MaterialTheme.timnorSpacing.extraLarge * 2 * fontScale
+    val expandedCellHeight = (MaterialTheme.timnorSpacing.extraLarge + MaterialTheme.timnorSpacing.large) * fontScale
     val weekdayHeight = MaterialTheme.timnorSpacing.extraLarge * fontScale
     val weekdayHeightPx = with(androidx.compose.ui.platform.LocalDensity.current) { weekdayHeight.roundToPx() }
     val collapsedCellHeightPx = with(androidx.compose.ui.platform.LocalDensity.current) { collapsedCellHeight.roundToPx() }
     val expandedCellHeightPx = with(androidx.compose.ui.platform.LocalDensity.current) { expandedCellHeight.roundToPx() }
     val columnSpacingPx = with(androidx.compose.ui.platform.LocalDensity.current) {
-        (MaterialTheme.timnorSpacing.extraSmall * (1f - p)).roundToPx()
+        MaterialTheme.timnorSpacing.extraSmall.roundToPx()
     }
+    val rowSpacingPx = columnSpacingPx
     val selectedMonthRow = remember(selectedDate, year, monthNumber, rows) {
         monthGridRow(selectedDate, year, monthNumber) ?: rows + 1
     }
 
     Layout(
-        modifier = modifier.fillMaxWidth().clipToBounds().testTag("calendar-morph-grid"),
+        modifier = modifier.fillMaxWidth().clipToBounds()
+            .onSizeChanged { weekWidthPx.intValue = it.width }
+            .graphicsLayer { translationX = weekOffset.value }
+            .pointerInput(p, selectedDate, swipeThresholdPx, animationsEnabled) {
+                if (p < 0.5f) {
+                    var horizontalDrag = 0f
+                    detectHorizontalDragGestures(
+                        onDragStart = { horizontalDrag = 0f },
+                        onHorizontalDrag = { change, amount ->
+                            horizontalDrag += amount
+                            change.consume()
+                        },
+                        onDragEnd = {
+                            val dayOffset = when {
+                                horizontalDrag <= -swipeThresholdPx -> 7
+                                horizontalDrag >= swipeThresholdPx -> -7
+                                else -> 0
+                            }
+                            if (dayOffset != 0) {
+                                coroutineScope.launch {
+                                    val width = weekWidthPx.intValue.toFloat()
+                                    weekOffset.snapTo(if (dayOffset > 0) width * 0.14f else -width * 0.14f)
+                                    onSelectWeekDate(selectedDate.plus(dayOffset, DateTimeUnit.DAY))
+                                    if (animationsEnabled) {
+                                        weekOffset.animateTo(0f, tween(durationMillis = 180))
+                                    } else {
+                                        weekOffset.snapTo(0f)
+                                    }
+                                }
+                            }
+                            horizontalDrag = 0f
+                        },
+                        onDragCancel = { horizontalDrag = 0f },
+                    )
+                }
+            }
+            .testTag("calendar-morph-grid"),
         content = {
             weekdays.forEachIndexed { index, weekday ->
                 key("weekday-$index") {
                     Box(
                         Modifier.testTag("calendar-weekday-label-$index")
-                            .background(MaterialTheme.colorScheme.primary)
+                            .background(MaterialTheme.colorScheme.surfaceContainerHigh)
                             .then(if (p > 0.01f) Modifier else Modifier.clearAndSetSemantics {}),
                         contentAlignment = Alignment.Center,
                     ) {
@@ -131,11 +191,7 @@ internal fun CalendarMonthGrid(
                     }
                     MorphCalendarDateCell(
                         date = cell.date,
-                        weekday = legacyHomeWeekdayLabel(
-                            date = cell.date,
-                            selectedDate = selectedDate,
-                            localizedWeekday = weekdays[cell.column],
-                        ),
+                        weekday = weekdays[cell.column],
                         weekdayAlpha = if (cell.selectedWeekDate) {
                             (1f - (p / 0.15f).coerceIn(0f, 1f))
                         } else 0f,
@@ -150,11 +206,10 @@ internal fun CalendarMonthGrid(
                             !cell.inMonth -> false
                             else -> p > 0.01f || cell.selectedWeekDate
                         },
-                        enabled = if (!monthStyle) {
-                            cell.selectedWeekDate && cell.date.year == selectedDate.year && cell.date.month == selectedDate.month
-                        } else interactive && cell.inMonth,
+                        enabled = if (!monthStyle) cell.selectedWeekDate else interactive && cell.inMonth,
                         monthStyle = monthStyle,
                         onClick = cellClick,
+                        isToday = cell.date == today,
                     )
                 }
             }
@@ -171,7 +226,7 @@ internal fun CalendarMonthGrid(
         ).toInt()
         val height = interpolateCalendarCoordinate(
             collapsedCellHeightPx.toFloat(),
-            (weekdayHeightPx + rows * expandedCellHeightPx).toFloat(),
+            (weekdayHeightPx + rows * expandedCellHeightPx + (rows - 1).coerceAtLeast(0) * rowSpacingPx).toFloat(),
             p,
         ).toInt().coerceIn(constraints.minHeight, constraints.maxHeight)
         val placeables = measurables.drop(7).mapIndexed { index, measurable ->
@@ -189,16 +244,16 @@ internal fun CalendarMonthGrid(
                 val cell = cells[index]
                 val col = cell.column
                 val x = col * cellWidth + minOf(col, remainder) + col * columnSpacingPx
-                val targetY = weekdayHeightPx + cell.row * expandedCellHeightPx
+                val targetY = weekdayHeightPx + cell.row * (expandedCellHeightPx + rowSpacingPx)
                 val selectedRowOrigin = interpolateCalendarCoordinate(
                     0f,
-                    (weekdayHeightPx + selectedMonthRow * expandedCellHeightPx).toFloat(),
+                    (weekdayHeightPx + selectedMonthRow * (expandedCellHeightPx + rowSpacingPx)).toFloat(),
                     p,
                 )
                 val y = if (cell.selectedWeekDate) {
                     interpolateCalendarCoordinate(0f, targetY.toFloat(), p).toInt()
                 } else {
-                    (selectedRowOrigin + (cell.row - selectedMonthRow) * expandedCellHeightPx).toInt()
+                    (selectedRowOrigin + (cell.row - selectedMonthRow) * (expandedCellHeightPx + rowSpacingPx)).toInt()
                 }
                 val shown = when {
                     cell.selectedWeekDate && cell.row >= rows -> 1f - p
@@ -229,6 +284,7 @@ private fun MorphCalendarDateCell(
     monthStyle: Boolean,
     enabled: Boolean,
     onClick: () -> Unit,
+    isToday: Boolean,
 ) {
     val colors = MaterialTheme.colorScheme
     Surface(
@@ -243,12 +299,13 @@ private fun MorphCalendarDateCell(
             selected -> colors.primaryContainer
             !monthStyle && selectedWeekDate -> colors.surfaceContainerLow
             !monthStyle -> colors.surface
-            else -> colors.primary
+            else -> if (monthStyle) colors.surfaceContainerHigh else colors.surface
         },
         contentColor = when {
             selected -> colors.onPrimaryContainer
             else -> colors.onSurface
         },
+        border = if (isToday && !selected) BorderStroke(1.dp, colors.outline) else null,
     ) {
         Box(Modifier.fillMaxSize().padding(horizontal = MaterialTheme.timnorSpacing.extraSmall), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -266,15 +323,14 @@ private fun MorphCalendarDateCell(
                     }
                 }
                 Text(date.day.toString(), style = MaterialTheme.typography.titleMedium, maxLines = 1)
-                val hoursText = if (seconds > 0) {
-                    "${formatCalendarDayHours(seconds.toLong())}${stringResource(Res.string.calendar_hour_abbreviation)}"
-                } else "0"
-                Text(
-                    hoursText,
-                    style = MaterialTheme.typography.labelSmall,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                if (seconds > 0) {
+                    Text(
+                        "${formatCalendarDayHours(seconds.toLong())}${stringResource(Res.string.calendar_hour_abbreviation)}",
+                        style = MaterialTheme.typography.labelSmall,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
             }
         }
     }

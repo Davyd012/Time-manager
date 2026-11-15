@@ -35,6 +35,104 @@ import org.junit.Test
 
 class PlannorApiTest {
     @Test
+    fun uncertainAllocationRetriesWithTheSameKeyAndUpdatesRemainingTime() = runTest {
+        val store = FakeRecordStorage()
+        val project = PlannorProjectSelection(7, 21, "SBI", selected = true, refreshedAtUtc = "now")
+        store.put(7, PlannorApi.TYPE_PROJECT, "21", project, PlannorProjectSelection.serializer(), "now")
+        val entry = PersonalTimeEntry(7, "entry-9", "2026-11-12", 3600, 0, 1)
+        store.put(7, PlannorApi.TYPE_ENTRY, entry.serverId, entry, PersonalTimeEntry.serializer(), "now")
+        val keys = mutableListOf<String>()
+        val http = HttpClient(MockEngine { request ->
+            when (request.method) {
+                HttpMethod.Post -> {
+                    val body = Json.parseToJsonElement((request.body as TextContent).text).jsonObject
+                    keys += body.getValue("idempotencyKey").jsonPrimitive.content
+                    if (keys.size == 1) respond("{}", HttpStatusCode.InternalServerError)
+                    else respond("""{"data":{"id":"allocation-1","entryId":"entry-9","projectId":21,"workDate":"2026-11-12","durationSeconds":1200,"revision":1}}""",
+                        HttpStatusCode.OK, headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()))
+                }
+                HttpMethod.Get -> respond("""{"data":{"items":[{"id":"entry-9","ownerId":7,"workDate":"2026-11-12","durationSeconds":3600,"allocatedSeconds":1200,"revision":2}]}}""",
+                    HttpStatusCode.OK, headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()))
+                else -> error("Unexpected request")
+            }
+        }) { install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true; explicitNulls = false }) } }
+        val api = PlannorApi(FakeSessions(PlannorSession("access", "refresh", 7, "alex")), store, http)
+
+        assertEquals(SharedWriteStatus.UNKNOWN, api.allocateExisting(entry, 21, null, 1200, null).status)
+        assertEquals(setOf("entry-9"), api.pendingAllocationEntryIds())
+        assertEquals(SharedWriteStatus.SYNCED, api.retryPending(forceRetry = true).single().status)
+        assertEquals(2, keys.size)
+        assertEquals(keys.first(), keys.last())
+        assertTrue(api.pendingAllocationEntryIds().isEmpty())
+        assertEquals(2400L, api.cachedPersonalEntries().single().remainingSeconds)
+        http.close()
+    }
+
+    @Test
+    fun unresolvedLocalImportIsNotSubmittedAgainWithANewKey() = runTest {
+        val store = FakeRecordStorage()
+        val pending = SharedTimeOutboxItem(accountId = 7, operation = SharedTimeOperation.IMPORT_ENTRY,
+            outcome = SharedTimeOutcome.OUTCOME_UNKNOWN, projectId = 0, workDate = "2026-11-12",
+            durationSeconds = 600, sourceId = "local-source", entryIdempotencyKey = "original-key")
+        store.put(7, PlannorApi.TYPE_OUTBOX, "original-key", pending, SharedTimeOutboxItem.serializer(), "now")
+        var writes = 0
+        val http = HttpClient(MockEngine { request ->
+            if (request.method != HttpMethod.Get) writes++
+            respond("""{"data":{"items":[]}}""", HttpStatusCode.OK,
+                headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()))
+        }) { install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true; explicitNulls = false }) } }
+        val api = PlannorApi(FakeSessions(PlannorSession("access", "refresh", 7, "alex")), store, http)
+
+        val results = api.importHistoricalEntries(listOf(HistoricalTimeEntry("local-source", "2026-11-12", 600)))
+
+        assertTrue(results.isEmpty())
+        assertEquals(0, writes)
+        assertEquals(setOf("local-source"), api.pendingImportSourceIds())
+        http.close()
+    }
+
+    @Test
+    fun cachedEntriesAndUnresolvedWritesAreScopedToTheConnectedAccount() = runTest {
+        val store = FakeRecordStorage()
+        val entry = PersonalTimeEntry(7, "entry-7", "2026-11-12", 3600, 0, 1)
+        val other = PersonalTimeEntry(8, "entry-8", "2026-11-12", 1800, 0, 1)
+        store.put(7, PlannorApi.TYPE_ENTRY, entry.serverId, entry, PersonalTimeEntry.serializer(), "now")
+        store.put(8, PlannorApi.TYPE_ENTRY, other.serverId, other, PersonalTimeEntry.serializer(), "now")
+        val pending = SharedTimeOutboxItem(accountId = 7, operation = SharedTimeOperation.ALLOCATE_EXISTING,
+            outcome = SharedTimeOutcome.OUTCOME_UNKNOWN, entryId = "entry-7", entryRevision = 1,
+            projectId = 21, workDate = entry.workDate, durationSeconds = 600, allocationIdempotencyKey = "key-1")
+        val resolved = pending.copy(outcome = SharedTimeOutcome.SUCCEEDED, entryId = "completed", allocationIdempotencyKey = "key-2")
+        val edit = SharedTimeOutboxItem(accountId = 7, operation = SharedTimeOperation.UPDATE_ALLOCATION,
+            outcome = SharedTimeOutcome.PENDING, entryId = "entry-7", entryRevision = 1, allocationId = "allocation-7",
+            allocationRevision = 1, projectId = 21, workDate = entry.workDate, durationSeconds = 600, allocationIdempotencyKey = "key-3")
+        val importing = SharedTimeOutboxItem(accountId = 7, operation = SharedTimeOperation.IMPORT_ENTRY,
+            outcome = SharedTimeOutcome.OUTCOME_UNKNOWN, projectId = 0, workDate = entry.workDate,
+            durationSeconds = 600, sourceId = "local-source", entryIdempotencyKey = "key-4")
+        val direct = SharedTimeOutboxItem(accountId = 7, operation = SharedTimeOperation.CREATE_AND_ALLOCATE,
+            outcome = SharedTimeOutcome.PENDING, projectId = 21, workDate = entry.workDate,
+            durationSeconds = 600, atomicIdempotencyKey = "key-5")
+        listOf(pending, resolved, edit, importing, direct).forEachIndexed { index, item ->
+            store.put(7, PlannorApi.TYPE_OUTBOX, index.toString(), item, SharedTimeOutboxItem.serializer(), "now")
+        }
+        val http = HttpClient(MockEngine { error("Cache reads must not use the network") })
+        val sessions = FakeSessions(PlannorSession("access", "refresh", 7, "alex"))
+        val api = PlannorApi(sessions, store, http)
+
+        assertEquals(listOf(entry), api.cachedPersonalEntries())
+        assertEquals(setOf("entry-7"), api.pendingAllocationEntryIds())
+        assertEquals(setOf("allocation-7"), api.pendingAllocationIds())
+        assertEquals(setOf("local-source"), api.pendingImportSourceIds())
+        assertTrue(api.hasPendingDirectCreate())
+        sessions.write(PlannorSession("access", "refresh", 8, "sam"))
+        assertEquals(listOf(other), api.cachedPersonalEntries())
+        assertTrue(api.pendingAllocationEntryIds().isEmpty())
+        assertTrue(api.pendingAllocationIds().isEmpty())
+        assertTrue(api.pendingImportSourceIds().isEmpty())
+        assertEquals(false, api.hasPendingDirectCreate())
+        http.close()
+    }
+
+    @Test
     fun missingOwnerSnapshotFallsBackToAllAccessibleProjectsIncludingUnselectedOnes() = runTest {
         val store = FakeRecordStorage()
         listOf(

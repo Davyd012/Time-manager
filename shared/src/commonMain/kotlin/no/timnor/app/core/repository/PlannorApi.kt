@@ -700,6 +700,45 @@ class PlannorApi(
         }
     }
 
+    /** Last successfully loaded owner entries, available while the service is offline. */
+    suspend fun cachedPersonalEntries(): List<PersonalTimeEntry> {
+        val accountId = sessions.read()?.accountId ?: return emptyList()
+        return localStore.getAll(accountId, TYPE_ENTRY, PersonalTimeEntry.serializer())
+    }
+
+    /** Entries with an allocation request whose result still needs reconciliation. */
+    suspend fun pendingAllocationEntryIds(): Set<String> {
+        val accountId = sessions.read()?.accountId ?: return emptySet()
+        return localStore.getAll(accountId, TYPE_OUTBOX, SharedTimeOutboxItem.serializer())
+            .filter { it.operation == SharedTimeOperation.ALLOCATE_EXISTING &&
+                it.outcome in setOf(SharedTimeOutcome.PENDING, SharedTimeOutcome.OUTCOME_UNKNOWN) }
+            .mapNotNull { it.entryId }.toSet()
+    }
+
+    suspend fun pendingAllocationIds(): Set<String> {
+        val accountId = sessions.read()?.accountId ?: return emptySet()
+        return localStore.getAll(accountId, TYPE_OUTBOX, SharedTimeOutboxItem.serializer())
+            .filter { it.operation in setOf(SharedTimeOperation.UPDATE_ALLOCATION, SharedTimeOperation.DELETE_ALLOCATION) &&
+                it.outcome in setOf(SharedTimeOutcome.PENDING, SharedTimeOutcome.OUTCOME_UNKNOWN) }
+            .mapNotNull { it.allocationId }.toSet()
+    }
+
+    suspend fun pendingImportSourceIds(): Set<String> {
+        val accountId = sessions.read()?.accountId ?: return emptySet()
+        return localStore.getAll(accountId, TYPE_OUTBOX, SharedTimeOutboxItem.serializer())
+            .filter { it.operation == SharedTimeOperation.IMPORT_ENTRY &&
+                it.outcome in setOf(SharedTimeOutcome.PENDING, SharedTimeOutcome.OUTCOME_UNKNOWN) }
+            .mapNotNull { it.sourceId }.toSet()
+    }
+
+    suspend fun hasPendingDirectCreate(): Boolean {
+        val accountId = sessions.read()?.accountId ?: return false
+        return localStore.getAll(accountId, TYPE_OUTBOX, SharedTimeOutboxItem.serializer()).any {
+            it.operation == SharedTimeOperation.CREATE_AND_ALLOCATE && it.sourceId == null &&
+                it.outcome in setOf(SharedTimeOutcome.PENDING, SharedTimeOutcome.OUTCOME_UNKNOWN)
+        }
+    }
+
     suspend fun clearAccountCache(accountId: Int) {
         localStore.clear(accountId, TYPE_PROJECT)
     }
@@ -813,7 +852,7 @@ class PlannorApi(
     /** Imports already-reviewed local history; private notes are never included. */
     suspend fun importHistoricalEntries(entries: List<HistoricalTimeEntry>): List<SharedWriteResult> {
         val session = sessions.read() ?: return emptyList()
-        val existingSourceIds = loadPersonalEntries().mapNotNull(PersonalTimeEntry::sourceWorkId).toSet()
+        val existingSourceIds = loadPersonalEntries().mapNotNull(PersonalTimeEntry::sourceWorkId).toSet() + pendingImportSourceIds()
         val eligibleIds = no.timnor.app.shared.features.shared_hours.domain.eligibleForImport(
             entries.map(HistoricalTimeEntry::sourceId),
             existingSourceIds,

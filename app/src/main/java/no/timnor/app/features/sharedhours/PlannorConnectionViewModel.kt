@@ -30,11 +30,26 @@ import no.timnor.app.shared.domain.time.utcLocalDateTimeFromEpochSeconds
 import java.time.LocalDate
 import java.util.UUID
 
+data class LocalTimeCandidate(
+    val workId: Int,
+    val sourceId: String?,
+    val workDate: String,
+    val durationSeconds: Long,
+    val projectName: String?,
+)
+
 data class PlannorConnectionUiState(
     val session: PlannorSession? = null,
     val identifier: String = "",
     val password: String = "",
     val projectSearch: String = "",
+    val projectDraftSelection: Set<Int>? = null,
+    val projectListIndex: Int = 0,
+    val projectListOffset: Int = 0,
+    val entryListIndex: Int = 0,
+    val entryListOffset: Int = 0,
+    val allocationListIndex: Int = 0,
+    val allocationListOffset: Int = 0,
     val sharedProjectId: Int? = null,
     val sharedTaskId: Int? = null,
     val tasks: List<AuthorizedPlannorTask> = emptyList(),
@@ -47,10 +62,17 @@ data class PlannorConnectionUiState(
     val sharedWorkReviews: List<SharedWorkReviewItem> = emptyList(),
     val projects: List<PlannorProjectSelection> = emptyList(),
     val personalProjects: List<StoredProject> = emptyList(),
+    val localProjectNamesBySource: Map<String, String> = emptyMap(),
+    val localTimeCandidates: List<LocalTimeCandidate> = emptyList(),
     val personalEntries: List<PersonalTimeEntry> = emptyList(),
     val projectAllocations: List<ProjectTimeAllocation> = emptyList(),
+    val pendingAllocationEntryIds: Set<String> = emptySet(),
+    val pendingAllocationIds: Set<String> = emptySet(),
+    val pendingImportSourceIds: Set<String> = emptySet(),
+    val pendingDirectCreate: Boolean = false,
     val existingEntryId: String? = null,
     val selectedAllocationId: String? = null,
+    val allocationCorrectionSeconds: Long = 0,
     val confirmAllocationDeletion: Boolean = false,
     val entryCorrectionDate: String = "",
     val entryCorrectionSeconds: String = "",
@@ -60,6 +82,9 @@ data class PlannorConnectionUiState(
     val loading: Boolean = false,
     val error: PlannorConnectionFailure? = null,
     val projectError: Boolean = false,
+    val projectSaveError: Boolean = false,
+    val entryError: Boolean = false,
+    val allocationError: Boolean = false,
 )
 
 class PlannorConnectionViewModel(
@@ -70,7 +95,7 @@ class PlannorConnectionViewModel(
     private val loadSharedWorkReviews: suspend () -> List<SharedWorkReviewItem>,
     private val resolveSharedWork: suspend (Int, SharedWorkResolution) -> Boolean,
 ) : ViewModel() {
-    private val mutableState = MutableStateFlow(PlannorConnectionUiState())
+    private val mutableState = MutableStateFlow(PlannorConnectionUiState(loading = true))
     val state: StateFlow<PlannorConnectionUiState> = mutableState.asStateFlow()
     private val syncRequests = Channel<Unit>(Channel.CONFLATED)
 
@@ -81,13 +106,27 @@ class PlannorConnectionViewModel(
             }
         }
         viewModelScope.launch {
-            val personalProjects = persistence.snapshotAll().projects
-            mutableState.update { it.copy(personalProjects = personalProjects) }
+            try {
             val session = api.currentSession()
             mutableState.update { it.copy(session = session) }
+            loadCachedProjects()
             if (session != null) {
+                val cachedEntries = api.cachedPersonalEntries()
+                val cachedAllocations = api.cachedProjectAllocations()
+                val pending = api.pendingAllocationEntryIds()
+                val pendingAllocations = api.pendingAllocationIds()
+                val pendingImports = api.pendingImportSourceIds()
+                val pendingDirect = api.hasPendingDirectCreate()
+                mutableState.update { it.copy(personalEntries = cachedEntries, projectAllocations = cachedAllocations, pendingAllocationEntryIds = pending, pendingAllocationIds = pendingAllocations, pendingImportSourceIds = pendingImports, pendingDirectCreate = pendingDirect, loading = false) }
                 requestSync()
                 refreshProjects()
+            } else {
+                mutableState.update { it.copy(loading = false) }
+            }
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (_: Exception) {
+                mutableState.update { it.copy(loading = false, error = PlannorConnectionFailure.NETWORK) }
             }
         }
     }
@@ -95,6 +134,44 @@ class PlannorConnectionViewModel(
     fun setIdentifier(value: String) = mutableState.update { it.copy(identifier = value, error = null) }
     fun setPassword(value: String) = mutableState.update { it.copy(password = value, error = null) }
     fun setProjectSearch(value: String) = mutableState.update { it.copy(projectSearch = value) }
+    fun setProjectDraft(projectId: Int, selected: Boolean) = mutableState.update { current ->
+        val project = current.projects.firstOrNull { it.projectId == projectId }
+        if (current.loading || project == null || project.archived || !project.available) return@update current
+        val saved = current.projects.filter { it.selected }.map { it.projectId }.toSet()
+        val draft = current.projectDraftSelection ?: saved
+        val next = if (selected) draft + projectId else draft - projectId
+        current.copy(projectDraftSelection = next.takeUnless { it == saved }, projectSaveError = false)
+    }
+
+    fun saveProjectDraft() {
+        val current = mutableState.value
+        val draft = current.projectDraftSelection ?: return
+        if (current.loading) return
+        mutableState.update { it.copy(loading = true, projectSaveError = false) }
+        viewModelScope.launch {
+            try {
+                val changed = current.projects.filter { it.selected != (it.projectId in draft) }
+                val saved = changed.all { api.setProjectSelected(it.projectId, it.projectId in draft) }
+                loadCachedProjects()
+                mutableState.update { it.copy(loading = false, projectSaveError = !saved, projectDraftSelection = if (saved) null else draft) }
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (_: Exception) {
+                try {
+                    loadCachedProjects()
+                } catch (cancellation: CancellationException) {
+                    throw cancellation
+                } catch (_: Exception) {
+                    // Keep the last visible selection if the local cache cannot be reread.
+                }
+                mutableState.update { it.copy(loading = false, projectSaveError = true, projectDraftSelection = draft) }
+            }
+        }
+    }
+    fun rememberProjectScroll(index: Int, offset: Int) = mutableState.update { it.copy(projectListIndex = index, projectListOffset = offset) }
+    fun rememberEntryScroll(index: Int, offset: Int) = mutableState.update { it.copy(entryListIndex = index, entryListOffset = offset) }
+    fun rememberAllocationScroll(index: Int, offset: Int) = mutableState.update { it.copy(allocationListIndex = index, allocationListOffset = offset) }
+    fun clearSharedWriteResult() = mutableState.update { it.copy(sharedWriteResult = null) }
     fun selectSharedProject(projectId: Int) {
         mutableState.update { it.copy(sharedProjectId = projectId, sharedTaskId = null, tasks = emptyList(), sharedWriteResult = null) }
         refreshTasks(projectId)
@@ -109,8 +186,15 @@ class PlannorConnectionViewModel(
             sharedWriteResult = null,
         )
     }
-    fun selectAllocation(allocationId: String) = mutableState.update {
-        it.copy(selectedAllocationId = allocationId, sharedWriteResult = null)
+    fun selectAllocation(allocationId: String) {
+        val allocation = mutableState.value.projectAllocations.firstOrNull { it.allocationId == allocationId } ?: return
+        mutableState.update {
+            it.copy(selectedAllocationId = allocationId, sharedProjectId = allocation.projectId,
+                sharedTaskId = allocation.taskId, sharedMinutes = (allocation.durationSeconds / 60).toString(),
+                allocationCorrectionSeconds = allocation.durationSeconds,
+                sharedNote = allocation.sharedNote.orEmpty(), tasks = emptyList(), sharedWriteResult = null)
+        }
+        refreshTasks(allocation.projectId)
     }
     fun setEntryCorrectionDate(value: String) = mutableState.update { it.copy(entryCorrectionDate = value) }
     fun setEntryCorrectionSeconds(value: String) = mutableState.update {
@@ -120,6 +204,7 @@ class PlannorConnectionViewModel(
         val selected = value.filter(Char::isDigit).take(4).toIntOrNull()?.coerceAtMost(1439)?.toString().orEmpty()
         it.copy(sharedMinutes = selected, sharedWriteResult = null)
     }
+    fun setAllocationSeconds(value: Long) = mutableState.update { it.copy(allocationCorrectionSeconds = value, sharedWriteResult = null) }
     fun setSharedWorkDate(value: String) {
         if (runCatching { LocalDate.parse(value) }.isSuccess) {
             mutableState.update { it.copy(sharedWorkDate = value, sharedWriteResult = null) }
@@ -133,9 +218,10 @@ class PlannorConnectionViewModel(
         val projectId = current.sharedProjectId ?: current.projects.firstOrNull { it.selected && !it.archived }?.projectId
             ?: return
         val seconds = current.sharedMinutes.toLongOrNull()?.takeIf { it in 1L..1439L }?.times(60) ?: return
-        if (current.loading) return
+        if (current.loading || current.pendingDirectCreate) return
+        mutableState.update { it.copy(loading = true, sharedWriteResult = null) }
         viewModelScope.launch {
-            mutableState.update { it.copy(loading = true, sharedWriteResult = null) }
+            try {
             val result = api.createAndAllocate(
                 projectId = projectId,
                 taskId = current.sharedTaskId,
@@ -144,8 +230,14 @@ class PlannorConnectionViewModel(
                 privateNote = current.privateNote.ifBlank { null },
                 sharedNote = current.sharedNote.ifBlank { null },
             )
-            mutableState.update { it.copy(loading = false, sharedWriteResult = result) }
+            val pending = api.hasPendingDirectCreate()
+            mutableState.update { it.copy(loading = false, sharedWriteResult = result, pendingDirectCreate = pending) }
             refreshEntries()
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (_: Exception) {
+                mutableState.update { it.copy(loading = false, pendingDirectCreate = true, entryError = true) }
+            }
         }
     }
 
@@ -156,9 +248,10 @@ class PlannorConnectionViewModel(
             ?: current.projects.firstOrNull { it.selected && !it.archived }?.projectId
             ?: return
         val seconds = current.sharedMinutes.toLongOrNull()?.takeIf { it > 0 }?.times(60) ?: return
-        if (!entry.canAllocate(seconds) || current.loading) return
+        if (!entry.canAllocate(seconds) || current.loading || entry.serverId in current.pendingAllocationEntryIds) return
+        mutableState.update { it.copy(loading = true, sharedWriteResult = null) }
         viewModelScope.launch {
-            mutableState.update { it.copy(loading = true, sharedWriteResult = null) }
+            try {
             val result = api.allocateExisting(
                 entry = entry,
                 projectId = projectId,
@@ -166,8 +259,15 @@ class PlannorConnectionViewModel(
                 durationSeconds = seconds,
                 sharedNote = current.sharedNote.ifBlank { null },
             )
-            mutableState.update { it.copy(loading = false, sharedWriteResult = result) }
+            val pending = api.pendingAllocationEntryIds()
+            val cachedEntries = api.cachedPersonalEntries()
+            mutableState.update { it.copy(loading = false, sharedWriteResult = result, pendingAllocationEntryIds = pending, personalEntries = cachedEntries) }
             refreshEntries()
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (_: Exception) {
+                mutableState.update { it.copy(loading = false, entryError = true, pendingAllocationEntryIds = it.pendingAllocationEntryIds + entry.serverId) }
+            }
         }
     }
 
@@ -205,19 +305,20 @@ class PlannorConnectionViewModel(
 
     fun refreshProjectSnapshots() {
         if (mutableState.value.loading) return
+        mutableState.update { it.copy(loading = true, allocationError = false) }
         viewModelScope.launch {
-            mutableState.update { it.copy(loading = true, projectError = false) }
             try {
                 val allocations = api.refreshProjectSnapshots()
+                val entries = api.cachedPersonalEntries()
                 mutableState.update { current ->
                     val selected = current.selectedAllocationId?.takeIf { id -> allocations.any { it.allocationId == id } }
                         ?: allocations.firstOrNull()?.allocationId
-                    current.copy(projectAllocations = allocations, selectedAllocationId = selected, loading = false)
+                    current.copy(projectAllocations = allocations, personalEntries = entries, selectedAllocationId = selected, loading = false)
                 }
             } catch (cancellation: CancellationException) {
                 throw cancellation
             } catch (_: Exception) {
-                mutableState.update { it.copy(loading = false, projectError = true) }
+                mutableState.update { it.copy(loading = false, allocationError = true) }
             }
         }
     }
@@ -226,10 +327,11 @@ class PlannorConnectionViewModel(
         val current = mutableState.value
         val allocation = current.projectAllocations.firstOrNull { it.allocationId == current.selectedAllocationId } ?: return
         val entry = current.personalEntries.firstOrNull { it.serverId == allocation.entryId } ?: return
-        val seconds = current.sharedMinutes.toLongOrNull()?.takeIf { it > 0 }?.times(60) ?: return
-        if (current.loading) return
+        val seconds = current.allocationCorrectionSeconds.takeIf { it > 0 && it <= entry.remainingSeconds + allocation.durationSeconds } ?: return
+        if (current.loading || allocation.allocationId in current.pendingAllocationIds) return
+        mutableState.update { it.copy(loading = true, sharedWriteResult = null) }
         viewModelScope.launch {
-            mutableState.update { it.copy(loading = true, sharedWriteResult = null) }
+            try {
             val result = api.correctAllocation(
                 allocation = allocation,
                 entryRevision = entry.revision,
@@ -237,8 +339,14 @@ class PlannorConnectionViewModel(
                 taskId = current.sharedTaskId,
                 sharedNote = current.sharedNote.ifBlank { null },
             )
-            mutableState.update { it.copy(loading = false, sharedWriteResult = result) }
-            refreshProjectSnapshots()
+            val pending = api.pendingAllocationIds()
+            mutableState.update { it.copy(loading = false, sharedWriteResult = result, pendingAllocationIds = pending) }
+            refreshEntries()
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (_: Exception) {
+                mutableState.update { it.copy(loading = false, allocationError = true, pendingAllocationIds = it.pendingAllocationIds + allocation.allocationId) }
+            }
         }
     }
 
@@ -249,19 +357,26 @@ class PlannorConnectionViewModel(
         val current = mutableState.value
         val allocation = current.projectAllocations.firstOrNull { it.allocationId == current.selectedAllocationId } ?: return
         val entry = current.personalEntries.firstOrNull { it.serverId == allocation.entryId } ?: return
-        if (current.loading) return
+        if (current.loading || allocation.allocationId in current.pendingAllocationIds) return
+        mutableState.update { it.copy(loading = true, confirmAllocationDeletion = false, sharedWriteResult = null) }
         viewModelScope.launch {
-            mutableState.update { it.copy(loading = true, confirmAllocationDeletion = false, sharedWriteResult = null) }
+            try {
             val result = api.deleteAllocation(allocation, entry.revision)
-            mutableState.update { it.copy(loading = false, sharedWriteResult = result) }
-            refreshProjectSnapshots()
+            val pending = api.pendingAllocationIds()
+            mutableState.update { it.copy(loading = false, sharedWriteResult = result, pendingAllocationIds = pending) }
+            refreshEntries()
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (_: Exception) {
+                mutableState.update { it.copy(loading = false, allocationError = true, pendingAllocationIds = it.pendingAllocationIds + allocation.allocationId) }
+            }
         }
     }
 
     fun refreshEntries() {
         if (mutableState.value.loading) return
+        mutableState.update { it.copy(loading = true, entryError = false) }
         viewModelScope.launch {
-            mutableState.update { it.copy(loading = true, projectError = false) }
             try {
                 val entries = api.loadPersonalEntries()
                 mutableState.update { current ->
@@ -274,22 +389,40 @@ class PlannorConnectionViewModel(
             } catch (cancellation: CancellationException) {
                 throw cancellation
             } catch (_: Exception) {
-                mutableState.update { it.copy(loading = false, projectError = true) }
+                mutableState.update { it.copy(loading = false, entryError = true, allocationError = true) }
             }
         }
     }
 
     fun retryPendingWrites() {
+        if (mutableState.value.loading || mutableState.value.session == null) return
+        mutableState.update { it.copy(loading = true) }
         viewModelScope.launch {
-            val accountId = mutableState.value.session?.accountId ?: return@launch
+            val accountId = mutableState.value.session?.accountId ?: run {
+                mutableState.update { it.copy(loading = false) }
+                return@launch
+            }
             try {
-                api.retryPending(forceRetry = true)
+                val results = api.retryPending(forceRetry = true)
+                val pending = api.pendingAllocationEntryIds()
+                val pendingAllocations = api.pendingAllocationIds()
+                val pendingImports = api.pendingImportSourceIds()
+                val pendingDirect = api.hasPendingDirectCreate()
+                mutableState.update { current ->
+                    val matching = current.sharedWriteResult?.commandId?.let { id -> results.firstOrNull { it.commandId == id } }
+                    val result = matching ?: results.firstOrNull { it.status != no.timnor.app.core.repository.SharedWriteStatus.SYNCED }
+                        ?: results.lastOrNull() ?: current.sharedWriteResult
+                    current.copy(pendingAllocationEntryIds = pending, pendingAllocationIds = pendingAllocations,
+                        pendingImportSourceIds = pendingImports, pendingDirectCreate = pendingDirect, sharedWriteResult = result)
+                }
             } catch (cancellation: CancellationException) {
                 throw cancellation
             } catch (_: Exception) {
-                mutableState.update { it.copy(projectError = true) }
+                mutableState.update { it.copy(entryError = true, allocationError = true) }
             }
+            mutableState.update { it.copy(loading = false) }
             if (mutableState.value.session?.accountId == accountId) requestSync()
+            if (mutableState.value.session?.accountId == accountId) refreshEntries()
         }
     }
 
@@ -299,19 +432,58 @@ class PlannorConnectionViewModel(
             mutableState.update { it.copy(loading = true) }
             try {
                 val resolved = resolveSharedWork.invoke(localWorkId, resolution)
-                mutableState.update { it.copy(loading = false, projectError = !resolved) }
+                mutableState.update { it.copy(loading = false, allocationError = !resolved) }
                 if (resolved) {
                     requestSync()
                 }
             } catch (cancellation: CancellationException) {
                 throw cancellation
             } catch (_: Exception) {
-                mutableState.update { it.copy(loading = false, projectError = true) }
+                mutableState.update { it.copy(loading = false, allocationError = true) }
             }
         }
     }
 
     fun requestSync() { syncRequests.trySend(Unit) }
+
+    fun refreshLocalEntries() {
+        viewModelScope.launch {
+            try {
+                loadCachedProjects()
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (_: Exception) {
+                mutableState.update { it.copy(entryError = true) }
+            }
+        }
+    }
+
+    fun prepareLocalEntry(workId: Int) {
+        val current = mutableState.value
+        val accountId = current.session?.accountId ?: return
+        val source = sourceId(accountId, workId)
+        if (current.loading || source in current.pendingImportSourceIds) return
+        mutableState.update { it.copy(loading = true, sharedWriteResult = null) }
+        viewModelScope.launch {
+            try {
+                val work = persistence.snapshotAll().works.firstOrNull { it.id == workId && it.time in 1..315_360_000 }
+                    ?: error("local entry no longer exists")
+                val result = api.importHistoricalEntries(listOf(HistoricalTimeEntry(
+                    sourceId = source,
+                    workDate = utcLocalDateTimeFromEpochSeconds(work.dateEpochSeconds).date.toString(),
+                    durationSeconds = work.time.toLong(),
+                )))
+                val pending = api.pendingImportSourceIds()
+                mutableState.update { it.copy(loading = false, pendingImportSourceIds = pending, sharedWriteResult = result.lastOrNull()) }
+                refreshEntries()
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (_: Exception) {
+                mutableState.update { it.copy(loading = false, entryError = true,
+                    pendingImportSourceIds = it.pendingImportSourceIds + source) }
+            }
+        }
+    }
 
     fun reviewHistoricalImport() {
         if (mutableState.value.loading) return
@@ -322,7 +494,7 @@ class PlannorConnectionViewModel(
                 val localWorks = persistence.snapshotAll().works.filter { it.time in 1..315_360_000 }
                 val remoteEntries = api.loadPersonalEntries()
                 val sourceIds = localWorks.map { work -> sourceId(session.accountId, work.id) }
-                val alreadyImported = remoteEntries.mapNotNull(PersonalTimeEntry::sourceWorkId).toSet()
+                val alreadyImported = remoteEntries.mapNotNull(PersonalTimeEntry::sourceWorkId).toSet() + api.pendingImportSourceIds()
                 val eligibleIds = eligibleForImport(sourceIds, alreadyImported).toSet()
                 val candidates = localWorks.filter { sourceId(session.accountId, it.id) in eligibleIds }.map { work ->
                     HistoricalTimeEntry(
@@ -345,7 +517,7 @@ class PlannorConnectionViewModel(
             } catch (cancellation: CancellationException) {
                 throw cancellation
             } catch (_: Exception) {
-                mutableState.update { it.copy(loading = false, projectError = true) }
+                mutableState.update { it.copy(loading = false, entryError = true) }
             }
         }
     }
@@ -360,9 +532,11 @@ class PlannorConnectionViewModel(
         viewModelScope.launch {
             mutableState.update { it.copy(loading = true) }
             val results = api.importHistoricalEntries(current.historicalImportEntries)
+            val pendingImports = api.pendingImportSourceIds()
             mutableState.update {
                 it.copy(
                     loading = false,
+                    pendingImportSourceIds = pendingImports,
                     sharedWriteResult = results.firstOrNull {
                         it.status == no.timnor.app.core.repository.SharedWriteStatus.UNKNOWN ||
                             it.status == no.timnor.app.core.repository.SharedWriteStatus.PENDING
@@ -382,7 +556,12 @@ class PlannorConnectionViewModel(
             mutableState.update { it.copy(loading = true, error = null, projectError = false) }
             when (val result = api.signIn(current.identifier, current.password)) {
                 is PlannorConnectionResult.Connected -> {
-                    mutableState.update { it.copy(session = result.session, password = "", loading = false) }
+                    val pending = api.pendingAllocationEntryIds()
+                    val pendingAllocations = api.pendingAllocationIds()
+                    val pendingImports = api.pendingImportSourceIds()
+                    val pendingDirect = api.hasPendingDirectCreate()
+                    mutableState.update { it.copy(session = result.session, password = "", loading = false, pendingAllocationEntryIds = pending, pendingAllocationIds = pendingAllocations, pendingImportSourceIds = pendingImports, pendingDirectCreate = pendingDirect) }
+                    loadCachedProjects()
                     requestSync()
                     refreshProjects()
                 }
@@ -395,24 +574,18 @@ class PlannorConnectionViewModel(
 
     fun refreshProjects() {
         if (mutableState.value.loading) return
+        mutableState.update { it.copy(loading = true, projectError = false) }
         viewModelScope.launch {
-            mutableState.update { it.copy(loading = true, projectError = false) }
             try {
                 api.loadAuthorizedProjects()
-                val entries = api.loadPersonalEntries()
                 loadCachedProjects()
-                mutableState.update { current ->
-                    val selectedEntryId = current.existingEntryId?.takeIf { id -> entries.any { it.serverId == id } }
-                        ?: entries.firstOrNull { it.remainingSeconds > 0 }?.serverId
-                    current.copy(personalEntries = entries, existingEntryId = selectedEntryId, loading = false)
-                }
-                mutableState.value.sharedProjectId?.let(::refreshTasks)
-                refreshProjectSnapshots()
             } catch (cancellation: CancellationException) {
                 throw cancellation
             } catch (_: Exception) {
-                mutableState.update { it.copy(loading = false, projectError = true) }
+                mutableState.update { it.copy(projectError = true) }
             }
+            mutableState.update { it.copy(loading = false) }
+            refreshEntries()
         }
     }
 
@@ -458,18 +631,32 @@ class PlannorConnectionViewModel(
                 mutableState.update { it.copy(loading = false, error = PlannorConnectionFailure.NETWORK) }
                 return@launch
             }
-            mutableState.value = PlannorConnectionUiState()
+            mutableState.value = PlannorConnectionUiState(loading = false)
+            loadCachedProjects()
         }
     }
 
     private suspend fun loadCachedProjects() {
-        val rows = api.selectedAndCachedProjects()
-        val personalProjects = persistence.snapshotAll().projects
+        val accountId = mutableState.value.session?.accountId
+        val rows = api.selectedAndCachedProjects().filter { it.accountId == accountId }
+        val snapshot = persistence.snapshotAll()
+        val personalProjects = snapshot.projects
+        val names = personalProjects.associate { it.id to it.name }
+        val projectNamesBySource = if (accountId == null) emptyMap() else snapshot.works.mapNotNull { work ->
+            names[work.project]?.let { name -> sourceId(accountId, work.id) to name }
+        }.toMap()
+        val localCandidates = snapshot.works.filter { it.time in 1..315_360_000 }.map { work ->
+            LocalTimeCandidate(work.id, accountId?.let { sourceId(it, work.id) },
+                utcLocalDateTimeFromEpochSeconds(work.dateEpochSeconds).date.toString(), work.time.toLong(), names[work.project])
+        }
         mutableState.update {
+            if (it.session?.accountId != accountId) return@update it
             val availableShared = rows.filter { project -> project.selected && !project.archived }
             val selectedId = it.sharedProjectId?.takeIf { id -> availableShared.any { project -> project.projectId == id } }
                 ?: availableShared.firstOrNull()?.projectId
-            it.copy(projects = rows, personalProjects = personalProjects, sharedProjectId = selectedId)
+            it.copy(projects = rows, personalProjects = personalProjects, sharedProjectId = selectedId,
+                localProjectNamesBySource = projectNamesBySource)
+                .copy(localTimeCandidates = localCandidates)
         }
     }
 
@@ -490,7 +677,7 @@ class PlannorConnectionViewModel(
         } catch (cancellation: CancellationException) {
             throw cancellation
         } catch (_: Exception) {
-            mutableState.update { it.copy(projectError = true) }
+            mutableState.update { it.copy(allocationError = true) }
         }
     }
 
@@ -509,14 +696,13 @@ class PlannorConnectionViewModel(
                     if (current.sharedProjectId != projectId) current
                     else current.copy(
                         tasks = tasks,
-                        sharedTaskId = current.sharedTaskId?.takeIf { taskId -> tasks.any { it.id == taskId } },
                     )
                 }
             } catch (cancellation: CancellationException) {
                 throw cancellation
             } catch (_: Exception) {
                 mutableState.update { current ->
-                    if (current.sharedProjectId == projectId) current.copy(tasks = emptyList(), sharedTaskId = null)
+                    if (current.sharedProjectId == projectId) current.copy(tasks = emptyList())
                     else current
                 }
             }

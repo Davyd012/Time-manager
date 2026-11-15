@@ -5,7 +5,6 @@ import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -13,6 +12,26 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.FileProvider
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -27,6 +46,15 @@ import no.timnor.app.shared.features.settings.domain.TimnorSettingsViewModel
 import no.timnor.app.shared.features.settings.presentation.TimnorSettingsSection
 import no.timnor.app.features.sharedhours.PlannorConnectionSection
 import no.timnor.app.features.sharedhours.PlannorConnectionViewModel
+import no.timnor.app.features.sharedhours.PlannorConnectionUiState
+import no.timnor.app.features.sharedhours.PlannorSettingsDestination
+import no.timnor.app.features.sharedhours.AllocateExistingTimeScreen
+import no.timnor.app.features.sharedhours.PlannorProjectsScreen
+import no.timnor.app.features.sharedhours.SharedAllocationsScreen
+import no.timnor.app.R
+import no.timnor.app.shared.features.settings.presentation.TimnorSettingsEntry
+import no.timnor.app.shared.features.settings.presentation.TimnorSettingsOverview
+import no.timnor.app.ui.theme.spacing
 import java.io.File
 
 /** Collect document effects at the host root so Home export remains available outside Settings. */
@@ -103,7 +131,6 @@ fun AndroidTimnorDocumentEffectHandler(viewModel: TimnorSettingsViewModel) {
 @Composable
 fun SharedSettingsScreen(
     viewModel: TimnorSettingsViewModel,
-    plannorViewModel: PlannorConnectionViewModel,
     onBack: () -> Unit,
     onGoToTimer: () -> Unit,
     onRestored: () -> Unit,
@@ -115,15 +142,126 @@ fun SharedSettingsScreen(
 
     TimnorSettingsSection(
         state = state,
-        modifier = androidx.compose.ui.Modifier.statusBarsPadding(),
         onBack = onBack,
         onCreateBackup = viewModel::createBackup,
         onRestoreBackup = viewModel::requestBackupRestore,
         onConfirmRestore = viewModel::restoreBackup,
         onCancelRestore = viewModel::cancelRestorePreview,
         onGoToStopwatch = onGoToTimer,
-        additionalContent = { PlannorConnectionSection(plannorViewModel) },
+        backLabelOverride = stringResource(R.string.settings_back_label),
     )
+}
+
+@Composable
+fun AndroidSettingsOverview(
+    state: PlannorConnectionUiState,
+    modifier: androidx.compose.ui.Modifier = androidx.compose.ui.Modifier,
+    onBack: () -> Unit,
+    onOpen: (PlannorSettingsDestination) -> Unit,
+    onBackup: () -> Unit,
+) {
+    val accountSummary = state.session?.let { stringResource(R.string.plannor_connected_as, it.username) }
+        ?: stringResource(R.string.settings_plannor_disconnected)
+    val selectedCount = state.projects.count { it.selected }
+    val projectSummary = if (state.session == null) stringResource(R.string.plannor_connect_required)
+        else pluralStringResource(R.plurals.settings_selected_projects, selectedCount, selectedCount)
+    val reviewSummary = if (state.sharedWorkNeedsReview > 0) {
+        stringResource(R.string.plannor_work_needs_review)
+    } else if (state.projectAllocations.isNotEmpty()) stringResource(R.string.allocation_count, state.projectAllocations.size)
+    else stringResource(R.string.settings_allocations_summary)
+    TimnorSettingsOverview(
+        entries = listOf(
+            TimnorSettingsEntry("account", stringResource(R.string.plannor_connection_title), accountSummary,
+                painterResource(R.drawable.baseline_person_24), connected = state.session != null) { onOpen(PlannorSettingsDestination.Account) },
+            TimnorSettingsEntry("projects", stringResource(R.string.settings_projects_title), projectSummary,
+                painterResource(R.drawable.baseline_work_outline_24)) { onOpen(PlannorSettingsDestination.Projects) },
+            TimnorSettingsEntry("share", stringResource(R.string.settings_share_time_title),
+                stringResource(R.string.settings_share_time_summary), painterResource(R.drawable.baseline_share_24)) {
+                onOpen(PlannorSettingsDestination.ShareTime)
+            },
+            TimnorSettingsEntry("allocations", stringResource(R.string.plannor_allocations_title), reviewSummary,
+                painterResource(R.drawable.baseline_import_export_24)) { onOpen(PlannorSettingsDestination.AllocationsReview) },
+            TimnorSettingsEntry("backup", stringResource(R.string.backup_restore_section),
+                stringResource(R.string.settings_backup_summary), painterResource(R.drawable.baseline_import_export_24), onClick = onBackup),
+        ),
+        modifier = modifier,
+        backLabel = stringResource(R.string.settings_overview_back_label),
+        onBack = onBack,
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun PlannorSettingsScreen(
+    viewModel: PlannorConnectionViewModel,
+    destination: PlannorSettingsDestination,
+    modifier: androidx.compose.ui.Modifier = androidx.compose.ui.Modifier,
+    onBack: () -> Unit,
+    onConnectRequired: () -> Unit,
+    onOpenProjects: () -> Unit = {},
+    onCreateTime: () -> Unit = {},
+) {
+    val backLabel = stringResource(R.string.back_cd)
+    val title = when (destination) {
+        PlannorSettingsDestination.Account -> stringResource(R.string.plannor_connection_title)
+        PlannorSettingsDestination.Projects -> stringResource(R.string.settings_choose_projects_title)
+        PlannorSettingsDestination.ShareTime -> stringResource(R.string.settings_share_time_title)
+        PlannorSettingsDestination.CreateTime -> stringResource(R.string.plannor_share_time_title)
+        PlannorSettingsDestination.AllocationsReview -> stringResource(R.string.plannor_allocations_title)
+    }
+    Scaffold(
+        modifier = modifier,
+        containerColor = MaterialTheme.colorScheme.background,
+        contentColor = MaterialTheme.colorScheme.onBackground,
+        topBar = {
+            TopAppBar(
+                title = { Text(title) },
+                navigationIcon = {
+                    IconButton(
+                        onClick = onBack,
+                        modifier = androidx.compose.ui.Modifier.semantics {
+                            contentDescription = backLabel
+                        },
+                    ) {
+                        Icon(painterResource(R.drawable.outline_keyboard_arrow_left_24), null)
+                    }
+                },
+            )
+        },
+    ) { padding ->
+        if (destination == PlannorSettingsDestination.ShareTime) {
+            AllocateExistingTimeScreen(
+                viewModel = viewModel,
+                modifier = androidx.compose.ui.Modifier.fillMaxSize().padding(padding),
+                onConnectRequired = onConnectRequired,
+            )
+        } else if (destination == PlannorSettingsDestination.AllocationsReview) {
+            SharedAllocationsScreen(viewModel = viewModel, onConnectRequired = onConnectRequired,
+                modifier = androidx.compose.ui.Modifier.fillMaxSize().padding(padding))
+        } else if (destination == PlannorSettingsDestination.Projects) {
+            PlannorProjectsScreen(
+                viewModel = viewModel,
+                modifier = androidx.compose.ui.Modifier.fillMaxSize().padding(padding)
+                    .padding(MaterialTheme.spacing.medium),
+                onConnectRequired = onConnectRequired,
+            )
+        } else {
+            Column(
+                modifier = androidx.compose.ui.Modifier.fillMaxSize().padding(padding)
+                    .verticalScroll(rememberScrollState()).padding(MaterialTheme.spacing.medium),
+                verticalArrangement = Arrangement.spacedBy(MaterialTheme.spacing.medium),
+            ) {
+                PlannorConnectionSection(
+                    viewModel = viewModel,
+                    destination = destination,
+                    modifier = androidx.compose.ui.Modifier.fillMaxWidth(),
+                    onConnectRequired = onConnectRequired,
+                    onOpenProjects = onOpenProjects,
+                    onCreateTime = onCreateTime,
+                )
+            }
+        }
+    }
 }
 
 private fun writeText(context: Context, uri: Uri, contents: String): Boolean = try {
