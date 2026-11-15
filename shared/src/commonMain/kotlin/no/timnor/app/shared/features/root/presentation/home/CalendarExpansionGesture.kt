@@ -1,6 +1,9 @@
 package no.timnor.app.shared.features.root.presentation.home
 
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.ui.input.pointer.PointerEventPass
@@ -23,7 +26,10 @@ internal fun Modifier.calendarExpansionGesture(
     onDragStart: () -> Unit,
     onProgressChange: suspend (Float) -> Unit,
     onDragStop: (Float) -> Unit,
-): Modifier = pointerInput(dragDistancePx, enabled) {
+    collapseStartLimitPx: Float? = null,
+): Modifier = composed {
+    val currentCollapseStartLimitPx by rememberUpdatedState(collapseStartLimitPx)
+    pointerInput(dragDistancePx, enabled) {
     if (!enabled) return@pointerInput
     coroutineScope {
         val touchSlop = viewConfiguration.touchSlop
@@ -70,6 +76,10 @@ internal fun Modifier.calendarExpansionGesture(
                         if (abs(accumulated.y) <= abs(accumulated.x)) return@awaitEachGesture
                         progress = currentProgress()
                         if (!shouldClaimCalendarDrag(progress, accumulated.y)) return@awaitEachGesture
+                        val limit = currentCollapseStartLimitPx
+                        if (accumulated.y < 0f && limit != null && down.position.y > limit) {
+                            return@awaitEachGesture
+                        }
                         onDragStart()
                         claimed = true
                         progress = currentProgress()
@@ -93,6 +103,7 @@ internal fun Modifier.calendarExpansionGesture(
             updateWorker.join()
         }
     }
+}
 }
 
 private sealed interface ExpansionGestureUpdate {

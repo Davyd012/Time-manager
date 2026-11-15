@@ -4,13 +4,17 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -95,8 +99,9 @@ internal fun StopwatchSection(
         elapsed > 0 -> Res.string.stopwatch_paused_status
         else -> Res.string.stopwatch_idle_status
     }
+    BoxWithConstraints(modifier = modifier.fillMaxSize()) {
     Column(
-        modifier = modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).heightIn(min = maxHeight),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Spacer(Modifier.weight(0.5f))
@@ -179,7 +184,7 @@ internal fun StopwatchSection(
         }
         LargeFloatingActionButton(
             onClick = { if (selectedProject == null) showProjectPicker = true else onStartPause() },
-            containerColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            containerColor = MaterialTheme.colorScheme.primaryContainer,
             contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
             shape = CircleShape,
         ) {
@@ -218,6 +223,7 @@ internal fun StopwatchSection(
             }
         }
         Spacer(Modifier.weight(1f))
+    }
     }
 
     if (showProjectPicker) {

@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.requiredHeight
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -85,6 +86,7 @@ fun TimnorHomeScreen(
     val calendarProgress = testExpansionProgress?.coerceIn(0f, 1f) ?: expansionAnimation.value
     val calendarExpanded = calendarProgress >= 0.5f
     val calendarBackEnabled = calendarProgress > 0.001f
+    val calendarScrollState = rememberScrollState()
 
     suspend fun updateCalendarExpansionProgress(progress: Float) {
         expansionAnimation.snapTo(progress.coerceIn(0f, 1f))
@@ -120,6 +122,11 @@ fun TimnorHomeScreen(
     }
     LaunchedEffect(calendarExpanded) { onCalendarExpansionChange(calendarExpanded) }
     LaunchedEffect(calendarBackEnabled) { onCalendarBackEnabledChange(calendarBackEnabled) }
+    LaunchedEffect(calendarProgress >= 0.999f) {
+        if (calendarProgress < 0.999f && calendarScrollState.value > 0) {
+            calendarScrollState.scrollTo(0)
+        }
+    }
 
     Surface(
         modifier = modifier.fillMaxSize(),
@@ -149,6 +156,9 @@ fun TimnorHomeScreen(
                     .calendarExpansionGesture(
                         enabled = !calendarScrollMode,
                         dragDistancePx = dragDistance,
+                        collapseStartLimitPx = if (calendarProgress >= 0.999f && calendarScrollState.maxValue > 0) {
+                            with(LocalDensity.current) { (spacing.extraLarge * 2 * fontScale).toPx() }
+                        } else null,
                         currentProgress = { expansionAnimation.value },
                         onDragStart = ::startCalendarDrag,
                         onProgressChange = ::updateCalendarExpansionProgress,
@@ -205,6 +215,7 @@ fun TimnorHomeScreen(
                 expanded = calendarExpanded,
                 expansionProgress = calendarProgress,
                 scrollMode = calendarScrollMode,
+                scrollState = calendarScrollState,
                 onToggleScrollMode = { calendarScrollMode = !calendarScrollMode },
                 contentInteractive = calendarProgress >= 0.999f && !isDraggingCalendar,
                 onToggleExpanded = { settleCalendarExpansion(calendarProgress < 0.5f) },

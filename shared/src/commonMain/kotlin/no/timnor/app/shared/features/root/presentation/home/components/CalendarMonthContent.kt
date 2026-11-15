@@ -266,7 +266,7 @@ internal fun CalendarMonthContent(
                     modifier = Modifier.fillMaxWidth()
                         .height(monthTotalRowHeight * progress)
                         .clipToBounds()
-                        .alpha(progress),
+                        .alpha(if (progress >= 0.999f) 1f else 0f),
                     contentAlignment = Alignment.Center,
                 ) {
                 Row(

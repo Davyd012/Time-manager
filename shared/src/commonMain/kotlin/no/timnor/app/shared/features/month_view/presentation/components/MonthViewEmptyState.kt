@@ -2,6 +2,7 @@ package no.timnor.app.shared.features.month_view.presentation.components
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -23,6 +24,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import io.github.alexzhirkevich.compottie.LottieCompositionSpec
 import io.github.alexzhirkevich.compottie.animateLottieCompositionAsState
 import io.github.alexzhirkevich.compottie.rememberLottiePainter
@@ -53,7 +55,12 @@ internal fun MonthViewEmptyState(
         0f
     }
 
-    Box(modifier = modifier, contentAlignment = Alignment.Center) {
+    BoxWithConstraints(modifier = modifier, contentAlignment = Alignment.Center) {
+        val illustrationSize = minOf(
+            MaterialTheme.timnorSpacing.extraLarge * 8,
+            maxHeight * 0.5f,
+            (maxWidth - MaterialTheme.timnorSpacing.large * 2).coerceAtLeast(0.dp),
+        )
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -66,7 +73,7 @@ internal fun MonthViewEmptyState(
                 painter = rememberLottiePainter(composition = composition, progress = { progress }),
                 contentDescription = null,
                 modifier = Modifier
-                    .size(MaterialTheme.timnorSpacing.extraLarge * 8)
+                    .size(illustrationSize)
                     .testTag("home-empty-state-illustration"),
             )
             Text(

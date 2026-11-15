@@ -34,6 +34,7 @@ struct TimnorContentView: View {
             documentHandler: documentEffectHandler,
             sessionStorage: IosPlannorSessionStorage(),
         )
+        .ignoresSafeArea(.container)
         .onChange(of: scenePhase) { phase in
             if phase == .active {
                 IosPlannorSyncBridge.shared.retrySync()

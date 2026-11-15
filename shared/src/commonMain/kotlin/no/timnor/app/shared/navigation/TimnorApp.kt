@@ -1,6 +1,7 @@
 package no.timnor.app.shared.navigation
 
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -112,17 +113,17 @@ fun TimnorApp(
                     },
                     onShareMonth = settingsViewModel::shareText,
                     onCalendarBackEnabledChange = { calendarBackEnabled = it },
-                    modifier = Modifier.padding(insets),
+                    modifier = Modifier.padding(insets).consumeWindowInsets(insets),
                 )
                 SharedAppDestination.Stopwatch -> TimnorStopwatchScreen(
                     state = state,
                     viewModel = viewModel,
-                    modifier = Modifier.padding(insets),
+                    modifier = Modifier.padding(insets).consumeWindowInsets(insets),
                 )
                 SharedAppDestination.MonthView -> TimnorMonthViewScreen(
                     state = state,
                     viewModel = viewModel,
-                    modifier = Modifier.padding(insets),
+                    modifier = Modifier.padding(insets).consumeWindowInsets(insets),
                     scrollToSelectedDateKey = monthViewEntryKey,
                     onBack = {
                         val next = navigationState.backToHomeRoot()
@@ -146,7 +147,7 @@ fun TimnorApp(
                             ),
                         ),
                         additionalContent = additionalSettingsContent,
-                        modifier = Modifier.padding(insets),
+                        modifier = Modifier.padding(insets).consumeWindowInsets(insets),
                         backLabel = stringResource(Res.string.back_to_home),
                         onBack = {
                             val next = navigationState.backToHomeRoot()
@@ -158,7 +159,7 @@ fun TimnorApp(
                 SharedAppDestination.Backup -> {
                     TimnorSettingsSection(
                         state = settingsState,
-                        modifier = Modifier.padding(insets),
+                        modifier = Modifier.padding(insets).consumeWindowInsets(insets),
                         onBack = {
                             val next = navigationState.openHomeRoute(SharedHomeRoute.Settings)
                             selectedTab = next.selectedTab

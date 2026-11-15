@@ -144,7 +144,7 @@ private fun MonthViewTimelineGroup(
             text = hour.toString().padStart(2, '0'),
             modifier = if (showProjectMarker) Modifier else Modifier.width(MaterialTheme.timnorSpacing.extraLarge),
             style = MaterialTheme.typography.titleLarge,
-            color = MaterialTheme.colorScheme.onPrimaryContainer,
+            color = MaterialTheme.colorScheme.onTertiaryContainer,
             fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
         )
         if (showProjectMarker) Spacer(Modifier.width(homeRowSpacing))
@@ -157,7 +157,7 @@ private fun MonthViewTimelineGroup(
             thickness = if (showProjectMarker) {
                 MaterialTheme.timnorSpacing.extraSmall / 2
             } else DividerDefaults.Thickness,
-            color = MaterialTheme.colorScheme.onPrimaryContainer,
+            color = MaterialTheme.colorScheme.onTertiaryContainer,
         )
         if (showProjectMarker) Spacer(Modifier.width(homeRowSpacing))
         Column(
@@ -208,12 +208,12 @@ private fun MonthViewTimelineGroup(
                                     Icon(
                                         painter = painterResource(Res.drawable.plannor_link_24),
                                         contentDescription = stringResource(Res.string.plannor_project_marker_description),
-                                        tint = MaterialTheme.colorScheme.secondary,
+                                        tint = MaterialTheme.colorScheme.secondaryContainer,
                                     )
                                     Text(
                                         stringResource(Res.string.plannor_linked_project_label, name),
                                         style = MaterialTheme.typography.bodySmall,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        color = MaterialTheme.colorScheme.secondaryContainer,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
                                     )

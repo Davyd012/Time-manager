@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -59,6 +60,7 @@ internal fun CalendarSection(
     expanded: Boolean = true,
     expansionProgress: Float = if (expanded) 1f else 0f,
     scrollMode: Boolean = false,
+    scrollState: ScrollState = rememberScrollState(),
     onToggleScrollMode: () -> Unit = {},
     contentInteractive: Boolean = expansionProgress >= 0.999f,
     onToggleExpanded: (() -> Unit)? = null,
@@ -91,7 +93,6 @@ internal fun CalendarSection(
         stringResource(Res.string.calendar_weekday_saturday),
         stringResource(Res.string.calendar_weekday_sunday),
     )
-    val calendarScrollState = rememberScrollState()
     fun requestMonthChange(targetMonth: LocalDate) {
         if (expandedContentEnabled && targetMonth != month) {
             onMonthChange(targetMonth)
@@ -112,7 +113,7 @@ internal fun CalendarSection(
                 },
             )
             .then(
-                if (expansionProgress > 0f) Modifier.verticalScroll(calendarScrollState) else Modifier,
+                if (expansionProgress > 0f) Modifier.verticalScroll(scrollState) else Modifier,
             ),
         verticalArrangement = Arrangement.spacedBy(MaterialTheme.timnorSpacing.small * expansionProgress.coerceIn(0f, 1f)),
     ) {
