@@ -37,6 +37,7 @@ import org.jetbrains.compose.resources.stringResource
 fun TimnorApp(
     viewModel: TimnorHomeViewModel,
     settingsViewModel: TimnorSettingsViewModel,
+    additionalSettingsContent: @Composable () -> Unit = {},
     onSettingsEffect: suspend (TimnorSettingsEffect) -> Unit = {},
     onPlatformBackHandlerChanged: (canGoBack: Boolean, handleBack: () -> Unit) -> Unit = { _, _ -> },
 ) {
@@ -144,6 +145,7 @@ fun TimnorApp(
                                 },
                             ),
                         ),
+                        additionalContent = additionalSettingsContent,
                         modifier = Modifier.padding(insets),
                         backLabel = stringResource(Res.string.back_to_home),
                         onBack = {

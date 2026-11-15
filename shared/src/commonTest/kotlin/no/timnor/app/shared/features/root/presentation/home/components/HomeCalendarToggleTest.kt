@@ -27,14 +27,14 @@ class HomeCalendarToggleTest {
     fun expansionDragUsesProgressThresholdWhenFlingIsSlow() {
         assertFalse(
             calendarExpansionTarget(
-                progress = 0.49f,
+                progress = 0.19f,
                 velocityPxPerSecond = -100f,
                 velocityThresholdPxPerSecond = 500f,
             ),
         )
         assertTrue(
             calendarExpansionTarget(
-                progress = 0.5f,
+                progress = 0.2f,
                 velocityPxPerSecond = 100f,
                 velocityThresholdPxPerSecond = 500f,
             ),

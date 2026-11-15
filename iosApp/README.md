@@ -20,7 +20,8 @@ paths and the Swift/Kotlin bridge have not been compiled or exercised on a
 simulator; the stopwatch does not promise continuous background execution. See
 `docs/ai/timnor-migration/HANDOFF.md` for the current acceptance gaps.
 
-The Windows build cannot execute Xcode or Kotlin/Native iOS targets. Build and
-run the Xcode project on macOS before treating this host as validated.
+Windows can compile the configured Kotlin/Native framework targets, but cannot
+run Xcode or iOS simulator tests. Build and run the Xcode project on macOS
+before treating this host as validated.
 See `docs/ai/timnor-migration/PLATFORM-BUILDS.md` for the available Android and
 iOS build/acceptance steps and current compatibility limits.

@@ -34,12 +34,12 @@ struct TimnorContentView: View {
             documentHandler: documentEffectHandler,
             sessionStorage: IosPlannorSessionStorage(),
         )
-        .onChange(of: scenePhase) { _, phase in
+        .onChange(of: scenePhase) { phase in
             if phase == .active {
                 IosPlannorSyncBridge.shared.retrySync()
             }
         }
-        .onChange(of: connectivityMonitor.reconnectGeneration) { _, _ in
+        .onChange(of: connectivityMonitor.reconnectGeneration) { _ in
             IosPlannorSyncBridge.shared.retrySync()
         }
         .fileExporter(

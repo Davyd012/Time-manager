@@ -52,6 +52,7 @@ data class TimnorSettingsEntry(
 @Composable
 fun TimnorSettingsOverview(
     entries: List<TimnorSettingsEntry>,
+    additionalContent: @Composable () -> Unit = {},
     modifier: Modifier = Modifier,
     backLabel: String,
     onBack: () -> Unit,
@@ -133,6 +134,11 @@ fun TimnorSettingsOverview(
                         if (index < entries.lastIndex) {
                             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                         }
+                    }
+                }
+                item {
+                    Column(modifier = Modifier.fillMaxWidth().widthIn(max = 640.dp)) {
+                        additionalContent()
                     }
                 }
             }
