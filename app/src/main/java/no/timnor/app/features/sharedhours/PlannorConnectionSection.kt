@@ -176,5 +176,6 @@ private fun PlannorConnectionFailure.toStringResource(): Int = when (this) {
     PlannorConnectionFailure.CREDENTIALS_OR_ACCOUNT -> R.string.plannor_error_credentials
     PlannorConnectionFailure.RATE_LIMITED -> R.string.plannor_error_rate_limited
     PlannorConnectionFailure.SERVER -> R.string.plannor_error_server
+    PlannorConnectionFailure.STORAGE -> R.string.plannor_error_storage
     PlannorConnectionFailure.NETWORK, PlannorConnectionFailure.SESSION_EXPIRED -> R.string.plannor_error_network
 }

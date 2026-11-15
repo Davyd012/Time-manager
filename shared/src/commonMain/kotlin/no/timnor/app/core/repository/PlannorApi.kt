@@ -245,7 +245,7 @@ sealed interface PlannorConnectionResult {
     data class Failed(val reason: PlannorConnectionFailure) : PlannorConnectionResult
 }
 
-enum class PlannorConnectionFailure { NETWORK, CREDENTIALS_OR_ACCOUNT, RATE_LIMITED, SESSION_EXPIRED, SERVER }
+enum class PlannorConnectionFailure { NETWORK, CREDENTIALS_OR_ACCOUNT, RATE_LIMITED, SESSION_EXPIRED, SERVER, STORAGE }
 
 /** Uses only the first-party session and project-discovery routes registered by Plannor. */
 class PlannorApi(
@@ -271,7 +271,7 @@ class PlannorApi(
             return PlannorConnectionResult.Failed(PlannorConnectionFailure.SERVER)
         }
         val session = provisional.copy(username = account.username)
-        sessions.write(session)
+        if (!sessions.saveSession(session)) return PlannorConnectionResult.Failed(PlannorConnectionFailure.STORAGE)
         recordSessionStateChange(session.accountId)
         PlannorConnectionResult.Connected(session)
     } catch (cancellation: CancellationException) {
@@ -287,7 +287,7 @@ class PlannorApi(
             if (account.id != current.accountId) {
                 clearSessionIfCurrent(current)
                 null
-            } else current.copy(username = account.username).also(sessions::write)
+            } else current.copy(username = account.username).also { sessions.saveSession(it) }
         } catch (_: UnauthorizedException) {
             null
         } catch (_: Throwable) {
@@ -313,8 +313,7 @@ class PlannorApi(
                 clearSessionIfCurrent(current)
                 return false
             }
-            sessions.write(current.copy(accessToken = next.accessToken, refreshToken = next.refreshToken))
-            true
+            sessions.saveSession(current.copy(accessToken = next.accessToken, refreshToken = next.refreshToken))
         } catch (_: Throwable) {
             false
         }
@@ -332,7 +331,6 @@ class PlannorApi(
             }
             if (response.status != HttpStatusCode.NoContent && response.status != HttpStatusCode.OK) return false
             clearSessionIfCurrent(session)
-            true
         } catch (_: Throwable) {
             false
         }
@@ -1174,10 +1172,11 @@ class PlannorApi(
         localStore.putOutboxUnlessRestorePaused(item.accountId, key, item, now())
     }
 
-    private suspend fun clearSessionIfCurrent(session: PlannorSession) {
-        if (sessions.read() != session) return
-        sessions.clear()
+    private suspend fun clearSessionIfCurrent(session: PlannorSession): Boolean {
+        if (sessions.read() != session) return false
+        if (!sessions.clearSession()) return false
         recordSessionStateChange(session.accountId)
+        return true
     }
 
     private suspend fun recordSessionStateChange(accountId: Int) {

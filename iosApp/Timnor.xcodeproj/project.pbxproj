@@ -154,7 +154,6 @@
 				CODE_SIGN_STYLE = Automatic;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Timnor-Info.plist";
-				INFOPLIST_KEY_CADisableMinimumFrameDurationOnPhone = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Timnor;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -176,7 +175,6 @@
 				CODE_SIGN_STYLE = Automatic;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Timnor-Info.plist";
-				INFOPLIST_KEY_CADisableMinimumFrameDurationOnPhone = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Timnor;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

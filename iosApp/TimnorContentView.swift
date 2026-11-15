@@ -409,23 +409,33 @@ private final class IosPlannorSessionStorage: NSObject, PlannorSessionStorage {
     }
 
     func write(session: PlannorSession) {
+        _ = saveSession(session: session)
+    }
+
+    func saveSession(session: PlannorSession) -> Bool {
         let stored = SessionValue(
             accessToken: session.accessToken,
             refreshToken: session.refreshToken,
             accountId: session.accountId,
             username: session.username,
         )
-        guard let data = try? JSONEncoder().encode(stored) else { preconditionFailure("Unable to encode Plannor session") }
-        SecItemDelete(baseQuery as CFDictionary)
+        guard let data = try? JSONEncoder().encode(stored) else { return false }
+        let updateStatus = SecItemUpdate(baseQuery as CFDictionary, [kSecValueData as String: data] as CFDictionary)
+        if updateStatus == errSecSuccess { return true }
+        guard updateStatus == errSecItemNotFound else { return false }
         var item = baseQuery
         item[kSecValueData as String] = data
         item[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
-        precondition(SecItemAdd(item as CFDictionary, nil) == errSecSuccess, "Unable to save Plannor session to Keychain")
+        return SecItemAdd(item as CFDictionary, nil) == errSecSuccess
     }
 
     func clear() {
+        _ = clearSession()
+    }
+
+    func clearSession() -> Bool {
         let status = SecItemDelete(baseQuery as CFDictionary)
-        precondition(status == errSecSuccess || status == errSecItemNotFound, "Unable to clear Plannor session from Keychain")
+        return status == errSecSuccess || status == errSecItemNotFound
     }
 }
 

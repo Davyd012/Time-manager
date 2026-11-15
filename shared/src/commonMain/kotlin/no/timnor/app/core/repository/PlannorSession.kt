@@ -15,4 +15,6 @@ interface PlannorSessionStorage {
     fun read(): PlannorSession?
     fun write(session: PlannorSession)
     fun clear()
+    fun saveSession(session: PlannorSession): Boolean { write(session); return true }
+    fun clearSession(): Boolean { clear(); return true }
 }

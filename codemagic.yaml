@@ -114,6 +114,7 @@ workflows:
           bundle_identifier="$(/usr/libexec/PlistBuddy -c 'Print:CFBundleIdentifier' "$app_info")"
           test "$bundle_identifier" = "no.timnor.ios"
           test "$(/usr/libexec/PlistBuddy -c 'Print:CFBundleShortVersionString' "$app_info")" = "1.0"
+          test "$(/usr/libexec/PlistBuddy -c 'Print:CADisableMinimumFrameDurationOnPhone' "$app_info")" = "true"
           /usr/libexec/PlistBuddy -c 'Print:CFBundleVersion' "$app_info"
           for orientation in UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight; do
             /usr/libexec/PlistBuddy -c 'Print:UISupportedInterfaceOrientations' "$app_info" | grep -Fxq "    $orientation"

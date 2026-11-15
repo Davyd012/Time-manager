@@ -80,6 +80,7 @@
     <string name="plannor_account_error_credentials">Sign-in failed. Check your credentials or account access.</string>
     <string name="plannor_account_error_network">Could not reach Plannor. Check your connection and try again.</string>
     <string name="plannor_account_error_server">Plannor is temporarily unavailable.</string>
+    <string name="plannor_account_error_storage">Could not save account information securely. Try again.</string>
     <string name="plannor_account_error_rate_limited">Too many attempts. Wait a moment and try again.</string>
     <string name="plannor_account_project_checked">%1$s, selected Plannor project</string>
     <string name="plannor_account_project_unchecked">%1$s, unselected Plannor project</string>

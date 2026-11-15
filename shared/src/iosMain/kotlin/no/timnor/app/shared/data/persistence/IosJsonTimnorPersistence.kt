@@ -717,13 +717,16 @@ object IosTimnorPlatform {
         it.configureSessionStorage(sessionStorage)
     }
 
+    @Throws(Exception::class)
     suspend fun exportBackupV1(): String = store.exportBackupV1()
 
+    @Throws(Exception::class)
     suspend fun previewBackupV1(contents: String): String {
         val backup = decodeTimnorBackup(contents)
         return "${backup.projects.size}|${backup.works.size}|${backup.sharedHoursRecords.size}"
     }
 
+    @Throws(Exception::class)
     suspend fun restoreBackupV1(contents: String) = store.restoreBackupV1(contents)
 
     @OptIn(ExperimentalEncodingApi::class)

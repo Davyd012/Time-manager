@@ -116,6 +116,7 @@
     <string name="plannor_error_credentials">Kunne ikke logge inn. Kontroller opplysningene eller kontotilgangen.</string>
     <string name="plannor_error_rate_limited">For mange forsøk. Vent litt og prøv igjen.</string>
     <string name="plannor_error_server">Plannor er midlertidig utilgjengelig.</string>
+    <string name="plannor_error_storage">Kunne ikke lagre kontoinformasjonen sikkert. Prøv igjen.</string>
     <string name="plannor_error_network">Kunne ikke nå Plannor. Kontroller tilkoblingen og prøv igjen.</string>
     <string name="plannor_error_projects">Kunne ikke hente prosjekter. Prøv å oppdatere.</string>
     <string name="plannor_share_time_title">Registrer tid i Plannor</string>

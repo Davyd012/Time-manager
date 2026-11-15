@@ -35,6 +35,7 @@
     <string name="plannor_account_error_credentials">Kunne ikke logge inn. Kontroller opplysningene eller kontotilgangen.</string>
     <string name="plannor_account_error_network">Kunne ikke nå Plannor. Kontroller tilkoblingen og prøv igjen.</string>
     <string name="plannor_account_error_server">Plannor er midlertidig utilgjengelig.</string>
+    <string name="plannor_account_error_storage">Kunne ikke lagre kontoinformasjonen sikkert. Prøv igjen.</string>
     <string name="plannor_account_error_rate_limited">For mange forsøk. Vent litt og prøv igjen.</string>
     <string name="plannor_account_project_checked">%1$s, valgt Plannor-prosjekt</string>
     <string name="plannor_account_project_unchecked">%1$s, ikke valgt Plannor-prosjekt</string>

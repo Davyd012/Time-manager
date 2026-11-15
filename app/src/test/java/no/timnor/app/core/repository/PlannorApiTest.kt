@@ -35,6 +35,33 @@ import org.junit.Test
 
 class PlannorApiTest {
     @Test
+    fun sessionStorageFailuresDoNotReportRefreshOrSignOutSuccess() = runTest {
+        val original = PlannorSession("access", "refresh", 7, "alex")
+        val sessions = object : PlannorSessionStorage {
+            override fun read() = original
+            override fun write(session: PlannorSession) = Unit
+            override fun clear() = Unit
+            override fun saveSession(session: PlannorSession) = false
+            override fun clearSession() = false
+        }
+        val http = HttpClient(MockEngine { request ->
+            if (request.method == HttpMethod.Patch) {
+                respond("""{"data":{"id":7,"accessToken":"new","refreshToken":"new-refresh"}}""",
+                    HttpStatusCode.OK, headersOf(HttpHeaders.ContentType, ContentType.Application.Json.toString()))
+            } else {
+                respond("", HttpStatusCode.NoContent)
+            }
+        }) { install(ContentNegotiation) { json(Json { ignoreUnknownKeys = true; explicitNulls = false }) } }
+        val api = PlannorApi(sessions, FakeRecordStorage(), http)
+
+        assertEquals(false, api.refresh())
+        assertEquals(original, sessions.read())
+        assertEquals(false, api.signOut())
+        assertEquals(original, sessions.read())
+        http.close()
+    }
+
+    @Test
     fun uncertainAllocationRetriesWithTheSameKeyAndUpdatesRemainingTime() = runTest {
         val store = FakeRecordStorage()
         val project = PlannorProjectSelection(7, 21, "SBI", selected = true, refreshedAtUtc = "now")

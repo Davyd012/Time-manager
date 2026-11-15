@@ -44,6 +44,7 @@ import no.timnor.app.shared.generated.resources.plannor_account_title
 import no.timnor.app.shared.generated.resources.plannor_account_error_credentials
 import no.timnor.app.shared.generated.resources.plannor_account_error_network
 import no.timnor.app.shared.generated.resources.plannor_account_error_server
+import no.timnor.app.shared.generated.resources.plannor_account_error_storage
 import no.timnor.app.shared.generated.resources.plannor_account_error_rate_limited
 import no.timnor.app.shared.generated.resources.plannor_account_project_checked
 import no.timnor.app.shared.generated.resources.plannor_account_project_unchecked
@@ -192,6 +193,7 @@ fun PlannorAccountSection(
                         no.timnor.app.core.repository.PlannorConnectionFailure.SESSION_EXPIRED -> Res.string.plannor_account_error_credentials
                         no.timnor.app.core.repository.PlannorConnectionFailure.RATE_LIMITED -> Res.string.plannor_account_error_rate_limited
                         no.timnor.app.core.repository.PlannorConnectionFailure.SERVER -> Res.string.plannor_account_error_server
+                        no.timnor.app.core.repository.PlannorConnectionFailure.STORAGE -> Res.string.plannor_account_error_storage
                         no.timnor.app.core.repository.PlannorConnectionFailure.NETWORK -> Res.string.plannor_account_error_network
                     },
                 ),
