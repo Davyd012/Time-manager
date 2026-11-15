@@ -115,6 +115,10 @@ workflows:
           test "$bundle_identifier" = "no.timnor.ios"
           test "$(/usr/libexec/PlistBuddy -c 'Print:CFBundleShortVersionString' "$app_info")" = "1.0"
           /usr/libexec/PlistBuddy -c 'Print:CFBundleVersion' "$app_info"
+          for orientation in UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight; do
+            /usr/libexec/PlistBuddy -c 'Print:UISupportedInterfaceOrientations' "$app_info" | grep -Fxq "    $orientation"
+            /usr/libexec/PlistBuddy -c 'Print:UISupportedInterfaceOrientations~ipad' "$app_info" | grep -Fxq "    $orientation"
+          done
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
