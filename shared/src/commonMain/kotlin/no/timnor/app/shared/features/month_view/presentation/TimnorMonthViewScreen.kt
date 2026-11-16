@@ -112,6 +112,11 @@ fun TimnorMonthViewScreen(
             onUpdateWorkMinutes = viewModel::updateWorkMinutes,
             onUpdateWorkDescription = viewModel::updateWorkDescription,
             onSelectWorkProject = viewModel::selectWorkProject,
+            onBeginProject = viewModel::cancelProjectEdit,
+            onProjectNameChange = viewModel::updateProjectName,
+            onProjectDescriptionChange = viewModel::updateProjectDescription,
+            onSaveProject = viewModel::saveProjectForWork,
+            onCancelProject = viewModel::cancelProjectEdit,
             onSelectPlannorTask = viewModel::selectPlannorTask,
             onSubmit = {
                 viewModel.submitManualWork { saved ->

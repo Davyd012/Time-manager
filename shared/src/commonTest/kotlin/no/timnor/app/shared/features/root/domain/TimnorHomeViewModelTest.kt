@@ -282,6 +282,28 @@ class TimnorHomeViewModelTest {
     }
 
     @Test
+    fun creatingProjectForWorkSelectsItAndPreservesTheEntry() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val viewModel = TimnorHomeViewModel(FakeTimnorPersistence(), FakeStopwatch())
+            runCurrent()
+            viewModel.addProject("Existing")
+            runCurrent()
+            viewModel.updateWorkDescription("Pending work")
+            viewModel.updateProjectName("New project")
+
+            viewModel.saveProjectForWork()
+            runCurrent()
+
+            assertEquals(2, viewModel.state.value.workProjectId)
+            assertEquals("Pending work", viewModel.state.value.workDescription)
+            assertEquals(1, viewModel.state.value.stopwatch.selectedProject)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
     fun creatingProjectDuringRecordedStopwatchTimeDoesNotChangeTheActiveProject() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         try {

@@ -26,6 +26,7 @@ import kotlinx.datetime.LocalTime
 import no.timnor.app.shared.domain.work.manualWorkDurationSeconds
 import no.timnor.app.shared.features.root.domain.TimnorHomeUiState
 import no.timnor.app.shared.features.root.domain.TimnorHomeError
+import no.timnor.app.shared.features.root.presentation.newProject.components.ProjectEditorSheet
 import no.timnor.app.shared.generated.resources.Res
 import no.timnor.app.shared.generated.resources.invalid_project
 import no.timnor.app.shared.generated.resources.invalid_work
@@ -49,6 +50,11 @@ internal fun WorkEntrySheet(
     onUpdateWorkMinutes: (String) -> Unit,
     onUpdateWorkDescription: (String) -> Unit,
     onSelectWorkProject: (Int) -> Unit,
+    onBeginProject: () -> Unit,
+    onProjectNameChange: (String) -> Unit,
+    onProjectDescriptionChange: (String) -> Unit,
+    onSaveProject: ((Boolean) -> Unit) -> Unit,
+    onCancelProject: () -> Unit,
     onSelectPlannorTask: (Int?) -> Unit,
     onSubmit: () -> Unit,
     onDelete: (Boolean, (Boolean) -> Unit) -> Unit,
@@ -58,6 +64,7 @@ internal fun WorkEntrySheet(
     showDragHandle: Boolean,
 ) {
     var confirmSharedDeletion by remember(state.editingWorkId) { mutableStateOf(false) }
+    var showProjectEditor by remember { mutableStateOf(false) }
     fun delete(confirmed: Boolean) {
         onCancel()
         onDelete(confirmed) { _ -> }
@@ -90,6 +97,7 @@ internal fun WorkEntrySheet(
                 editingSyncIndicator = state.editingWorkSyncIndicator,
                 selectedProjectId = selectedProjectId,
                 onProjectSelected = onSelectWorkProject,
+                onCreateProject = { onBeginProject(); showProjectEditor = true },
                 taskOptions = state.linkedPlannorTasks,
                 selectedTaskId = state.selectedPlannorTaskId,
                 onTaskSelected = onSelectPlannorTask,
@@ -126,6 +134,15 @@ internal fun WorkEntrySheet(
                 )
             }
         }
+    }
+    if (showProjectEditor) {
+        ProjectEditorSheet(
+            state = state,
+            onProjectNameChange = onProjectNameChange,
+            onProjectDescriptionChange = onProjectDescriptionChange,
+            onSaveProject = onSaveProject,
+            onDismiss = { showProjectEditor = false; onCancelProject() },
+        )
     }
     if (confirmSharedDeletion) {
         AlertDialog(

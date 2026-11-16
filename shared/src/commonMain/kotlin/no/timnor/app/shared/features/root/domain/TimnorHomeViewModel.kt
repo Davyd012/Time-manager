@@ -155,12 +155,15 @@ class TimnorHomeViewModel(
     }
 
     fun saveProject(onResult: (Boolean) -> Unit = {}) =
-        saveProject(selectCreatedProject = false, onResult = onResult)
+        saveProject(selection = null, onResult = onResult)
 
     fun saveProjectAndSelect(onResult: (Boolean) -> Unit = {}) =
-        saveProject(selectCreatedProject = true, onResult = onResult)
+        saveProject(selection = ::selectProject, onResult = onResult)
 
-    private fun saveProject(selectCreatedProject: Boolean, onResult: (Boolean) -> Unit) {
+    fun saveProjectForWork(onResult: (Boolean) -> Unit = {}) =
+        saveProject(selection = ::selectWorkProject, onResult = onResult)
+
+    private fun saveProject(selection: ((Int) -> Unit)?, onResult: (Boolean) -> Unit) {
         val form = mutableState.value
         val cleanName = form.projectName.trim()
         if (cleanName.isEmpty()) {
@@ -176,11 +179,11 @@ class TimnorHomeViewModel(
         val existingIds = form.projects.mapTo(mutableSetOf(), StoredProject::id)
         performStorageAction(onResult) {
             persistence.upsertProject(project)
-            if (selectCreatedProject && form.editingProjectId == null) {
+            if (selection != null && form.editingProjectId == null) {
                 persistence.observeProjects().first()
                     .filterNot { it.id in existingIds }
                     .maxByOrNull(StoredProject::id)
-                    ?.let { created -> selectProject(created.id) }
+                    ?.let { created -> selection(created.id) }
             }
             cancelProjectEdit()
         }

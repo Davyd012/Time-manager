@@ -25,6 +25,7 @@ import no.timnor.app.shared.features.shared_hours.presentation.SharedWorkSyncLab
 import no.timnor.app.shared.domain.work.formatWorkDateInput
 import no.timnor.app.shared.features.root.presentation.newProject.components.ProjectSelector
 import no.timnor.app.shared.generated.resources.Res
+import no.timnor.app.shared.generated.resources.project_add
 import no.timnor.app.shared.generated.resources.calendar_month_april
 import no.timnor.app.shared.generated.resources.calendar_month_august
 import no.timnor.app.shared.generated.resources.calendar_month_december
@@ -66,6 +67,7 @@ internal fun WorkEntrySection(
     editingSyncIndicator: SharedWorkSyncIndicator?,
     selectedProjectId: Int?,
     onProjectSelected: (Int) -> Unit,
+    onCreateProject: () -> Unit,
     taskOptions: List<PlannorTaskOption>,
     selectedTaskId: Int?,
     onTaskSelected: (Int?) -> Unit,
@@ -115,6 +117,9 @@ internal fun WorkEntrySection(
             selectedProjectId = selectedProjectId,
             onProjectSelected = onProjectSelected,
         )
+        OutlinedButton(onClick = onCreateProject) {
+            Text(stringResource(Res.string.project_add))
+        }
         if (!periodRegistration && taskOptions.isNotEmpty()) {
             WorkTaskSelector(taskOptions, selectedTaskId, onTaskSelected)
         }
