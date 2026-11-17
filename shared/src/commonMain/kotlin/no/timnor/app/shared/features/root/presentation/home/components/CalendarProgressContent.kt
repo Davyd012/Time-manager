@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.ScrollState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -27,6 +28,7 @@ internal fun CalendarProgressContent(
     selectedProjectIds: Set<Int>?,
     weekdays: List<String>,
     expansionProgress: Float,
+    scrollState: ScrollState,
     expanded: Boolean,
     expandedContentEnabled: Boolean,
     onMonthChange: (LocalDate) -> Unit,
@@ -49,6 +51,7 @@ internal fun CalendarProgressContent(
             selectedProjectIds = selectedProjectIds,
             weekdays = weekdays,
             expansionProgress = expansionProgress,
+            scrollState = scrollState,
             interactive = expandedContentEnabled,
             onMonthChange = onMonthChange,
             onSelectWeekDate = onSelectDate,

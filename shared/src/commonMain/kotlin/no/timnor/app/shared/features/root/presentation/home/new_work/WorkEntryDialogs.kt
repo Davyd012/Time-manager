@@ -86,8 +86,8 @@ internal fun WorkEntryDialogs(
     if (showTimePicker) {
         key(startTime) {
             WorkTimePickerDialog(
-                initialHour = 0,
-                initialMinute = 0,
+                initialHour = startTime.substringBefore(":").toIntOrNull()?.coerceIn(0, 23) ?: 0,
+                initialMinute = startTime.substringAfter(":", "0").toIntOrNull()?.coerceIn(0, 59) ?: 0,
                 onDismiss = onDismissTimePicker,
                 onConfirm = { hour, minute ->
                     onStartTimeChange("${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}")
@@ -99,9 +99,9 @@ internal fun WorkEntryDialogs(
 
     if (showDurationPicker) {
         key(hours, minutes) {
-            WorkTimePickerDialog(
-                initialHour = 0,
-                initialMinute = 0,
+            WorkDurationDialog(
+                initialHours = hours,
+                initialMinutes = minutes,
                 onDismiss = onDismissDurationPicker,
                 onConfirm = { hour, minute ->
                     onHoursChange(hour.toString())

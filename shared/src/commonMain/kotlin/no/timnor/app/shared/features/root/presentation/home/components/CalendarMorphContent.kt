@@ -1,6 +1,7 @@
 package no.timnor.app.shared.features.root.presentation.home.components
 
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.ScrollState
 import kotlinx.datetime.LocalDate
 import no.timnor.app.shared.data.persistence.StoredProject
 import no.timnor.app.shared.data.persistence.StoredWork
@@ -16,6 +17,7 @@ internal fun CalendarMorphContent(
     selectedProjectIds: Set<Int>?,
     weekdays: List<String>,
     expansionProgress: Float,
+    scrollState: ScrollState,
     interactive: Boolean,
     onMonthChange: (LocalDate) -> Unit,
     onSelectWeekDate: (LocalDate) -> Unit,
@@ -34,6 +36,7 @@ internal fun CalendarMorphContent(
         interactive = interactive,
         weekdays = weekdays,
         expansionProgress = expansionProgress,
+        scrollState = scrollState,
         onSelectWeekDate = onSelectWeekDate,
         onMonthChange = onMonthChange,
         onSelectDate = onSelectDate,

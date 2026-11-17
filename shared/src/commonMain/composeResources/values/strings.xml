@@ -86,6 +86,10 @@
     <string name="shared_work_sync_account_required">Logg inn på opprinnelig Plannor-konto</string>
     <string name="shared_work_sync_error">Synkronisering trenger oppfølging</string>
     <string name="work_task_none">Ingen oppgave</string>
+    <string name="duration_custom">Egendefinert tid</string>
+    <string name="duration_use">Bruk tid</string>
+    <string name="duration_increase">Øk %1$s</string>
+    <string name="duration_decrease">Reduser %1$s</string>
     <string name="work_hours_hint">Timer</string>
     <string name="work_minutes_hint">Minutter</string>
     <string name="work_start_time_hint">Starttid (TT:MM)</string>

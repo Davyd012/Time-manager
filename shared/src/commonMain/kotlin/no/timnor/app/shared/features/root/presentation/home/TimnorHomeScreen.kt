@@ -156,7 +156,7 @@ fun TimnorHomeScreen(
                     .calendarExpansionGesture(
                         enabled = !calendarScrollMode,
                         dragDistancePx = dragDistance,
-                        collapseStartLimitPx = if (calendarProgress >= 0.999f && calendarScrollState.maxValue > 0) {
+                        collapseStartLimitPx = if (calendarProgress >= 0.999f) {
                             with(LocalDensity.current) { (spacing.extraLarge * 2 * fontScale).toPx() }
                         } else null,
                         currentProgress = { expansionAnimation.value },

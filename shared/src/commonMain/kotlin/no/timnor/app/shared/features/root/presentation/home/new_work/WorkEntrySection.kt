@@ -2,14 +2,16 @@ package no.timnor.app.shared.features.root.presentation.home.new_work
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.ui.Alignment
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -46,10 +48,7 @@ import no.timnor.app.shared.generated.resources.home_weekday_thursday
 import no.timnor.app.shared.generated.resources.home_weekday_tuesday
 import no.timnor.app.shared.generated.resources.home_weekday_wednesday
 import no.timnor.app.shared.generated.resources.work_date_header
-import no.timnor.app.shared.generated.resources.work_date_label
-import no.timnor.app.shared.generated.resources.work_period_label
 import no.timnor.app.shared.generated.resources.work_period_range_label
-import no.timnor.app.shared.generated.resources.work_period_select_range
 import no.timnor.app.shared.generated.resources.work_period_single_date
 import no.timnor.app.shared.generated.resources.work_project_hint
 import no.timnor.app.shared.generated.resources.work_time_details
@@ -96,20 +95,15 @@ internal fun WorkEntrySection(
     val dateHeader = PeriodHeader(periodRegistration, date, periodDates)
 
     Column(verticalArrangement = Arrangement.spacedBy(MaterialTheme.timnorSpacing.small)) {
-        Text(
-            stringResource(
-                if (periodRegistration) Res.string.work_period_label
-                else Res.string.work_date_label,
-            ),
-            style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
+        Text(stringResource(Res.string.work_title), style = MaterialTheme.typography.titleLarge)
         if (dateHeader.isNotBlank()) {
-            Text(dateHeader, style = MaterialTheme.typography.titleMedium)
+            Text(dateHeader, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
-        Text(stringResource(Res.string.work_title), style = MaterialTheme.typography.headlineSmall)
         editingSyncIndicator?.let { SharedWorkSyncLabel(it) }
-        Text(stringResource(Res.string.work_project_hint), style = MaterialTheme.typography.labelLarge)
+        Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(stringResource(Res.string.work_project_hint), style = MaterialTheme.typography.labelLarge, modifier = Modifier.weight(1f))
+            TextButton(onClick = onCreateProject) { Text(stringResource(Res.string.project_add)) }
+        }
         ProjectSelector(
             projects = projects,
             linkedPlannorProjectNames = linkedPlannorProjectNames,
@@ -117,9 +111,6 @@ internal fun WorkEntrySection(
             selectedProjectId = selectedProjectId,
             onProjectSelected = onProjectSelected,
         )
-        OutlinedButton(onClick = onCreateProject) {
-            Text(stringResource(Res.string.project_add))
-        }
         if (!periodRegistration && taskOptions.isNotEmpty()) {
             WorkTaskSelector(taskOptions, selectedTaskId, onTaskSelected)
         }

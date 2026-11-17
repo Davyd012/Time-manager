@@ -1,4 +1,10 @@
 <resources>
+    <string name="duration_custom">Custom duration</string>
+    <string name="duration_use">Use duration</string>
+    <string name="duration_increase">Increase %1$s</string>
+    <string name="duration_decrease">Decrease %1$s</string>
+    <string name="work_hours_hint">Hours</string>
+    <string name="work_minutes_hint">Minutes</string>
     <string name="backup_cancel">Cancel</string>
     <string name="back_to_home">Back to home</string>
     <string name="spreadsheet_creating">Creating spreadsheet…</string>

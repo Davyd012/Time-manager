@@ -119,7 +119,40 @@ class SharedCalendarGestureTest {
     }
 
     @Test
-    fun draggingEmptyHoursDownOpensCalendarAndDraggingMonthUpClosesIt() {
+    fun shortExpandedCalendarScrollsGridWhileToolbarAndMonthSelectorStayFixed() {
+        val viewModel = TimnorHomeViewModel(EmptyPersistence(), IdleStopwatch(), LocalDate(2026, 11, 10))
+        composeRule.setContent {
+            val state by viewModel.state.collectAsState()
+            TimnorTheme(darkTheme = false) {
+                Box(Modifier.width(360.dp).height(480.dp)) {
+                    TimnorHomeScreen(
+                        state = state,
+                        viewModel = viewModel,
+                        homeReselectionCount = 0,
+                        onMonthView = {},
+                        testExpansionProgress = 1f,
+                    )
+                }
+            }
+        }
+        val toolbar = composeRule.onNodeWithTag("calendar-expanded-toolbar")
+        val selector = composeRule.onNodeWithTag("calendar-month-selector")
+        val date = composeRule.onNodeWithTag("calendar-month-day-2026-11-20")
+        val toolbarBefore = toolbar.fetchSemanticsNode().boundsInRoot
+        val selectorBefore = selector.fetchSemanticsNode().boundsInRoot
+        val dateTopBefore = date.fetchSemanticsNode().boundsInRoot.top
+
+        composeRule.onNodeWithTag("calendar-scroll-content").performTouchInput {
+            swipe(Offset(center.x, height * 0.8f), Offset(center.x, height * 0.3f), durationMillis = 300)
+        }
+
+        assertEquals(toolbarBefore, toolbar.fetchSemanticsNode().boundsInRoot)
+        assertEquals(selectorBefore, selector.fetchSemanticsNode().boundsInRoot)
+        assertTrue(date.fetchSemanticsNode().boundsInRoot.top < dateTopBefore)
+    }
+
+    @Test
+    fun draggingEmptyHoursDownOpensCalendarAndToolbarDragClosesIt() {
         val viewModel = TimnorHomeViewModel(EmptyPersistence(), IdleStopwatch(), LocalDate(2026, 11, 10))
         var expanded by mutableStateOf(false)
         composeRule.setContent {
@@ -139,8 +172,8 @@ class SharedCalendarGestureTest {
             swipe(Offset(width * 0.1f, height * 0.1f), Offset(width * 0.1f, height * 0.8f), 350)
         }
         composeRule.waitUntil(5_000) { expanded }
-        composeRule.onNodeWithTag("calendar-month-content").performTouchInput {
-            swipe(Offset(width * 0.5f, height * 0.9f), Offset(width * 0.5f, height * 0.1f), 150)
+        composeRule.onNodeWithTag("calendar-expanded-toolbar").performTouchInput {
+            swipe(center, Offset(center.x, center.y - height * 3f), 150)
         }
         composeRule.waitUntil(5_000) { !expanded }
         composeRule.onNodeWithTag("home-empty-work-drag-surface").assertExists()
@@ -260,7 +293,7 @@ class SharedCalendarGestureTest {
     }
 
     @Test
-    fun draggingUpFromMonthDateCollapsesCalendarWithoutSelectingThatDate() {
+    fun draggingUpFromMonthDateKeepsCalendarOpenWithoutSelectingThatDate() {
         val selectedDate = LocalDate(2026, 11, 10)
         val viewModel = TimnorHomeViewModel(EmptyPersistence(), IdleStopwatch(), selectedDate)
         var expanded by mutableStateOf(false)
@@ -286,12 +319,14 @@ class SharedCalendarGestureTest {
             val travel = with(composeRule.density) { 320.dp.toPx() }
             swipe(start, Offset(start.x, start.y - travel), durationMillis = 70)
         }
-        composeRule.waitUntil(5_000) { !expanded }
-        composeRule.runOnIdle { assertEquals(selectedDate, viewModel.state.value.selectedCalendarDate) }
+        composeRule.runOnIdle {
+            assertTrue(expanded)
+            assertEquals(selectedDate, viewModel.state.value.selectedCalendarDate)
+        }
     }
 
     @Test
-    fun draggingUpFromEmptyMonthGridCellCollapsesCalendar() {
+    fun draggingUpFromEmptyMonthGridCellKeepsCalendarOpen() {
         val selectedDate = LocalDate(2026, 11, 11)
         val viewModel = TimnorHomeViewModel(EmptyPersistence(), IdleStopwatch(), selectedDate)
         var expanded by mutableStateOf(false)
@@ -315,8 +350,10 @@ class SharedCalendarGestureTest {
             val travel = with(composeRule.density) { 320.dp.toPx() }
             swipe(start, Offset(start.x, start.y - travel), durationMillis = 70)
         }
-        composeRule.waitUntil(5_000) { !expanded }
-        composeRule.runOnIdle { assertEquals(selectedDate, viewModel.state.value.selectedCalendarDate) }
+        composeRule.runOnIdle {
+            assertTrue(expanded)
+            assertEquals(selectedDate, viewModel.state.value.selectedCalendarDate)
+        }
     }
 
     @Test
@@ -597,9 +634,7 @@ class SharedCalendarGestureTest {
                 .fetchSemanticsNode().config[SemanticsProperties.Selected],
         )
 
-        composeRule.onNodeWithTag("calendar-month-content").performTouchInput {
-            swipe(Offset(center.x, height * 0.9f), Offset(center.x, height * 0.1f), durationMillis = 150)
-        }
+        composeRule.onNodeWithTag("calendar-close").performClick()
         composeRule.waitUntil(5_000) { !expanded }
         composeRule.runOnIdle {
             assertEquals(selectedHomeDate, viewModel.state.value.selectedCalendarDate)

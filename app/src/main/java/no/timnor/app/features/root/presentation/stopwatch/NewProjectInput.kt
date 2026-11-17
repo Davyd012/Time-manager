@@ -3,9 +3,11 @@ package no.timnor.app.features.root.presentation.stopwatch
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -16,8 +18,8 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
@@ -64,10 +66,15 @@ fun NewProjectSheetContent(
 ) {
     val colors = MaterialTheme.colorScheme
     val texts = MaterialTheme.typography
-    var name by remember { mutableStateOf(project?.name ?: "") }
-    var description by remember { mutableStateOf(project?.description ?: "") }
+    var name by rememberSaveable(project?.id) { mutableStateOf(project?.name ?: "") }
+    var description by rememberSaveable(project?.id) { mutableStateOf(project?.description ?: "") }
 
-    Column(modifier = Modifier.padding(20.dp)) {
+    Column(
+        modifier = Modifier
+            .imePadding()
+            .verticalScroll(rememberScrollState())
+            .padding(20.dp),
+    ) {
             Text(stringResource(R.string.new_project_title), style = texts.headlineSmall.copy(fontWeight = FontWeight.Bold))
             Spacer(modifier = Modifier.height(5.dp))
             Text(stringResource(R.string.name_label), style = texts.titleMedium)
@@ -76,8 +83,6 @@ fun NewProjectSheetContent(
                 name, stringResource(R.string.name_hint), { name = it }, 1,
                 modifier = Modifier
                     .fillMaxWidth(),
-                background = colors.surface,
-                false,
             )
             Spacer(modifier = Modifier.height(10.dp))
             Text(stringResource(R.string.description_label), style = texts.titleMedium)
@@ -86,8 +91,6 @@ fun NewProjectSheetContent(
                 description, stringResource(R.string.description_hint), { description = it }, 7,
                 modifier = Modifier
                     .fillMaxWidth(),
-                background = colors.surface,
-                false,
             )
 
             Spacer(modifier = Modifier.height(50.dp))

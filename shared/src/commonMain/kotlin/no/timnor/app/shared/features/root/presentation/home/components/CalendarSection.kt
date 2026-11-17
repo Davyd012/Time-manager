@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.ScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -111,9 +110,6 @@ internal fun CalendarSection(
                         },
                     )
                 },
-            )
-            .then(
-                if (expansionProgress > 0f) Modifier.verticalScroll(scrollState) else Modifier,
             ),
         verticalArrangement = Arrangement.spacedBy(MaterialTheme.timnorSpacing.small * expansionProgress.coerceIn(0f, 1f)),
     ) {
@@ -142,6 +138,7 @@ internal fun CalendarSection(
             selectedProjectIds = selectedProjectIds,
             weekdays = weekdays,
             expansionProgress = expansionProgress,
+            scrollState = scrollState,
             expanded = expanded,
             expandedContentEnabled = contentInteractive,
             onMonthChange = ::requestMonthChange,

@@ -25,7 +25,7 @@ internal fun WorkEntryDescriptionField(
         value = value,
         onValueChange = onValueChange,
         modifier = Modifier.fillMaxWidth().testTag("work-description").onFocusChanged { focused = it.isFocused },
-        minLines = if (focused || value.isNotBlank()) 4 else 2,
+        minLines = if (focused || value.isNotBlank()) 3 else 1,
         maxLines = 4,
         label = { Text(stringResource(Res.string.work_description_hint)) },
     )

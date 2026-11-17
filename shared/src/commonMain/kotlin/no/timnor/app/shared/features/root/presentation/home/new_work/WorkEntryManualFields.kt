@@ -1,18 +1,18 @@
 package no.timnor.app.shared.features.root.presentation.home.new_work
 
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.PressInteraction
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -20,9 +20,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.role
-import androidx.compose.ui.semantics.onClick
-import androidx.compose.ui.semantics.semantics
 import no.timnor.app.shared.domain.work.formatWorkDateInput
 import no.timnor.app.shared.generated.resources.Res
 import no.timnor.app.shared.generated.resources.calendar
@@ -116,31 +113,17 @@ private fun WorkEntryPickerField(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val interactionSource = remember { MutableInteractionSource() }
-    val currentOnClick = androidx.compose.runtime.rememberUpdatedState(onClick)
-    LaunchedEffect(interactionSource) {
-        interactionSource.interactions.collect { interaction ->
-            if (interaction is PressInteraction.Release) currentOnClick.value()
-        }
-    }
-    OutlinedTextField(
-        value = value,
-        onValueChange = {},
-        readOnly = true,
-        singleLine = true,
-        label = { Text(label) },
-        leadingIcon = { Icon(painterResource(icon), contentDescription = null) },
+    Surface(
+        modifier = modifier.fillMaxWidth().clickable(role = Role.Button, onClick = onClick),
         shape = MaterialTheme.shapes.medium,
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-            unfocusedBorderColor = MaterialTheme.colorScheme.outlineVariant,
-            focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-            unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerLow,
-        ),
-        interactionSource = interactionSource,
-        modifier = Modifier.fillMaxWidth().then(modifier).semantics {
-            role = Role.Button
-            onClick { currentOnClick.value(); true }
-        },
-    )
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        border = BorderStroke(androidx.compose.ui.unit.Dp.Hairline, MaterialTheme.colorScheme.outlineVariant),
+    ) {
+        ListItem(
+            headlineContent = { Text(label, style = MaterialTheme.typography.bodyMedium) },
+            leadingContent = { Icon(painterResource(icon), contentDescription = null) },
+            trailingContent = { Text(value, style = MaterialTheme.typography.labelLarge) },
+            colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+        )
+    }
 }

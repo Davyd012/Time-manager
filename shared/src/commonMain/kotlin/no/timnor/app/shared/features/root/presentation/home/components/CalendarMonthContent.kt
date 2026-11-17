@@ -12,6 +12,8 @@ import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -94,6 +96,7 @@ internal fun CalendarMonthContent(
     interactive: Boolean,
     weekdays: List<String>,
     expansionProgress: Float,
+    scrollState: ScrollState,
     onMonthChange: (LocalDate) -> Unit,
     onSelectWeekDate: (LocalDate) -> Unit,
     onSelectDate: (LocalDate) -> Unit,
@@ -182,6 +185,7 @@ internal fun CalendarMonthContent(
     ) {
         Box(
             modifier = Modifier.fillMaxWidth()
+                .testTag("calendar-month-selector")
                 .height(expandedActionRowHeight * progress)
                 .clipToBounds()
                 .alpha(progress),
@@ -241,7 +245,9 @@ internal fun CalendarMonthContent(
         }
         }
         Surface(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().testTag("calendar-scroll-content").then(
+                if (progress > 0f) Modifier.verticalScroll(scrollState) else Modifier,
+            ),
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
             contentColor = MaterialTheme.colorScheme.onSurface,
             shape = MaterialTheme.shapes.large,

@@ -3,6 +3,7 @@ package no.timnor.app.shared.navigation
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.DisposableEffect
@@ -86,6 +87,7 @@ fun TimnorApp(
     }
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.surface,
         bottomBar = { SharedNavigationBar(selectedTab, onSelectTab) },
     ) { insets ->
         screenStateHolder.SaveableStateProvider(destination.name) {

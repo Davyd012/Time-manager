@@ -87,7 +87,7 @@ internal fun WorkEntrySheet(
         Column(
             modifier = Modifier.fillMaxWidth().imePadding()
                 .verticalScroll(rememberScrollState())
-                .padding(MaterialTheme.timnorSpacing.large),
+                .padding(horizontal = MaterialTheme.timnorSpacing.medium, vertical = MaterialTheme.timnorSpacing.small),
             verticalArrangement = Arrangement.spacedBy(MaterialTheme.timnorSpacing.medium),
         ) {
             WorkEntrySection(
