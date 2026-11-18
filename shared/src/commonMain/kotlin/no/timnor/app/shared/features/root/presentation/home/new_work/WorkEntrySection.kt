@@ -75,9 +75,7 @@ internal fun WorkEntrySection(
     startTime: String,
     onStartTimeChange: (String) -> Unit,
     hours: String,
-    onHoursChange: (String) -> Unit,
     minutes: String,
-    onMinutesChange: (String) -> Unit,
     description: String,
     onDescriptionChange: (String) -> Unit,
     isEditing: Boolean,
@@ -85,6 +83,7 @@ internal fun WorkEntrySection(
     onSave: () -> Unit,
     onDelete: () -> Unit,
     onSubmitPeriod: (List<LocalDate>) -> Unit,
+    onOpenDurationPicker: () -> Unit,
 ) {
     var periodRegistration by remember { mutableStateOf(false) }
     val periodRangeState = androidx.compose.material3.rememberDateRangePickerState()
@@ -125,11 +124,10 @@ internal fun WorkEntrySection(
             startTime = startTime,
             onStartTimeChange = onStartTimeChange,
             hours = hours,
-            onHoursChange = onHoursChange,
             minutes = minutes,
-            onMinutesChange = onMinutesChange,
             periodRegistration = periodRegistration,
             isEditing = isEditing,
+            onOpenDurationPicker = onOpenDurationPicker,
         )
         WorkPeriodRegistration(
             enabled = periodRegistration,

@@ -33,16 +33,10 @@ internal fun WorkEntryDialogs(
     onDateChange: (String) -> Unit,
     startTime: String,
     onStartTimeChange: (String) -> Unit,
-    hours: String,
-    onHoursChange: (String) -> Unit,
-    minutes: String,
-    onMinutesChange: (String) -> Unit,
     showDatePicker: Boolean,
     onDismissDatePicker: () -> Unit,
     showTimePicker: Boolean,
     onDismissTimePicker: () -> Unit,
-    showDurationPicker: Boolean,
-    onDismissDurationPicker: () -> Unit,
 ) {
     if (showDatePicker) {
         val initialDate = runCatching { LocalDate.parse(date) }.getOrElse { LocalDate(2000, 1, 1) }
@@ -97,20 +91,6 @@ internal fun WorkEntryDialogs(
         }
     }
 
-    if (showDurationPicker) {
-        key(hours, minutes) {
-            WorkDurationDialog(
-                initialHours = hours,
-                initialMinutes = minutes,
-                onDismiss = onDismissDurationPicker,
-                onConfirm = { hour, minute ->
-                    onHoursChange(hour.toString())
-                    onMinutesChange(minute.toString())
-                    onDismissDurationPicker()
-                },
-            )
-        }
-    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

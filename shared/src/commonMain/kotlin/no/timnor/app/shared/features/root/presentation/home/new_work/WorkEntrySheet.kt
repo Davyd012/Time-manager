@@ -11,6 +11,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.Text
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.TextButton
@@ -19,6 +20,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import kotlinx.datetime.LocalDate
@@ -65,6 +67,7 @@ internal fun WorkEntrySheet(
 ) {
     var confirmSharedDeletion by remember(state.editingWorkId) { mutableStateOf(false) }
     var showProjectEditor by remember { mutableStateOf(false) }
+    var showDurationPicker by rememberSaveable { mutableStateOf(false) }
     fun delete(confirmed: Boolean) {
         onCancel()
         onDelete(confirmed) { _ -> }
@@ -106,9 +109,7 @@ internal fun WorkEntrySheet(
                 startTime = state.workStartTime,
                 onStartTimeChange = onUpdateWorkStartTime,
                 hours = state.workHours,
-                onHoursChange = onUpdateWorkHours,
                 minutes = state.workMinutes,
-                onMinutesChange = onUpdateWorkMinutes,
                 description = state.workDescription,
                 onDescriptionChange = onUpdateWorkDescription,
                 isEditing = state.editingWorkId != null,
@@ -119,6 +120,7 @@ internal fun WorkEntrySheet(
                     else delete(false)
                 },
                 onSubmitPeriod = onSubmitPeriod,
+                onOpenDurationPicker = { showDurationPicker = true },
             )
             state.error?.let { error ->
                 Text(
@@ -133,6 +135,26 @@ internal fun WorkEntrySheet(
                     color = MaterialTheme.colorScheme.error,
                 )
             }
+        }
+    }
+    if (showDurationPicker) {
+        ModalBottomSheet(
+            onDismissRequest = { showDurationPicker = false },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            sheetGesturesEnabled = false,
+            containerColor = MaterialTheme.colorScheme.surface,
+            dragHandle = null,
+        ) {
+            WorkDurationDialog(
+                initialHours = state.workHours,
+                initialMinutes = state.workMinutes,
+                onDismiss = { showDurationPicker = false },
+                onConfirm = { hours, minutes ->
+                    onUpdateWorkHours(hours.toString())
+                    onUpdateWorkMinutes(minutes.toString())
+                    showDurationPicker = false
+                },
+            )
         }
     }
     if (showProjectEditor) {

@@ -41,15 +41,13 @@ internal fun WorkEntryManualFields(
     startTime: String,
     onStartTimeChange: (String) -> Unit,
     hours: String,
-    onHoursChange: (String) -> Unit,
     minutes: String,
-    onMinutesChange: (String) -> Unit,
     periodRegistration: Boolean,
     isEditing: Boolean,
+    onOpenDurationPicker: () -> Unit,
 ) {
     var showDatePicker by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
-    var showDurationPicker by remember { mutableStateOf(false) }
     val animationsEnabled = rememberSystemAnimationsEnabled()
 
     androidx.compose.animation.AnimatedVisibility(
@@ -66,7 +64,7 @@ internal fun WorkEntryManualFields(
                 value = "${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}",
                 label = stringResource(Res.string.work_hours_hint),
                 icon = Res.drawable.clock_outline,
-                onClick = { showDurationPicker = true },
+                onClick = onOpenDurationPicker,
                 modifier = Modifier.testTag("work-duration-picker-field"),
             )
             WorkEntryPickerField(
@@ -92,16 +90,10 @@ internal fun WorkEntryManualFields(
         onDateChange = onDateChange,
         startTime = startTime,
         onStartTimeChange = onStartTimeChange,
-        hours = hours,
-        onHoursChange = onHoursChange,
-        minutes = minutes,
-        onMinutesChange = onMinutesChange,
         showDatePicker = showDatePicker,
         onDismissDatePicker = { showDatePicker = false },
         showTimePicker = showTimePicker,
         onDismissTimePicker = { showTimePicker = false },
-        showDurationPicker = showDurationPicker,
-        onDismissDurationPicker = { showDurationPicker = false },
     )
 }
 

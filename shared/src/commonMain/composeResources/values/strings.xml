@@ -87,6 +87,11 @@
     <string name="shared_work_sync_error">Synkronisering trenger oppfølging</string>
     <string name="work_task_none">Ingen oppgave</string>
     <string name="duration_custom">Egendefinert tid</string>
+    <string name="duration_manual">Skriv inn selv</string>
+    <string name="duration_wheels">Velg med hjul</string>
+    <string name="duration_invalid">Velg en tid mellom 1 minutt og 24 timer. Minutter må være mellom 0 og 59.</string>
+    <string name="duration_minutes_short">%1$d min</string>
+    <string name="duration_hours_short">%1$d t</string>
     <string name="duration_use">Bruk tid</string>
     <string name="duration_increase">Øk %1$s</string>
     <string name="duration_decrease">Reduser %1$s</string>

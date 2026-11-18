@@ -1,5 +1,10 @@
 <resources>
     <string name="duration_custom">Custom duration</string>
+    <string name="duration_manual">Enter manually</string>
+    <string name="duration_wheels">Use wheels</string>
+    <string name="duration_invalid">Choose a duration between 1 minute and 24 hours. Minutes must be between 0 and 59.</string>
+    <string name="duration_minutes_short">%1$d min</string>
+    <string name="duration_hours_short">%1$d h</string>
     <string name="duration_use">Use duration</string>
     <string name="duration_increase">Increase %1$s</string>
     <string name="duration_decrease">Decrease %1$s</string>

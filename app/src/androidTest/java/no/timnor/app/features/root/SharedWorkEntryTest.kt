@@ -1,6 +1,10 @@
 package no.timnor.app.features.root
 
 import androidx.activity.ComponentActivity
+import android.os.SystemClock
+import android.view.MotionEvent
+import android.view.InputDevice
+import androidx.test.platform.app.InstrumentationRegistry
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -8,7 +12,10 @@ import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.onAllNodesWithText
+import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotEnabled
+import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.assertHeightIsEqualTo
@@ -17,6 +24,8 @@ import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextReplacement
+import androidx.compose.ui.test.performTouchInput
+import androidx.compose.ui.test.swipeUp
 import kotlin.time.Clock
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
@@ -36,6 +45,7 @@ import no.timnor.app.shared.features.root.domain.TimnorHomeViewModel
 import no.timnor.app.shared.features.root.presentation.home.TimnorHomeScreen
 import no.timnor.app.shared.ui.theme.TimnorTheme
 import org.junit.Assert.assertEquals
+import org.junit.Assume.assumeTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -263,7 +273,7 @@ class SharedWorkEntryTest {
     }
 
     @Test
-    fun timePickersOpenAtMidnightAndApplyOnlyAfterConfirmation() {
+    fun startTimePickerOpensAtMidnightAndAppliesAfterConfirmation() {
         val date = LocalDate(2026, 11, 10)
         val viewModel = TimnorHomeViewModel(WorkPersistence(date), IdleStopwatch(), date)
         composeRule.setContent {
@@ -275,17 +285,103 @@ class SharedWorkEntryTest {
         composeRule.waitUntil(5_000) { viewModel.state.value.works.isNotEmpty() }
         composeRule.onNodeWithTag("work-entry-1").performClick()
 
-        composeRule.onNodeWithTag("work-duration-picker-field").performScrollTo().performClick()
-        assertEquals("1", viewModel.state.value.workHours)
-        composeRule.onNodeWithText("Ferdig").performClick()
-        composeRule.waitUntil(5_000) {
-            viewModel.state.value.workHours == "0" && viewModel.state.value.workMinutes == "0"
-        }
-
         composeRule.onNodeWithTag("work-start-time-picker-field").performScrollTo().performClick()
         assertEquals("07:00", viewModel.state.value.workStartTime)
         composeRule.onNodeWithText("Ferdig").performClick()
         composeRule.waitUntil(5_000) { viewModel.state.value.workStartTime == "00:00" }
+    }
+
+    @Test
+    fun durationWheelsScrollWithoutMovingTheSheetAndApplyOnConfirmation() {
+        val date = LocalDate(2026, 11, 10)
+        val viewModel = TimnorHomeViewModel(WorkPersistence(date), IdleStopwatch(), date)
+        composeRule.setContent {
+            val state by viewModel.state.collectAsState()
+            TimnorTheme(darkTheme = false) {
+                TimnorHomeScreen(state = state, viewModel = viewModel, homeReselectionCount = 0, onMonthView = {})
+            }
+        }
+        composeRule.waitUntil(5_000) { viewModel.state.value.works.isNotEmpty() }
+        composeRule.onNodeWithTag("work-entry-1").performClick()
+        composeRule.onNodeWithTag("work-duration-picker-field").performScrollTo().performClick()
+        composeRule.onNodeWithTag("duration-hours-wheel").performScrollTo().performTouchInput { swipeUp() }
+        composeRule.onNodeWithTag("duration-minutes-wheel").performScrollTo().performTouchInput { swipeUp() }
+
+        assertEquals("1", viewModel.state.value.workHours)
+        assertEquals("0", viewModel.state.value.workMinutes)
+        composeRule.onNodeWithTag("duration-confirm").performClick()
+        composeRule.waitUntil(5_000) {
+            (viewModel.state.value.workHours.toIntOrNull() ?: 0) > 1 &&
+                (viewModel.state.value.workMinutes.toIntOrNull() ?: 0) > 0
+        }
+        composeRule.onNodeWithTag("work-duration-picker-field").assertExists()
+    }
+
+    @Test
+    fun durationManualEntryRejectsMoreThan24Hours() {
+        val date = LocalDate(2026, 11, 10)
+        val viewModel = TimnorHomeViewModel(WorkPersistence(date), IdleStopwatch(), date)
+        composeRule.setContent {
+            val state by viewModel.state.collectAsState()
+            TimnorTheme(darkTheme = false) {
+                TimnorHomeScreen(state = state, viewModel = viewModel, homeReselectionCount = 0, onMonthView = {})
+            }
+        }
+        composeRule.waitUntil(5_000) { viewModel.state.value.works.isNotEmpty() }
+        composeRule.onNodeWithTag("work-entry-1").performClick()
+        composeRule.onNodeWithTag("work-duration-picker-field").performScrollTo().performClick()
+        composeRule.onNodeWithTag("duration-manual-toggle").performClick()
+        composeRule.onNodeWithTag("duration-hours-input").performTextReplacement("25")
+        composeRule.onNodeWithTag("duration-confirm").assertIsNotEnabled()
+        composeRule.onNodeWithTag("duration-hours-input").performTextReplacement("24")
+        composeRule.onNodeWithTag("duration-minutes-input").performTextReplacement("1")
+        composeRule.onNodeWithTag("duration-confirm").assertIsNotEnabled()
+        composeRule.onNodeWithTag("duration-minutes-input").performTextReplacement("0")
+        composeRule.onNodeWithTag("duration-manual-toggle").assertIsDisplayed().performClick()
+        composeRule.onNodeWithTag("duration-hours-wheel").assertExists()
+        composeRule.onNodeWithTag("duration-confirm").assertIsEnabled().performClick()
+        composeRule.waitUntil(5_000) { viewModel.state.value.workHours == "24" && viewModel.state.value.workMinutes == "0" }
+    }
+
+    @Test
+    fun tappingOutsideDurationPickerReturnsToWorkFormWithoutApplying() {
+        val date = LocalDate(2026, 11, 10)
+        val viewModel = TimnorHomeViewModel(WorkPersistence(date), IdleStopwatch(), date)
+        composeRule.setContent {
+            val state by viewModel.state.collectAsState()
+            TimnorTheme(darkTheme = true) {
+                TimnorHomeScreen(state = state, viewModel = viewModel, homeReselectionCount = 0, onMonthView = {})
+            }
+        }
+        composeRule.waitUntil(5_000) { viewModel.state.value.works.isNotEmpty() }
+        composeRule.onNodeWithTag("work-entry-1").performClick()
+        composeRule.onNodeWithTag("work-duration-picker-field").performScrollTo().performClick()
+        composeRule.onNodeWithTag("duration-manual-toggle").assertIsDisplayed().performClick()
+        composeRule.onNodeWithTag("duration-manual-toggle").assertIsDisplayed().performClick()
+        composeRule.onNodeWithTag("duration-preset-120").performClick()
+
+        val metrics = composeRule.activity.resources.displayMetrics
+        val sheetTop = composeRule.onNodeWithTag("duration-picker-content").fetchSemanticsNode().boundsInWindow.top
+        val safeTop = 48f * metrics.density
+        assumeTrue("The display must have a visible scrim above the picker", sheetTop > safeTop + 24f * metrics.density)
+        val tapY = (safeTop + sheetTop) / 2f
+        val now = SystemClock.uptimeMillis()
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val down = MotionEvent.obtain(now, now, MotionEvent.ACTION_DOWN, metrics.widthPixels / 2f, tapY, 0)
+        val up = MotionEvent.obtain(now, now + 50, MotionEvent.ACTION_UP, metrics.widthPixels / 2f, tapY, 0)
+        down.source = InputDevice.SOURCE_TOUCHSCREEN
+        up.source = InputDevice.SOURCE_TOUCHSCREEN
+        try {
+            instrumentation.uiAutomation.injectInputEvent(down, true)
+            instrumentation.uiAutomation.injectInputEvent(up, true)
+        } finally {
+            down.recycle()
+            up.recycle()
+        }
+        composeRule.waitUntil(5_000) { composeRule.onAllNodesWithTag("duration-confirm").fetchSemanticsNodes().isEmpty() }
+        composeRule.onNodeWithTag("duration-confirm").assertDoesNotExist()
+        composeRule.onNodeWithTag("work-duration-picker-field").assertExists()
+        assertEquals("1", viewModel.state.value.workHours)
     }
 
     @Test
