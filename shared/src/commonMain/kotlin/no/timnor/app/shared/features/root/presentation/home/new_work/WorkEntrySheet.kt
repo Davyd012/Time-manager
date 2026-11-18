@@ -108,6 +108,10 @@ internal fun WorkEntrySheet(
                 onDateChange = onUpdateWorkDate,
                 startTime = state.workStartTime,
                 onStartTimeChange = onUpdateWorkStartTime,
+                onDurationChange = { hours, minutes ->
+                    onUpdateWorkHours(hours.toString())
+                    onUpdateWorkMinutes(minutes.toString())
+                },
                 hours = state.workHours,
                 minutes = state.workMinutes,
                 description = state.workDescription,

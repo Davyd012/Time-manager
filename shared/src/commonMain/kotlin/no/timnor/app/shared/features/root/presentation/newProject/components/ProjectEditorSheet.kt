@@ -14,9 +14,14 @@ import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.TextFieldValue
 import no.timnor.app.shared.features.root.domain.TimnorHomeError
 import no.timnor.app.shared.features.root.domain.TimnorHomeUiState
 import no.timnor.app.shared.generated.resources.Res
@@ -39,6 +44,8 @@ internal fun ProjectEditorSheet(
     onSaveProject: ((Boolean) -> Unit) -> Unit,
     onDismiss: () -> Unit,
 ) {
+    var name by remember { mutableStateOf(TextFieldValue(state.projectName)) }
+    var description by remember { mutableStateOf(TextFieldValue(state.projectDescription)) }
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         modifier = Modifier.testTag("project-editor"),
@@ -56,15 +63,15 @@ internal fun ProjectEditorSheet(
                 fontWeight = FontWeight.Bold,
             )
             OutlinedTextField(
-                value = state.projectName,
-                onValueChange = onProjectNameChange,
+                value = name,
+                onValueChange = { name = it; onProjectNameChange(it.text) },
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 label = { Text(stringResource(Res.string.project_name_hint)) },
             )
             OutlinedTextField(
-                value = state.projectDescription,
-                onValueChange = onProjectDescriptionChange,
+                value = description,
+                onValueChange = { description = it; onProjectDescriptionChange(it.text) },
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 2,
                 maxLines = 4,

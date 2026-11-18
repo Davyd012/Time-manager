@@ -293,7 +293,7 @@ class SharedCalendarGestureTest {
     }
 
     @Test
-    fun draggingUpFromMonthDateKeepsCalendarOpenWithoutSelectingThatDate() {
+    fun draggingUpFromMonthDateCollapsesWithoutSelectingThatDate() {
         val selectedDate = LocalDate(2026, 11, 10)
         val viewModel = TimnorHomeViewModel(EmptyPersistence(), IdleStopwatch(), selectedDate)
         var expanded by mutableStateOf(false)
@@ -319,14 +319,14 @@ class SharedCalendarGestureTest {
             val travel = with(composeRule.density) { 320.dp.toPx() }
             swipe(start, Offset(start.x, start.y - travel), durationMillis = 70)
         }
+        composeRule.waitUntil(5_000) { !expanded }
         composeRule.runOnIdle {
-            assertTrue(expanded)
             assertEquals(selectedDate, viewModel.state.value.selectedCalendarDate)
         }
     }
 
     @Test
-    fun draggingUpFromEmptyMonthGridCellKeepsCalendarOpen() {
+    fun draggingUpFromEmptyMonthGridCellCollapsesCalendar() {
         val selectedDate = LocalDate(2026, 11, 11)
         val viewModel = TimnorHomeViewModel(EmptyPersistence(), IdleStopwatch(), selectedDate)
         var expanded by mutableStateOf(false)
@@ -350,8 +350,8 @@ class SharedCalendarGestureTest {
             val travel = with(composeRule.density) { 320.dp.toPx() }
             swipe(start, Offset(start.x, start.y - travel), durationMillis = 70)
         }
+        composeRule.waitUntil(5_000) { !expanded }
         composeRule.runOnIdle {
-            assertTrue(expanded)
             assertEquals(selectedDate, viewModel.state.value.selectedCalendarDate)
         }
     }

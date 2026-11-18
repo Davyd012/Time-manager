@@ -95,7 +95,7 @@ internal fun WorkEntryDialogs(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun WorkTimePickerDialog(
+internal fun WorkTimePickerDialog(
     initialHour: Int,
     initialMinute: Int,
     onDismiss: () -> Unit,

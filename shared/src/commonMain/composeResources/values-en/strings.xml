@@ -9,6 +9,9 @@
     <string name="duration_increase">Increase %1$s</string>
     <string name="duration_decrease">Decrease %1$s</string>
     <string name="work_hours_hint">Hours</string>
+    <string name="work_start_time_hint">Start time</string>
+    <string name="work_end_time_hint">Finish time</string>
+    <string name="work_end_next_day">Finish time is the next day</string>
     <string name="work_minutes_hint">Minutes</string>
     <string name="backup_cancel">Cancel</string>
     <string name="back_to_home">Back to home</string>

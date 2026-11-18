@@ -98,6 +98,8 @@
     <string name="work_hours_hint">Timer</string>
     <string name="work_minutes_hint">Minutter</string>
     <string name="work_start_time_hint">Starttid (TT:MM)</string>
+    <string name="work_end_time_hint">Sluttid</string>
+    <string name="work_end_next_day">Sluttid er neste dag</string>
     <string name="work_description_hint">Beskrivelse</string>
     <string name="work_add">Lagre registrering</string>
     <string name="recent_work_title">Siste registreringer</string>
