@@ -130,4 +130,7 @@
     <string name="stopwatch_pause">Pause</string>
     <string name="stopwatch_resume">Resume</string>
     <string name="stopwatch_finish">Finish and save</string>
+    <string name="stopwatch_idle_status">Ready to start</string>
+    <string name="stopwatch_running_status">Tracking time</string>
+    <string name="stopwatch_paused_status">Timer paused</string>
 </resources>

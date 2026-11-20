@@ -40,15 +40,11 @@ import no.timnor.app.core.repository.SharedWorkSyncIndicator
 import no.timnor.app.shared.features.shared_hours.presentation.SharedWorkSyncLabel
 import no.timnor.app.shared.features.root.domain.TimnorHomeError
 import no.timnor.app.shared.domain.stopwatch.canChangeStopwatchProject
-import no.timnor.app.shared.domain.time.formatStopwatchTime
 import no.timnor.app.shared.generated.resources.Res
 import no.timnor.app.shared.generated.resources.active_project_label
 import no.timnor.app.shared.generated.resources.arrow_right
 import no.timnor.app.shared.generated.resources.select_project_before_start
 import no.timnor.app.shared.generated.resources.select_project_title
-import no.timnor.app.shared.generated.resources.stopwatch_idle_status
-import no.timnor.app.shared.generated.resources.stopwatch_paused_status
-import no.timnor.app.shared.generated.resources.stopwatch_running_status
 import no.timnor.app.shared.generated.resources.work
 import no.timnor.app.shared.generated.resources.plannor_linked_project_label
 import no.timnor.app.shared.generated.resources.work_task_optional
@@ -80,27 +76,24 @@ internal fun StopwatchSection(
     var showProjectPicker by remember { mutableStateOf(false) }
     val selectedProject = projects.firstOrNull { it.id == selectedProjectId }
     val elapsed = elapsedSeconds.coerceAtLeast(0)
-    val status = when {
-        isRunning -> Res.string.stopwatch_running_status
-        elapsed > 0 -> Res.string.stopwatch_paused_status
-        else -> Res.string.stopwatch_idle_status
-    }
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
+        val spacing = MaterialTheme.timnorSpacing
+        val dialDiameter = minOf(
+            maxWidth,
+            (maxHeight * 0.42f).coerceIn(spacing.extraLarge * 6, spacing.extraLarge * 10),
+        )
         Column(
             modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).heightIn(min = maxHeight),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Spacer(Modifier.weight(0.5f))
-            Text(
-                text = formatStopwatchTime(elapsed),
-                style = MaterialTheme.typography.displayLarge,
+            Spacer(Modifier.height(spacing.medium))
+            Spacer(Modifier.weight(1f))
+            StopwatchDial(
+                elapsedSeconds = elapsed,
+                isRunning = isRunning,
+                diameter = dialDiameter,
             )
-            Text(
-                text = stringResource(status),
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(Modifier.weight(0.5f))
+            Spacer(Modifier.height(spacing.large))
             Card(
                 onClick = { showProjectPicker = true },
                 enabled = canChangeStopwatchProject(elapsed),
