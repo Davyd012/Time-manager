@@ -68,9 +68,9 @@ private fun Work.toStored() = StoredWork(
     id = id,
 )
 
-private fun StoredProject.toProject() = Project(description, name, id)
+private fun StoredProject.toProject() = Project(description, name, id, hourlyRateOre)
 
-private fun Project.toStored() = StoredProject(description, name, id)
+private fun Project.toStored() = StoredProject(description, name, id, hourlyRateOre)
 
 class PoiSpreadsheetExporter(private val context: Context) : SpreadsheetExporter {
     override suspend fun export(uri: String, days: List<no.timnor.app.core.dates.models.DayModel>) {

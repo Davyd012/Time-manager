@@ -1,5 +1,6 @@
 package no.timnor.app.shared.features.root.domain
 
+import no.timnor.app.shared.data.persistence.CalendarProjectFilterStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
@@ -171,6 +172,38 @@ class TimnorHomeViewModelTest {
             viewModel.deleteProject(viewModel.state.value.projects.first { it.id == 2 })
             runCurrent()
             assertEquals(emptySet(), viewModel.state.value.selectedCalendarProjectIds)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
+    fun calendarFilterSurvivesViewModelRecreationAndCanBeCleared() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val persistence = FakeTimnorPersistence()
+            var savedFilter: String? = null
+            val store = CalendarProjectFilterStore(read = { savedFilter }, write = { savedFilter = it })
+            fun createViewModel() = TimnorHomeViewModel(
+                persistence,
+                FakeStopwatch(),
+                calendarProjectFilterStore = store,
+            )
+            val first = createViewModel()
+            first.addProject("Research")
+            runCurrent()
+            first.addProject("Planning")
+            runCurrent()
+            first.setCalendarProjectSelection(setOf(2))
+
+            val reopened = createViewModel()
+            runCurrent()
+            assertEquals(setOf(2), reopened.state.value.selectedCalendarProjectIds)
+
+            reopened.setCalendarProjectSelection(null)
+            val reopenedAfterClear = createViewModel()
+            runCurrent()
+            assertEquals(null, reopenedAfterClear.state.value.selectedCalendarProjectIds)
         } finally {
             Dispatchers.resetMain()
         }

@@ -1,5 +1,6 @@
 package no.timnor.app.shared.features.root.presentation.home.new_work
 
+import no.timnor.app.shared.generated.resources.invalid_hourly_rate
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -55,6 +56,7 @@ internal fun WorkEntrySheet(
     onBeginProject: () -> Unit,
     onProjectNameChange: (String) -> Unit,
     onProjectDescriptionChange: (String) -> Unit,
+    onProjectHourlyRateChange: (String?) -> Unit,
     onSaveProject: ((Boolean) -> Unit) -> Unit,
     onCancelProject: () -> Unit,
     onSelectPlannorTask: (Int?) -> Unit,
@@ -131,6 +133,7 @@ internal fun WorkEntrySheet(
                     text = stringResource(
                         when (error) {
                             TimnorHomeError.INVALID_PROJECT -> Res.string.invalid_project
+                            TimnorHomeError.INVALID_HOURLY_RATE -> Res.string.invalid_hourly_rate
                             TimnorHomeError.INVALID_WORK -> Res.string.invalid_work
                             TimnorHomeError.STORAGE -> Res.string.storage_error
                             TimnorHomeError.ACTIVE_STOPWATCH_PROJECT -> Res.string.stopwatch_project_locked
@@ -166,6 +169,7 @@ internal fun WorkEntrySheet(
             state = state,
             onProjectNameChange = onProjectNameChange,
             onProjectDescriptionChange = onProjectDescriptionChange,
+            onProjectHourlyRateChange = onProjectHourlyRateChange,
             onSaveProject = onSaveProject,
             onDismiss = { showProjectEditor = false; onCancelProject() },
         )

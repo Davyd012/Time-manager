@@ -7,5 +7,6 @@ import androidx.room.PrimaryKey
 data class Project(
     val description: String = "",
     val name: String = "",
-    @PrimaryKey(autoGenerate = true) val id: Int = 0
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    val hourlyRateOre: Int? = null,
 )

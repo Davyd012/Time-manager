@@ -1,5 +1,6 @@
 package no.timnor.app.shared.features.root.presentation.stopwatch.components
 
+import no.timnor.app.shared.features.root.presentation.newProject.components.ProjectHourlyRateLabel
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -241,6 +242,7 @@ private fun SwipeableStopwatchProjectRow(
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                             )
+                            ProjectHourlyRateLabel(project.hourlyRateOre)
                             linkedPlannorProjectName?.let { linkedName ->
                                 Text(
                                     stringResource(Res.string.plannor_linked_project_label, linkedName),

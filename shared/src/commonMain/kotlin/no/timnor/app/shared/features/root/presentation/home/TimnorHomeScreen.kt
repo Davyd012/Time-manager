@@ -1,5 +1,8 @@
 package no.timnor.app.shared.features.root.presentation.home
 
+import no.timnor.app.shared.domain.calendar.calendarVisibleWorks
+import androidx.compose.runtime.remember
+import no.timnor.app.shared.generated.resources.invalid_hourly_rate
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxSize
@@ -74,6 +77,9 @@ fun TimnorHomeScreen(
 ) {
     val projects = state.projects
     val works = state.works
+    val visibleWorks = remember(works, projects, state.selectedCalendarProjectIds) {
+        calendarVisibleWorks(works, projects, state.selectedCalendarProjectIds)
+    }
     var showWorkEditor by rememberSaveable { mutableStateOf(false) }
     var showExportDialog by rememberSaveable { mutableStateOf(false) }
     var savedCalendarExpanded by rememberSaveable { mutableStateOf(false) }
@@ -184,6 +190,7 @@ fun TimnorHomeScreen(
                     text = stringResource(
                         when (error) {
                             TimnorHomeError.INVALID_PROJECT -> Res.string.invalid_project
+                            TimnorHomeError.INVALID_HOURLY_RATE -> Res.string.invalid_hourly_rate
                             TimnorHomeError.INVALID_WORK -> Res.string.invalid_work
                             TimnorHomeError.STORAGE -> Res.string.storage_error
                             TimnorHomeError.ACTIVE_STOPWATCH_PROJECT -> Res.string.stopwatch_project_locked
@@ -219,7 +226,7 @@ fun TimnorHomeScreen(
             )
             HomeDailyWorkList(
                 selectedDate = state.selectedCalendarDate,
-                works = works,
+                works = visibleWorks,
                 projects = projects,
                 linkedPlannorProjectNames = state.linkedPlannorProjectNames,
                 sharedWorkIndicators = state.sharedWorkIndicators,
@@ -264,6 +271,7 @@ fun TimnorHomeScreen(
             onBeginProject = viewModel::cancelProjectEdit,
             onProjectNameChange = viewModel::updateProjectName,
             onProjectDescriptionChange = viewModel::updateProjectDescription,
+            onProjectHourlyRateChange = viewModel::updateProjectHourlyRate,
             onSaveProject = viewModel::saveProjectForWork,
             onCancelProject = viewModel::cancelProjectEdit,
             onSelectPlannorTask = viewModel::selectPlannorTask,

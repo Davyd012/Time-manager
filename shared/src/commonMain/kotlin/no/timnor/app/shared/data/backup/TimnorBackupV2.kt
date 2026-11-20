@@ -9,6 +9,7 @@ import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
 import kotlin.time.Clock
 import no.timnor.app.shared.data.persistence.StoredProject
+import no.timnor.app.shared.domain.project.MAX_HOURLY_RATE_ORE
 import no.timnor.app.shared.data.persistence.StoredWork
 import no.timnor.app.shared.data.persistence.SharedHoursBackupRecord
 import no.timnor.app.core.repository.SharedWorkBaseline
@@ -56,7 +57,7 @@ fun encodeTimnorBackupV2(
         format = TIMNOR_BACKUP_FORMAT,
         version = TIMNOR_BACKUP_V2_VERSION,
         createdAt = createdAt,
-        projects = projects.map { TimnorBackupProject(it.id, it.description, it.name) },
+        projects = projects.map { TimnorBackupProject(it.id, it.description, it.name, it.hourlyRateOre) },
         works = works.map { work ->
             TimnorBackupWork(
                 id = work.id,
@@ -94,7 +95,7 @@ fun decodeTimnorBackup(contents: String): TimnorBackupImport {
 }
 
 fun TimnorBackupImport.toStoredProjects(): List<StoredProject> =
-    projects.map { StoredProject(it.description, it.name, it.id) }
+    projects.map { StoredProject(it.description, it.name, it.id, it.hourlyRateOre) }
 
 fun TimnorBackupImport.toStoredWorks(): List<StoredWork> = works.map { backupWork ->
     val date = kotlinx.datetime.LocalDateTime.parse(backupWork.date)
@@ -112,6 +113,7 @@ fun validateTimnorBackupV2(value: TimnorBackupV2) {
     require(value.format == TIMNOR_BACKUP_FORMAT && value.version == TIMNOR_BACKUP_V2_VERSION)
     require(value.projects.size <= 100_000 && value.works.size <= 100_000)
     require(value.projects.map(TimnorBackupProject::id).toSet().size == value.projects.size)
+    require(value.projects.all { it.hourlyRateOre == null || it.hourlyRateOre in 1..MAX_HOURLY_RATE_ORE })
     require(value.works.map(TimnorBackupWork::id).toSet().size == value.works.size)
     require(value.sharedHoursRecords.size <= MAX_SHARED_HOURS_RECORDS)
     require(value.sharedHoursRecords.map { Triple(it.accountId, it.type, it.key) }.toSet().size == value.sharedHoursRecords.size)

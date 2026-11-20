@@ -1,5 +1,10 @@
 package no.timnor.app.shared.features.month_view.presentation
 
+import no.timnor.app.shared.domain.calendar.calendarVisibleWorks
+import no.timnor.app.shared.features.calendar.presentation.components.CalendarPayLabel
+import no.timnor.app.shared.domain.project.calendarHourlyPayOre
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.Alignment
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -42,8 +47,11 @@ fun TimnorMonthViewScreen(
     val daysInMonth = remember(month.year, monthNumber) {
         monthGridLayout(month.year, monthNumber).daysInMonth
     }
-    val monthWorks = remember(state.works, month) {
-        state.works.filter { work ->
+    val visibleWorks = remember(state.works, state.projects, state.selectedCalendarProjectIds) {
+        calendarVisibleWorks(state.works, state.projects, state.selectedCalendarProjectIds)
+    }
+    val monthWorks = remember(visibleWorks, month) {
+        visibleWorks.filter { work ->
             val date = utcLocalDateTimeFromEpochSeconds(work.dateEpochSeconds).date
             date.year == month.year && date.month == month.month
         }
@@ -57,8 +65,11 @@ fun TimnorMonthViewScreen(
             secondsOf = StoredWork::time,
         )
     }
-    val selectedWorks = remember(state.works, state.selectedCalendarDate) {
-        monthViewWorksForDate(state.works, state.selectedCalendarDate)
+    val selectedWorks = remember(visibleWorks, state.selectedCalendarDate) {
+        monthViewWorksForDate(visibleWorks, state.selectedCalendarDate)
+    }
+    val monthPayOre = remember(state.projects, state.selectedCalendarProjectIds, monthWorks) {
+        calendarHourlyPayOre(state.projects, state.selectedCalendarProjectIds, monthWorks)
     }
     LaunchedEffect(state.editingWorkId) {
         if (state.editingWorkId != null) showWorkEditor = true
@@ -74,30 +85,35 @@ fun TimnorMonthViewScreen(
             verticalArrangement = Arrangement.spacedBy(MaterialTheme.timnorSpacing.small),
         ) {
             MonthViewHeader(
-            daysInMonth = daysInMonth,
-            secondsByDay = secondsByDay,
-            selectedDate = state.selectedCalendarDate,
+                daysInMonth = daysInMonth,
+                secondsByDay = secondsByDay,
+                selectedDate = state.selectedCalendarDate,
                 scrollToSelectedDateKey = scrollToSelectedDateKey,
-            onSelectDate = viewModel::selectCalendarDate,
-            onBack = onBack,
-        )
+                onSelectDate = viewModel::selectCalendarDate,
+                onBack = onBack,
+            )
+            CalendarPayLabel(
+                monthPayOre,
+                modifier = Modifier.align(Alignment.CenterHorizontally)
+                    .padding(horizontal = MaterialTheme.timnorSpacing.medium),
+            )
             if (selectedWorks.isEmpty()) {
-            MonthViewEmptyState(
-                onAddWork = {
-                    viewModel.beginManualWork()
-                    showWorkEditor = true
-                },
-                modifier = Modifier.fillMaxWidth().weight(1f),
-            )
+                MonthViewEmptyState(
+                    onAddWork = {
+                        viewModel.beginManualWork()
+                        showWorkEditor = true
+                    },
+                    modifier = Modifier.fillMaxWidth().weight(1f),
+                )
             } else {
-            MonthViewTimeline(
-                works = selectedWorks,
-                projects = state.projects,
-                linkedPlannorProjectNames = state.linkedPlannorProjectNames,
-                sharedWorkIndicators = state.sharedWorkIndicators,
-                modifier = Modifier.fillMaxWidth().weight(1f),
-                onSelectWork = viewModel::editWork,
-            )
+                MonthViewTimeline(
+                    works = selectedWorks,
+                    projects = state.projects,
+                    linkedPlannorProjectNames = state.linkedPlannorProjectNames,
+                    sharedWorkIndicators = state.sharedWorkIndicators,
+                    modifier = Modifier.fillMaxWidth().weight(1f),
+                    onSelectWork = viewModel::editWork,
+                )
             }
         }
     }
@@ -115,6 +131,7 @@ fun TimnorMonthViewScreen(
             onBeginProject = viewModel::cancelProjectEdit,
             onProjectNameChange = viewModel::updateProjectName,
             onProjectDescriptionChange = viewModel::updateProjectDescription,
+            onProjectHourlyRateChange = viewModel::updateProjectHourlyRate,
             onSaveProject = viewModel::saveProjectForWork,
             onCancelProject = viewModel::cancelProjectEdit,
             onSelectPlannorTask = viewModel::selectPlannorTask,

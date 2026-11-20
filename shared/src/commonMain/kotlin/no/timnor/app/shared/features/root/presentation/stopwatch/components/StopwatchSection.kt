@@ -1,5 +1,6 @@
 package no.timnor.app.shared.features.root.presentation.stopwatch.components
 
+import no.timnor.app.shared.features.root.presentation.newProject.components.ProjectHourlyRateLabel
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -8,27 +9,20 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LargeFloatingActionButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateOf
@@ -50,23 +44,16 @@ import no.timnor.app.shared.domain.time.formatStopwatchTime
 import no.timnor.app.shared.generated.resources.Res
 import no.timnor.app.shared.generated.resources.active_project_label
 import no.timnor.app.shared.generated.resources.arrow_right
-import no.timnor.app.shared.generated.resources.done
-import no.timnor.app.shared.generated.resources.pause
-import no.timnor.app.shared.generated.resources.play
 import no.timnor.app.shared.generated.resources.select_project_before_start
 import no.timnor.app.shared.generated.resources.select_project_title
 import no.timnor.app.shared.generated.resources.stopwatch_idle_status
-import no.timnor.app.shared.generated.resources.stopwatch_pause
 import no.timnor.app.shared.generated.resources.stopwatch_paused_status
 import no.timnor.app.shared.generated.resources.stopwatch_running_status
-import no.timnor.app.shared.generated.resources.stopwatch_start
-import no.timnor.app.shared.generated.resources.stopwatch_resume
 import no.timnor.app.shared.generated.resources.work
 import no.timnor.app.shared.generated.resources.plannor_linked_project_label
 import no.timnor.app.shared.generated.resources.work_task_optional
 import no.timnor.app.shared.generated.resources.work_task_none
 import no.timnor.app.shared.ui.theme.timnorSpacing
-import no.timnor.app.shared.platform.motion.rememberSystemAnimationsEnabled
 import org.jetbrains.compose.resources.painterResource
 import org.jetbrains.compose.resources.stringResource
 
@@ -93,137 +80,100 @@ internal fun StopwatchSection(
     var showProjectPicker by remember { mutableStateOf(false) }
     val selectedProject = projects.firstOrNull { it.id == selectedProjectId }
     val elapsed = elapsedSeconds.coerceAtLeast(0)
-    val animationsEnabled = rememberSystemAnimationsEnabled()
     val status = when {
         isRunning -> Res.string.stopwatch_running_status
         elapsed > 0 -> Res.string.stopwatch_paused_status
         else -> Res.string.stopwatch_idle_status
     }
     BoxWithConstraints(modifier = modifier.fillMaxSize()) {
-    Column(
-        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).heightIn(min = maxHeight),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Spacer(Modifier.weight(0.5f))
-        Text(
-        text = formatStopwatchTime(elapsed),
-            style = MaterialTheme.typography.displayLarge,
-        )
-        Text(
-            text = stringResource(status),
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(Modifier.weight(0.5f))
-        Card(
-            onClick = { showProjectPicker = true },
-            enabled = canChangeStopwatchProject(elapsed),
-            modifier = Modifier.fillMaxWidth().testTag("stopwatch-project-picker"),
-            shape = MaterialTheme.shapes.medium,
-            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outlineVariant),
+        Column(
+            modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).heightIn(min = maxHeight),
+            horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            ListItem(
-                headlineContent = {
-                    Text(
-                        text = selectedProject?.name ?: stringResource(Res.string.select_project_title),
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                },
-                supportingContent = {
-                    Column {
+            Spacer(Modifier.weight(0.5f))
+            Text(
+                text = formatStopwatchTime(elapsed),
+                style = MaterialTheme.typography.displayLarge,
+            )
+            Text(
+                text = stringResource(status),
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            Spacer(Modifier.weight(0.5f))
+            Card(
+                onClick = { showProjectPicker = true },
+                enabled = canChangeStopwatchProject(elapsed),
+                modifier = Modifier.fillMaxWidth().testTag("stopwatch-project-picker"),
+                shape = MaterialTheme.shapes.medium,
+                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+            ) {
+                ListItem(
+                    headlineContent = {
                         Text(
-                            text = stringResource(
-                                if (selectedProject == null) Res.string.select_project_before_start
-                                else Res.string.active_project_label,
-                            ),
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            text = selectedProject?.name ?: stringResource(Res.string.select_project_title),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
                         )
-                        selectedProject?.let { linkedPlannorProjectNames[it.id] }?.let { linkedName ->
+                    },
+                    supportingContent = {
+                        Column {
                             Text(
-                                stringResource(Res.string.plannor_linked_project_label, linkedName),
+                                text = stringResource(
+                                    if (selectedProject == null) Res.string.select_project_before_start
+                                    else Res.string.active_project_label,
+                                ),
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
+                            ProjectHourlyRateLabel(selectedProject?.hourlyRateOre)
+                            selectedProject?.let { linkedPlannorProjectNames[it.id] }?.let { linkedName ->
+                                Text(
+                                    stringResource(Res.string.plannor_linked_project_label, linkedName),
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                            selectedProject?.let { sharedProjectIndicators[it.id] }?.let { indicator ->
+                                SharedWorkSyncLabel(indicator)
+                            }
                         }
-                        selectedProject?.let { sharedProjectIndicators[it.id] }?.let { indicator ->
-                            SharedWorkSyncLabel(indicator)
-                        }
-                    }
-                },
-                leadingContent = {
-                    Icon(
-                    painter = painterResource(Res.drawable.work),
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                },
-                trailingContent = {
-                    Icon(
-                        painter = painterResource(Res.drawable.arrow_right),
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                },
-                colors = ListItemDefaults.colors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                ),
-            )
-        }
-        if (selectedProject != null && linkedPlannorProjectNames.containsKey(selectedProject.id) && plannorTasks.isNotEmpty()) {
-            StopwatchTaskPicker(
-                tasks = plannorTasks,
-                selectedTaskId = selectedPlannorTaskId,
-                onSelectTask = onSelectPlannorTask,
-            )
-        }
-        Spacer(Modifier.weight(1f))
-        val primaryAction = when {
-            isRunning -> stringResource(Res.string.stopwatch_pause)
-            elapsed > 0 -> stringResource(Res.string.stopwatch_resume)
-            else -> stringResource(Res.string.stopwatch_start)
-        }
-        LargeFloatingActionButton(
-            onClick = { if (selectedProject == null) showProjectPicker = true else onStartPause() },
-            containerColor = MaterialTheme.colorScheme.primaryContainer,
-            contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
-            shape = CircleShape,
-        ) {
-            if (animationsEnabled) {
-                AnimatedContent(targetState = isRunning, label = "stopwatch-action-icon") { running ->
-                    Icon(
-                        painter = painterResource(if (running) Res.drawable.pause else Res.drawable.play),
-                        contentDescription = primaryAction,
-                        modifier = Modifier.size(MaterialTheme.timnorSpacing.extraLarge),
-                    )
-                }
-            } else {
-                Icon(
-                    painter = painterResource(if (isRunning) Res.drawable.pause else Res.drawable.play),
-                    contentDescription = primaryAction,
-                    modifier = Modifier.size(MaterialTheme.timnorSpacing.extraLarge),
+                    },
+                    leadingContent = {
+                        Icon(
+                            painter = painterResource(Res.drawable.work),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    },
+                    trailingContent = {
+                        Icon(
+                            painter = painterResource(Res.drawable.arrow_right),
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    },
+                    colors = ListItemDefaults.colors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                    ),
                 )
             }
-        }
-        Text(
-            primaryAction,
-            style = MaterialTheme.typography.labelLarge,
-            modifier = Modifier.padding(top = MaterialTheme.timnorSpacing.small),
-        )
-        if (animationsEnabled) AnimatedVisibility(visible = elapsed > 0, enter = fadeIn(), exit = fadeOut()) {
-            TextButton(onClick = onSave) {
-                Icon(painter = painterResource(Res.drawable.done), contentDescription = null)
-                Spacer(Modifier.width(MaterialTheme.timnorSpacing.small))
-                Text(stringResource(Res.string.done))
+            if (selectedProject != null && linkedPlannorProjectNames.containsKey(selectedProject.id) && plannorTasks.isNotEmpty()) {
+                Spacer(Modifier.height(MaterialTheme.timnorSpacing.small))
+                StopwatchTaskPicker(
+                    tasks = plannorTasks,
+                    selectedTaskId = selectedPlannorTaskId,
+                    onSelectTask = onSelectPlannorTask,
+                )
             }
-        } else if (elapsed > 0) {
-            TextButton(onClick = onSave) {
-                Icon(painter = painterResource(Res.drawable.done), contentDescription = null)
-                Spacer(Modifier.width(MaterialTheme.timnorSpacing.small))
-                Text(stringResource(Res.string.done))
-            }
+            Spacer(Modifier.height(MaterialTheme.timnorSpacing.large))
+            StopwatchControls(
+                isRunning = isRunning,
+                hasElapsedTime = elapsed > 0,
+                onStartPause = { if (selectedProject == null) showProjectPicker = true else onStartPause() },
+                onFinish = onSave,
+            )
+            Spacer(Modifier.height(MaterialTheme.timnorSpacing.extraLarge * 2))
+            Spacer(Modifier.weight(1f))
         }
-        Spacer(Modifier.weight(1f))
-    }
     }
 
     if (showProjectPicker) {
@@ -260,7 +210,15 @@ private fun StopwatchTaskPicker(
     var expanded by remember { mutableStateOf(false) }
     val selectedTask = tasks.firstOrNull { it.taskId == selectedTaskId }
     Box(modifier = Modifier.fillMaxWidth()) {
-        OutlinedButton(onClick = { expanded = true }, modifier = Modifier.fillMaxWidth()) {
+        OutlinedButton(
+            onClick = { expanded = true },
+            modifier = Modifier.fillMaxWidth(),
+            border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+            colors = ButtonDefaults.outlinedButtonColors(
+                containerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                contentColor = MaterialTheme.colorScheme.onSurface,
+            ),
+        ) {
             Text(selectedTask?.headline ?: stringResource(Res.string.work_task_optional))
         }
         DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {

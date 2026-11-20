@@ -1,5 +1,7 @@
 package no.timnor.app.shared.platform
 
+import no.timnor.app.shared.data.persistence.CalendarProjectFilterStore
+import platform.Foundation.NSUserDefaults
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.collectAsState
@@ -68,9 +70,18 @@ fun MainViewController(
     val coroutineScope = rememberCoroutineScope()
     val stopwatch = remember { IosStopwatchPlatform() }
     val viewModel = remember {
+        val defaults = NSUserDefaults.standardUserDefaults
+        val filterKey = "timnor.calendar.selectedProjectIds"
         TimnorHomeViewModel(
             persistence = persistence,
             stopwatch = stopwatch,
+            calendarProjectFilterStore = CalendarProjectFilterStore(
+                read = { defaults.stringForKey(filterKey) },
+                write = { value ->
+                    if (value == null) defaults.removeObjectForKey(filterKey)
+                    else defaults.setObject(value, forKey = filterKey)
+                },
+            ),
             loadLinkedPlannorProjects = {
                 val accountId = sessionStorage.read()?.accountId
                 if (accountId == null) emptyMap() else {

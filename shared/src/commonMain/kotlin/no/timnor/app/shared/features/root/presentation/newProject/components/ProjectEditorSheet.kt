@@ -26,7 +26,8 @@ import no.timnor.app.shared.features.root.domain.TimnorHomeError
 import no.timnor.app.shared.features.root.domain.TimnorHomeUiState
 import no.timnor.app.shared.generated.resources.Res
 import no.timnor.app.shared.generated.resources.invalid_project
-import no.timnor.app.shared.generated.resources.project_description_hint
+import no.timnor.app.shared.generated.resources.project_description_optional
+import no.timnor.app.shared.generated.resources.project_edit_title
 import no.timnor.app.shared.generated.resources.project_editor_title
 import no.timnor.app.shared.generated.resources.project_name_hint
 import no.timnor.app.shared.generated.resources.project_save
@@ -41,6 +42,7 @@ internal fun ProjectEditorSheet(
     state: TimnorHomeUiState,
     onProjectNameChange: (String) -> Unit,
     onProjectDescriptionChange: (String) -> Unit,
+    onProjectHourlyRateChange: (String?) -> Unit,
     onSaveProject: ((Boolean) -> Unit) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -50,6 +52,8 @@ internal fun ProjectEditorSheet(
         onDismissRequest = onDismiss,
         modifier = Modifier.testTag("project-editor"),
         dragHandle = null,
+        shape = MaterialTheme.shapes.extraLarge,
+        containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
     ) {
         Column(
             modifier = Modifier.fillMaxWidth().imePadding()
@@ -58,7 +62,9 @@ internal fun ProjectEditorSheet(
             verticalArrangement = Arrangement.spacedBy(MaterialTheme.timnorSpacing.medium),
         ) {
             Text(
-                stringResource(Res.string.project_editor_title),
+                stringResource(
+                    if (state.editingProjectId == null) Res.string.project_editor_title else Res.string.project_edit_title,
+                ),
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
             )
@@ -75,7 +81,12 @@ internal fun ProjectEditorSheet(
                 modifier = Modifier.fillMaxWidth(),
                 minLines = 2,
                 maxLines = 4,
-                label = { Text(stringResource(Res.string.project_description_hint)) },
+                label = { Text(stringResource(Res.string.project_description_optional)) },
+            )
+            ProjectHourlyRateField(
+                rate = state.projectHourlyRate,
+                isError = state.error == TimnorHomeError.INVALID_HOURLY_RATE,
+                onRateChange = onProjectHourlyRateChange,
             )
             state.error?.let { error ->
                 when (error) {
@@ -87,32 +98,23 @@ internal fun ProjectEditorSheet(
                         stringResource(Res.string.storage_error),
                         color = MaterialTheme.colorScheme.error,
                     )
-                    TimnorHomeError.INVALID_WORK -> Unit
+                    TimnorHomeError.INVALID_WORK, TimnorHomeError.INVALID_HOURLY_RATE -> Unit
                     TimnorHomeError.ACTIVE_STOPWATCH_PROJECT -> Text(
                         stringResource(Res.string.stopwatch_project_locked),
                         color = MaterialTheme.colorScheme.error,
                     )
                 }
             }
-            RowActions(
-                isEditing = state.editingProjectId != null,
-                onSave = {
-                    onSaveProject { saved ->
-                        if (saved) onDismiss()
-                    }
-                },
-            )
-        }
-    }
-}
-
-@Composable
-private fun RowActions(isEditing: Boolean, onSave: () -> Unit) {
-    androidx.compose.foundation.layout.Row(
-        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.timnorSpacing.small),
-    ) {
-        Button(onClick = onSave, modifier = Modifier.weight(1f)) {
-            Text(stringResource(if (isEditing) Res.string.project_save else Res.string.project_editor_title))
+            Button(
+                onClick = { onSaveProject { saved -> if (saved) onDismiss() } },
+                modifier = Modifier.fillMaxWidth().padding(top = MaterialTheme.timnorSpacing.small),
+                shape = MaterialTheme.shapes.medium,
+            ) {
+                Text(
+                    stringResource(Res.string.project_save),
+                    modifier = Modifier.padding(vertical = MaterialTheme.timnorSpacing.small),
+                )
+            }
         }
     }
 }

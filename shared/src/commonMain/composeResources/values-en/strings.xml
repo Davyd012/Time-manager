@@ -113,4 +113,21 @@
     <string name="shared_work_sync_account_required">Sign in to the original Plannor account</string>
     <string name="shared_work_sync_error">Sync needs attention</string>
     <string name="restore_shared_hours_count">It also contains %1$d shared sync records. Sign in to Plannor again after restoring.</string>
+
+    <string name="project_payment_optional">Payment (optional)</string>
+    <string name="project_hourly_rate">Hourly rate</string>
+    <string name="project_hourly_rate_unit">NOK/h</string>
+    <string name="project_hourly_rate_label">%1$s NOK/h</string>
+    <string name="invalid_hourly_rate">Enter a rate from 0.01 to 999,999.99 NOK.</string>
+    <string name="pay_decimal_separator">.</string>
+    <string name="calendar_estimated_pay">Estimated monthly pay: %1$s NOK</string>
+    <string name="project_editor_title">New project</string>
+    <string name="project_edit_title">Edit project</string>
+    <string name="project_description_optional">Description (optional)</string>
+    <string name="project_save">Save</string>
+    <string name="project_payment_help">Set the hourly rate for tracked time. You can change it later.</string>
+    <string name="stopwatch_start">Start</string>
+    <string name="stopwatch_pause">Pause</string>
+    <string name="stopwatch_resume">Resume</string>
+    <string name="stopwatch_finish">Finish and save</string>
 </resources>

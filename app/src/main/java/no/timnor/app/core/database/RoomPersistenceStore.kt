@@ -135,7 +135,7 @@ class RoomPersistenceStore(
     }
 }
 
-private fun Project.toStored() = StoredProject(description, name, id)
+private fun Project.toStored() = StoredProject(description, name, id, hourlyRateOre)
 
 private fun Work.toStored() = StoredWork(
     description = description,
@@ -146,7 +146,7 @@ private fun Work.toStored() = StoredWork(
     id = id,
 )
 
-private fun StoredProject.toEntity() = Project(description, name, id)
+private fun StoredProject.toEntity() = Project(description, name, id, hourlyRateOre)
 
 private fun StoredWork.toEntity() = Work(
     description = description,

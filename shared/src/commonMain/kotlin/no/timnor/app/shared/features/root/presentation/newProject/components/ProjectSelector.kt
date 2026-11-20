@@ -84,6 +84,7 @@ internal fun ProjectSelector(
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
+                    ProjectHourlyRateLabel(project.hourlyRateOre)
                     linkedPlannorProjectNames[project.id]?.let { linkedName ->
                         Text(
                             if (linkedName.isBlank()) stringResource(Res.string.plannor_linked_project_unavailable)

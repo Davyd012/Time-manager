@@ -7,13 +7,11 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performCustomAccessibilityActionWithLabel
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.assertIsDisplayed
-import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.swipe
 import androidx.compose.ui.test.ExperimentalTestApi
 import kotlinx.coroutines.flow.Flow
@@ -45,18 +43,19 @@ class SharedProjectGestureTest {
             swipe(Offset(width * 0.1f, center.y), Offset(width * 0.95f, center.y))
         }
         composeRule.onNodeWithTag("project-editor").assertExists()
-        composeRule.onNodeWithText("Nytt prosjekt").assertIsDisplayed()
+        composeRule.onNodeWithText("Rediger prosjekt").assertIsDisplayed()
         composeRule.onNodeWithText("Lagre").assertIsDisplayed()
         composeRule.onNodeWithText("Avbryt").assertDoesNotExist()
     }
 
     @Test
-    fun createProjectEditorMatchesLegacyTitleAndAction() {
+    fun createProjectEditorShowsTitleAndSaveAction() {
         val viewModel = createViewModel()
         showStopwatch(viewModel)
         composeRule.onNodeWithContentDescription("Legg til prosjekt").performClick()
 
-        composeRule.onAllNodesWithText("Nytt prosjekt").assertCountEquals(2)
+        composeRule.onNodeWithText("Nytt prosjekt").assertIsDisplayed()
+        composeRule.onNodeWithText("Lagre").assertIsDisplayed()
     }
 
     @Test

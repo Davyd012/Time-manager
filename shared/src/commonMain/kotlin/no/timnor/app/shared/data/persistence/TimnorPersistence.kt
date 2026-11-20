@@ -12,6 +12,7 @@ data class StoredProject(
     val description: String,
     val name: String,
     val id: Int,
+    val hourlyRateOre: Int? = null,
 )
 
 /** Work date is stored as UTC epoch seconds, matching the existing Room converter. */

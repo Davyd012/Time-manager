@@ -24,8 +24,14 @@ val MIGRATION_1_2 = object : Migration(1, 2) {
     }
 }
 
+val MIGRATION_2_3 = object : Migration(2, 3) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE `Project` ADD COLUMN `hourlyRateOre` INTEGER")
+    }
+}
+
 fun getDatabase(context: Context): Database =
     Room.databaseBuilder<Database>(
         context.applicationContext,
         context.getDatabasePath("work.db").absolutePath,
-    ).addMigrations(MIGRATION_1_2).build()
+    ).addMigrations(MIGRATION_1_2, MIGRATION_2_3).build()

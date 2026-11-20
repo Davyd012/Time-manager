@@ -1,5 +1,7 @@
 package no.timnor.app.shared.features.root.presentation.home.components
 
+import no.timnor.app.shared.domain.calendar.calendarVisibleWorks
+import no.timnor.app.shared.features.calendar.presentation.components.CalendarPayLabel
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.EnterTransition
@@ -49,6 +51,7 @@ import kotlinx.datetime.minus
 import kotlinx.datetime.plus
 import no.timnor.app.shared.data.persistence.StoredProject
 import no.timnor.app.shared.data.persistence.StoredWork
+import no.timnor.app.shared.domain.project.calendarHourlyPayOre
 import no.timnor.app.shared.domain.time.utcLocalDateTimeFromEpochSeconds
 import no.timnor.app.shared.features.calendar.presentation.components.MonthShareSummaryKind
 import no.timnor.app.shared.features.calendar.presentation.components.formatMonthShareHours
@@ -107,24 +110,29 @@ internal fun CalendarMonthContent(
     val progress = expansionProgress.coerceIn(0f, 1f)
     val fontScale = LocalDensity.current.fontScale.coerceAtLeast(1f)
     val expandedActionRowHeight = MaterialTheme.timnorSpacing.extraLarge * 2 * fontScale
-    val monthTotalRowHeight = expandedActionRowHeight + MaterialTheme.timnorSpacing.medium * 2 * fontScale
     val visibleMonthWorks = remember(works, projects, selectedProjectIds, month) {
-        visibleWorks(works, projects, selectedProjectIds).filter { work ->
+        calendarVisibleWorks(works, projects, selectedProjectIds).filter { work ->
             val date = utcLocalDateTimeFromEpochSeconds(work.dateEpochSeconds).date
             date.year == month.year && date.month == month.month
         }
     }
     val byDate = remember(works, projects, selectedProjectIds) {
-        visibleWorks(works, projects, selectedProjectIds)
+        calendarVisibleWorks(works, projects, selectedProjectIds)
             .groupBy { utcLocalDateTimeFromEpochSeconds(it.dateEpochSeconds).date }
             .mapValues { (_, entries) -> entries.sumOf(StoredWork::time) }
     }
     val weekSecondsByDate = remember(works, projects, selectedProjectIds) {
-        visibleWorks(works, projects, selectedProjectIds)
+        calendarVisibleWorks(works, projects, selectedProjectIds)
             .groupBy { utcLocalDateTimeFromEpochSeconds(it.dateEpochSeconds).date }
             .mapValues { (_, entries) -> entries.sumOf(StoredWork::time) }
     }
     val monthSeconds = remember(visibleMonthWorks) { visibleMonthWorks.sumOf { it.time.toLong() } }
+    val monthPayOre = remember(projects, selectedProjectIds, visibleMonthWorks) {
+        calendarHourlyPayOre(projects, selectedProjectIds, visibleMonthWorks)
+    }
+    val payLineHeight = if (monthPayOre == null) 0.dp else MaterialTheme.timnorSpacing.large
+    val monthTotalRowHeight = expandedActionRowHeight +
+        (MaterialTheme.timnorSpacing.medium * 2 + payLineHeight) * fontScale
     val monthTotalMinutes = (monthSeconds + 30) / 60
     val monthLabel = "${monthName(month.month)} ${month.year}"
     val monthSummary = when (monthShareSummaryKind(monthSeconds)) {
@@ -282,15 +290,21 @@ internal fun CalendarMonthContent(
                 ) {
                     HorizontalDivider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outlineVariant)
                     Surface(
+                        modifier = if (monthPayOre == null) Modifier else Modifier.weight(6f, fill = false),
                         color = MaterialTheme.colorScheme.surfaceContainerHigh,
                         contentColor = MaterialTheme.colorScheme.onSurface,
                         shape = MaterialTheme.shapes.extraLarge,
                     ) {
-                        Text(
-                            stringResource(Res.string.calendar_month_total, monthTotalMinutes / 60, monthTotalMinutes % 60),
+                        Column(
                             modifier = Modifier.padding(MaterialTheme.timnorSpacing.medium),
-                            style = MaterialTheme.typography.labelLarge,
-                        )
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            Text(
+                                stringResource(Res.string.calendar_month_total, monthTotalMinutes / 60, monthTotalMinutes % 60),
+                                style = MaterialTheme.typography.labelLarge,
+                            )
+                            CalendarPayLabel(monthPayOre)
+                        }
                     }
                     onShareMonth?.let { share ->
                         IconButton(
@@ -307,16 +321,6 @@ internal fun CalendarMonthContent(
             }
         }
     }
-}
-
-internal fun visibleWorks(
-    works: List<StoredWork>,
-    projects: List<StoredProject>,
-    selectedProjectIds: Set<Int>?,
-): List<StoredWork> {
-    if (selectedProjectIds == null) return works
-    val validProjectIds = projects.mapTo(mutableSetOf(), StoredProject::id)
-    return works.filter { it.project in selectedProjectIds && it.project in validProjectIds }
 }
 
 @Composable

@@ -30,10 +30,11 @@ class SharedHoursRoomMigrationTest {
             close()
         }
 
-        migrationHelper.runMigrationsAndValidate(TEST_DATABASE, 2, true, MIGRATION_1_2).use { migrated ->
+        migrationHelper.runMigrationsAndValidate(TEST_DATABASE, 3, true, MIGRATION_1_2, MIGRATION_2_3).use { migrated ->
             assertEquals("Local project", migrated.scalarString("SELECT name FROM Project WHERE id = 7"))
             assertEquals("local work", migrated.scalarString("SELECT description FROM Work WHERE id = 11"))
             assertEquals(0, migrated.scalarLong("SELECT COUNT(*) FROM shared_hours_record"))
+            assertEquals(1, migrated.scalarLong("SELECT COUNT(*) FROM Project WHERE id = 7 AND hourlyRateOre IS NULL"))
         }
     }
 
@@ -54,12 +55,13 @@ class SharedHoursRoomMigrationTest {
             database.sharedHoursRecordDao().upsert(preserved)
 
             RoomPersistenceStore(database).replaceAll(
-                projects = listOf(StoredProject("restored", "Restored project", 3)),
+                projects = listOf(StoredProject("restored", "Restored project", 3, hourlyRateOre = 25_050)),
                 works = listOf(StoredWork("restored work", 1700000000, 3, 0, 1800, 4)),
             )
 
             assertEquals(preserved, database.sharedHoursRecordDao().record(42, "personal_time_entry", "entry-9"))
             assertEquals("Restored project", database.projectDao().getAll().single().name)
+            assertEquals(25_050, database.projectDao().getAll().single().hourlyRateOre)
             assertEquals("restored work", database.workDao().getAll().single().description)
         } finally {
             database.close()

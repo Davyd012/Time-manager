@@ -64,7 +64,7 @@ internal fun ProjectFilterSheet(
     onDismiss: () -> Unit,
 ) {
     var query by rememberSaveable { mutableStateOf("") }
-    var selection by remember(projects, selectedProjectIds) {
+    var selection by remember(selectedProjectIds) {
         mutableStateOf(calendarProjectSelectionForApply(selectedProjectIds))
     }
     val allProjectIds = remember(projects) { projects.mapTo(mutableSetOf(), StoredProject::id) }
@@ -84,8 +84,12 @@ internal fun ProjectFilterSheet(
             .fold(0L) { total, work -> total + work.time }
     }
 
+    val applyAndDismiss = {
+        onApply(calendarProjectSelectionForApply(selection))
+        onDismiss()
+    }
     ModalBottomSheet(
-        onDismissRequest = onDismiss,
+        onDismissRequest = applyAndDismiss,
         sheetState = rememberBottomSheetState(
             initialValue = SheetValue.Hidden,
             enabledValues = setOf(SheetValue.Hidden, SheetValue.Expanded),
@@ -101,7 +105,7 @@ internal fun ProjectFilterSheet(
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 IconButton(
-                    onClick = { onApply(calendarProjectSelectionForApply(selection)); onDismiss() },
+                    onClick = applyAndDismiss,
                     modifier = Modifier.testTag("project-filter-back"),
                 ) {
                     Icon(painterResource(Res.drawable.arrow_back), contentDescription = stringResource(Res.string.back_to_home))
@@ -111,7 +115,7 @@ internal fun ProjectFilterSheet(
                     modifier = Modifier.weight(1f),
                     style = MaterialTheme.typography.titleLarge,
                 )
-                TextButton(onClick = { onApply(calendarProjectSelectionForApply(selection)); onDismiss() }) {
+                TextButton(onClick = applyAndDismiss) {
                     Text(stringResource(Res.string.done))
                 }
             }

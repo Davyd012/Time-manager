@@ -11,6 +11,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlin.time.Clock
 import kotlin.time.Instant
 import no.timnor.app.shared.data.persistence.StoredProject
+import no.timnor.app.shared.domain.project.MAX_HOURLY_RATE_ORE
 import no.timnor.app.shared.data.persistence.StoredWork
 
 const val TIMNOR_BACKUP_FORMAT = "org.examples.time_manager.backup"
@@ -28,7 +29,12 @@ data class TimnorBackupV1(
 )
 
 @Serializable
-data class TimnorBackupProject(val id: Int, val description: String, val name: String)
+data class TimnorBackupProject(
+    val id: Int,
+    val description: String,
+    val name: String,
+    val hourlyRateOre: Int? = null,
+)
 
 @Serializable
 data class TimnorBackupWork(
@@ -54,7 +60,7 @@ fun encodeTimnorBackupV1(
         format = TIMNOR_BACKUP_FORMAT,
         version = TIMNOR_BACKUP_VERSION,
         createdAt = createdAt,
-        projects = projects.map { TimnorBackupProject(it.id, it.description, it.name) },
+        projects = projects.map { TimnorBackupProject(it.id, it.description, it.name, it.hourlyRateOre) },
         works = works.map {
             TimnorBackupWork(
                 id = it.id,
@@ -87,13 +93,14 @@ fun validateTimnorBackupV1(value: TimnorBackupV1) {
     require(value.format == TIMNOR_BACKUP_FORMAT && value.version == TIMNOR_BACKUP_VERSION)
     require(value.projects.size <= MAX_RECORDS_PER_TABLE && value.works.size <= MAX_RECORDS_PER_TABLE)
     require(value.projects.map(TimnorBackupProject::id).toSet().size == value.projects.size)
+    require(value.projects.all { it.hourlyRateOre == null || it.hourlyRateOre in 1..MAX_HOURLY_RATE_ORE })
     require(value.works.map(TimnorBackupWork::id).toSet().size == value.works.size)
     value.works.forEach { LocalDateTime.parse(it.date) }
     Instant.parse(value.createdAt)
 }
 
 fun TimnorBackupV1.toStoredProjects(): List<StoredProject> =
-    projects.map { StoredProject(it.description, it.name, it.id) }
+    projects.map { StoredProject(it.description, it.name, it.id, it.hourlyRateOre) }
 
 fun TimnorBackupV1.toStoredWorks(): List<StoredWork> = works.map { backupWork ->
     val date = LocalDateTime.parse(backupWork.date)

@@ -22,10 +22,18 @@ import no.timnor.app.core.repository.PlannorProjectCreator
 import no.timnor.app.core.repository.SharedWorkJournal
 import no.timnor.app.core.repository.SharedWorkSync
 import no.timnor.app.core.service.StopwatchGateway
+import no.timnor.app.shared.data.persistence.CalendarProjectFilterStore
 import no.timnor.app.shared.platform.stopwatch.StopwatchPlatform
 
 class DIContainer(context: Context) {
     private val applicationContext = context.applicationContext
+    val calendarProjectFilterStore: CalendarProjectFilterStore by lazy {
+        val preferences = applicationContext.getSharedPreferences("calendar", Context.MODE_PRIVATE)
+        CalendarProjectFilterStore(
+            read = { preferences.getString("selected_project_ids", null) },
+            write = { preferences.edit().putString("selected_project_ids", it).apply() },
+        )
+    }
 
     val database: Database by lazy { getDatabase(applicationContext) }
     val sharedWorkJournal: SharedWorkJournal by lazy { SharedWorkJournal(database, plannorSessionStore) }

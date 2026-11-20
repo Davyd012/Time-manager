@@ -85,6 +85,7 @@ fun TimnorStopwatchScreen(
             state = state,
             onProjectNameChange = viewModel::updateProjectName,
             onProjectDescriptionChange = viewModel::updateProjectDescription,
+            onProjectHourlyRateChange = viewModel::updateProjectHourlyRate,
             onSaveProject = viewModel::saveProjectAndSelect,
             onDismiss = {
                 showProjectEditor = false

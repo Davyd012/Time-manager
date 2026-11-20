@@ -42,6 +42,7 @@ fun getSharedHomeViewModelFactory(
             observeSharedWorkIndicators = diContainer.sharedWorkJournal::observeWorkIndicators,
             loadLinkedPlannorTasks = diContainer.plannorApi::loadTasksForLinkedLocalProject,
             initialDate = initialDate,
+            calendarProjectFilterStore = diContainer.calendarProjectFilterStore,
         ) as T
     }
 }

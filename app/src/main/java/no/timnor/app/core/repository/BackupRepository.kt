@@ -67,7 +67,9 @@ class RoomBackupRepository(
         val contents = coordinator.snapshot {
             database.withTransaction {
                 encodeTimnorBackupV1(
-                    projects = database.projectDao().getAll().map { StoredProject(it.description, it.name, it.id) },
+                    projects = database.projectDao().getAll().map {
+                        StoredProject(it.description, it.name, it.id, it.hourlyRateOre)
+                    },
                     works = database.workDao().getAll().map {
                         StoredWork(
                             description = it.description,

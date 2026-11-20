@@ -1,5 +1,7 @@
 package no.timnor.app.shared.features.root.domain
 
+import no.timnor.app.shared.domain.project.formatPayAmount
+import no.timnor.app.shared.domain.project.parseHourlyRateOre
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
@@ -18,6 +20,7 @@ import kotlinx.datetime.TimeZone
 import kotlinx.datetime.toLocalDateTime
 import kotlin.time.Instant
 import kotlin.time.Clock
+import no.timnor.app.shared.data.persistence.CalendarProjectFilterStore
 import no.timnor.app.shared.data.persistence.StoredProject
 import no.timnor.app.shared.data.persistence.StoredWork
 import no.timnor.app.shared.data.persistence.TimnorPersistence
@@ -50,6 +53,7 @@ data class TimnorHomeUiState(
     val workProjectId: Int? = null,
     val projectName: String = "",
     val projectDescription: String = "",
+    val projectHourlyRate: String? = null,
     val editingProjectId: Int? = null,
     val workDate: String = currentLocalDate().toString(),
     val workStartTime: String = "00:00",
@@ -77,7 +81,7 @@ data class TimnorHomeUiState(
         get() = editingWorkId?.let(sharedWorkIndicators::get)
 }
 
-enum class TimnorHomeError { INVALID_PROJECT, INVALID_WORK, STORAGE, ACTIVE_STOPWATCH_PROJECT }
+enum class TimnorHomeError { INVALID_PROJECT, INVALID_HOURLY_RATE, INVALID_WORK, STORAGE, ACTIVE_STOPWATCH_PROJECT }
 
 /** Shared Home feature state and intents; platform storage and stopwatch stay behind contracts. */
 class TimnorHomeViewModel(
@@ -89,11 +93,13 @@ class TimnorHomeViewModel(
     private val observeSharedWorkIndicators: () -> Flow<Map<Int, SharedWorkSyncIndicator>> = { flowOf(emptyMap()) },
     private val loadLinkedPlannorTasks: suspend (Int) -> List<PlannorTaskOption> = { emptyList() },
     private val onSharedWorkChanged: () -> Unit = {},
+    private val calendarProjectFilterStore: CalendarProjectFilterStore? = null,
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(
         TimnorHomeUiState(
             calendarMonth = LocalDate(initialDate.year, initialDate.month.ordinal + 1, 1),
             selectedCalendarDate = initialDate,
+            selectedCalendarProjectIds = calendarProjectFilterStore?.load(),
         ),
     )
     val state: StateFlow<TimnorHomeUiState> = mutableState.asStateFlow()
@@ -110,6 +116,7 @@ class TimnorHomeViewModel(
         refreshLinkedProjectNames()
         viewModelScope.launch {
             persistence.observeProjects().collect { projects ->
+                val previousCalendarSelection = mutableState.value.selectedCalendarProjectIds
                 mutableState.update { current ->
                     current.copy(
                         projects = projects,
@@ -126,6 +133,8 @@ class TimnorHomeViewModel(
                         },
                     )
                 }
+                val calendarSelection = mutableState.value.selectedCalendarProjectIds
+                if (calendarSelection != previousCalendarSelection) calendarProjectFilterStore?.save(calendarSelection)
             }
         }
         viewModelScope.launch {
@@ -171,8 +180,15 @@ class TimnorHomeViewModel(
             onResult(false)
             return
         }
+        val hourlyRateOre = form.projectHourlyRate?.let(::parseHourlyRateOre)
+        if (form.projectHourlyRate != null && hourlyRateOre == null) {
+            mutableState.update { it.copy(error = TimnorHomeError.INVALID_HOURLY_RATE) }
+            onResult(false)
+            return
+        }
         val project = StoredProject(
             name = cleanName,
+            hourlyRateOre = hourlyRateOre,
             description = form.projectDescription.trim(),
             id = form.editingProjectId ?: 0,
         )
@@ -197,11 +213,16 @@ class TimnorHomeViewModel(
         mutableState.update { it.copy(projectDescription = description, error = null) }
     }
 
+    fun updateProjectHourlyRate(rate: String?) {
+        mutableState.update { it.copy(projectHourlyRate = rate, error = null) }
+    }
+
     fun editProject(project: StoredProject) {
         mutableState.update {
             it.copy(
                 projectName = project.name,
                 projectDescription = project.description,
+                projectHourlyRate = project.hourlyRateOre?.let { formatPayAmount(it.toLong(), ".") },
                 editingProjectId = project.id,
                 error = null,
             )
@@ -210,7 +231,13 @@ class TimnorHomeViewModel(
 
     fun cancelProjectEdit() {
         mutableState.update {
-            it.copy(projectName = "", projectDescription = "", editingProjectId = null)
+            it.copy(
+                projectName = "",
+                projectDescription = "",
+                projectHourlyRate = null,
+                editingProjectId = null,
+                error = it.error.takeUnless { error -> error == TimnorHomeError.INVALID_HOURLY_RATE },
+            )
         }
     }
 
@@ -306,15 +333,14 @@ class TimnorHomeViewModel(
     }
 
     fun toggleCalendarProject(projectId: Int) {
-        mutableState.update { current ->
-            current.copy(
-                selectedCalendarProjectIds = toggleProjectSelection(
-                    selectedIds = current.selectedCalendarProjectIds,
-                    projectId = projectId,
-                    allProjectIds = current.projects.mapTo(mutableSetOf(), StoredProject::id),
-                ),
-            )
-        }
+        val current = mutableState.value
+        setCalendarProjectSelection(
+            toggleProjectSelection(
+                selectedIds = current.selectedCalendarProjectIds,
+                projectId = projectId,
+                allProjectIds = current.projects.mapTo(mutableSetOf(), StoredProject::id),
+            ),
+        )
     }
 
     fun setCalendarProjectSelection(projectIds: Set<Int>?) {
@@ -322,6 +348,7 @@ class TimnorHomeViewModel(
         val normalized = projectIds?.intersect(allProjectIds)
             ?.takeUnless { it == allProjectIds }
         mutableState.update { it.copy(selectedCalendarProjectIds = normalized) }
+        calendarProjectFilterStore?.save(normalized)
     }
 
     fun selectProject(projectId: Int) {
