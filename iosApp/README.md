@@ -11,13 +11,14 @@ the Android application ID remains `no.timnor.app`.
 
 The shared screens provide project management, calendar filtering and day
 selection, manual work create/edit/delete, Month View and stopwatch controls.
-The stopwatch persists elapsed/start state and derives elapsed time while
-active. Shared Settings owns backup validation and restore preview/confirmation;
+The stopwatch restores running and paused sessions after relaunch. With
+notification permission, expand its notification in Notification Center to
+pause or resume. Finish and save from the stopwatch screen. Shared Settings
+owns backup validation and restore preview/confirmation;
 SwiftUI supplies file save/open, sharing, and `.xlsx` export UI through the
 document-effect bridge. The legacy toolbar menu remains available while the
-shared route is being validated. Notifications are not implemented. These iOS
-paths and the Swift/Kotlin bridge have not been compiled or exercised on a
-simulator; the stopwatch does not promise continuous background execution. See
+shared route is being validated. Verify the native notification actions on an
+iPhone, including while locked and after the app has been suspended. See
 `docs/ai/timnor-migration/HANDOFF.md` for the current acceptance gaps.
 
 Windows can compile the configured Kotlin/Native framework targets, but cannot

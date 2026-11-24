@@ -1,13 +1,21 @@
 package no.timnor.app.core.service
 
 import android.annotation.SuppressLint
+import android.app.Notification
 import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.app.Service
+import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
+import android.content.ServiceConnection
 import android.content.pm.ServiceInfo
 import android.os.Binder
+import android.os.Handler
 import android.os.IBinder
-import androidx.core.app.NotificationCompat
+import android.os.Looper
+import android.os.SystemClock
+import android.provider.Settings
 import androidx.core.app.ServiceCompat
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -25,177 +33,234 @@ import no.timnor.app.core.service.util.pad
 import no.timnor.app.di.NotificationModule
 import no.timnor.app.shared.platform.stopwatch.StopwatchPlatform
 import no.timnor.app.shared.platform.stopwatch.StopwatchSnapshot
-import java.util.Timer
-import kotlin.concurrent.fixedRateTimer
 
 class StopwatchService : Service() {
-    private val _snapshot = MutableStateFlow(StopwatchSnapshot())
-    val snapshot: StateFlow<StopwatchSnapshot> = _snapshot.asStateFlow()
+    private val handler = Handler(Looper.getMainLooper())
     private val binder = StopwatchBinder()
-    private var timer: Timer? = null
-    private var seconds = 0
-    private var observer: ((StopwatchSnapshot) -> Unit)? = null
-
+    private val coordinator = AppMutationCoordinator.instance
     private val notificationManager by lazy { NotificationModule.provideNotificationManager(this) }
-    private val notificationBuilder by lazy { NotificationModule.provideNotificationBuilder(this) }
+    private val preferences by lazy { getSharedPreferences("stopwatch_session", MODE_PRIVATE) }
+    private val bootCount by lazy { Settings.Global.getInt(contentResolver, Settings.Global.BOOT_COUNT, -1) }
+    private var session = StopwatchSession()
+    private var selectedProject = 1
+    private var observer: ((StopwatchSnapshot) -> Unit)? = null
+    private var saveInProgress = false
+    private var isForeground = false
+
+    private val ticker = object : Runnable {
+        override fun run() {
+            if (session.startedAtMillis == null) return
+            val elapsedMillis = session.elapsedMillis(SystemClock.elapsedRealtime())
+            publish(elapsedMillis)
+            handler.postDelayed(this, MILLIS_PER_SECOND - elapsedMillis % MILLIS_PER_SECOND)
+        }
+    }
+
+    override fun onCreate() {
+        super.onCreate()
+        selectedProject = preferences.getInt(PROJECT, 1)
+        val now = SystemClock.elapsedRealtime()
+        val startedAt = preferences.getLong(STARTED_AT, -1L).takeIf {
+            bootCount >= 0 && preferences.getInt(BOOT_COUNT, -1) == bootCount && it in 0..now
+        }
+        session = StopwatchSession(preferences.getLong(ACCUMULATED, 0L).coerceAtLeast(0), startedAt)
+        coordinator.timerObserved(session.startedAtMillis != null || session.accumulatedMillis > 0)
+        ticker.run()
+    }
 
     override fun onBind(intent: Intent?): IBinder = binder
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
-            ACTION_SERVICE_START -> if (AppMutationCoordinator.instance.timerStarted()) startStopwatch()
-            ACTION_SERVICE_STOP -> pauseStopwatch()
-            ACTION_SERVICE_CANCEL -> cancelStopwatch()
+            ACTION_SERVICE_START -> {
+                if (!saveInProgress && coordinator.timerStarted()) {
+                    session = session.start(SystemClock.elapsedRealtime())
+                    persist()
+                    handler.removeCallbacks(ticker)
+                    ticker.run()
+                    showNotification()
+                } else if (!isForeground) {
+                    stopSelf(startId)
+                }
+            }
+            ACTION_SERVICE_STOP -> {
+                pause()
+                if (!isForeground) {
+                    if (session.accumulatedMillis > 0) showNotification() else stopSelf(startId)
+                }
+            }
+            ACTION_SERVICE_CANCEL -> if (!saveInProgress) clear()
+            null -> {
+                if (session.startedAtMillis != null || session.accumulatedMillis > 0) showNotification()
+                else stopSelf(startId)
+            }
         }
-        return START_STICKY
+        return if (isForeground) START_STICKY else START_NOT_STICKY
     }
 
-    fun setProject(projectId: Int) {
-        publish(_snapshot.value.copy(selectedProject = projectId))
+    override fun onDestroy() {
+        handler.removeCallbacks(ticker)
+        super.onDestroy()
     }
 
-    fun observe(observer: (StopwatchSnapshot) -> Unit) {
+    internal fun observe(observer: (StopwatchSnapshot) -> Unit) {
         this.observer = observer
-        observer(_snapshot.value)
+        publish()
     }
 
-    private fun startStopwatch() {
-        if (timer != null) return
-        publish(_snapshot.value.copy(isRunning = true))
-        startForegroundService()
-        timer = fixedRateTimer(initialDelay = 1000L, period = 1000L) {
-            seconds += 1
-            publish(_snapshot.value.copy(elapsedSeconds = seconds, isRunning = true))
-            updateNotification(seconds)
+    internal fun setProject(projectId: Int) {
+        if (saveInProgress) return
+        selectedProject = projectId
+        persist()
+        publish()
+    }
+
+    internal fun pause() {
+        if (session.startedAtMillis == null) return
+        session = session.pause(SystemClock.elapsedRealtime())
+        handler.removeCallbacks(ticker)
+        persist()
+        publish()
+        if (isForeground) showNotification()
+    }
+
+    internal suspend fun savePaused(save: suspend (StopwatchSnapshot) -> Unit) {
+        if (saveInProgress) return
+        saveInProgress = true
+        try {
+            pause()
+            save(snapshot(session.elapsedMillis(SystemClock.elapsedRealtime())))
+        } finally {
+            saveInProgress = false
         }
     }
 
-    private fun pauseStopwatch() {
-        timer?.cancel()
-        timer = null
-        publish(_snapshot.value.copy(isRunning = false))
-        setResumeButton()
+    internal fun cancel() {
+        if (!saveInProgress) clear()
     }
 
-    private fun cancelStopwatch() {
-        timer?.cancel()
-        timer = null
-        seconds = 0
-        AppMutationCoordinator.instance.timerCleared()
-        publish(_snapshot.value.copy(elapsedSeconds = 0, isRunning = false))
-        notificationManager.cancel(NOTIFICATION_ID)
+    internal fun clear() {
+        session = StopwatchSession()
+        handler.removeCallbacks(ticker)
+        persist()
+        coordinator.timerCleared()
+        publish()
         stopForeground(STOP_FOREGROUND_REMOVE)
+        isForeground = false
         stopSelf()
     }
 
+    private fun persist() {
+        preferences.edit()
+            .putLong(ACCUMULATED, session.accumulatedMillis)
+            .putLong(STARTED_AT, session.startedAtMillis ?: -1L)
+            .putInt(BOOT_COUNT, bootCount)
+            .putInt(PROJECT, selectedProject)
+            .apply()
+    }
+
+    private fun snapshot(elapsedMillis: Long) = StopwatchSnapshot(
+        elapsedSeconds = (elapsedMillis / MILLIS_PER_SECOND).toInt(),
+        isRunning = session.startedAtMillis != null,
+        selectedProject = selectedProject,
+    )
+
+    private fun publish(elapsedMillis: Long = session.elapsedMillis(SystemClock.elapsedRealtime())) {
+        observer?.invoke(snapshot(elapsedMillis))
+    }
+
     @SuppressLint("InlinedApi")
-    private fun startForegroundService() {
-        createNotificationChannel()
-        ServiceCompat.startForeground(
-            this,
-            NOTIFICATION_ID,
-            notificationBuilder.build(),
-            ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE,
-        )
-        setStopButton()
+    private fun showNotification() {
+        val notification = buildNotification()
+        if (isForeground) {
+            notificationManager.notify(NOTIFICATION_ID, notification)
+        } else {
+            notificationManager.createNotificationChannel(
+                NotificationChannel(NOTIFICATION_CHANNEL_ID, NOTIFICATION_CHANNEL_NAME, NotificationManager.IMPORTANCE_LOW),
+            )
+            ServiceCompat.startForeground(this, NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
+            isForeground = true
+        }
     }
 
-    private fun createNotificationChannel() {
-        notificationManager.createNotificationChannel(
-            NotificationChannel(
-                NOTIFICATION_CHANNEL_ID,
-                NOTIFICATION_CHANNEL_NAME,
-                android.app.NotificationManager.IMPORTANCE_LOW,
-            ),
-        )
-    }
-
-    private fun updateNotification(value: Int) {
-        notificationManager.notify(
-            NOTIFICATION_ID,
-            notificationBuilder.setContentText(
-                formatTime(
-                    hours = (value / 3600).pad(),
-                    minutes = ((value % 3600) / 60).pad(),
-                    seconds = (value % 60).pad(),
-                ),
-            ).build(),
-        )
-    }
-
-    private fun publish(value: StopwatchSnapshot) {
-        _snapshot.value = value
-        observer?.invoke(value)
-    }
-
-    @SuppressLint("RestrictedApi")
-    private fun setStopButton() {
-        replaceAction(
-            getString(R.string.stop),
-            ServiceHelper.stopPendingIntent(this),
-        )
-    }
-
-    @SuppressLint("RestrictedApi")
-    private fun setResumeButton() {
-        replaceAction(
-            getString(R.string.resume),
-            ServiceHelper.resumePendingIntent(this),
-        )
-    }
-
-    @SuppressLint("RestrictedApi")
-    private fun replaceAction(label: String, intent: android.app.PendingIntent) {
-        if (notificationBuilder.mActions.isNotEmpty()) notificationBuilder.mActions.removeAt(0)
-        notificationBuilder.mActions.add(0, NotificationCompat.Action(0, label, intent))
-        notificationManager.notify(NOTIFICATION_ID, notificationBuilder.build())
+    private fun buildNotification(): Notification {
+        val running = session.startedAtMillis != null
+        val elapsedMillis = session.elapsedMillis(SystemClock.elapsedRealtime())
+        val seconds = (elapsedMillis / MILLIS_PER_SECOND).toInt()
+        val builder = NotificationModule.provideNotificationBuilder(this)
+            .setShowWhen(running)
+            .setUsesChronometer(running)
+        if (running) {
+            builder.setWhen(System.currentTimeMillis() - elapsedMillis)
+                .addAction(0, getString(R.string.stop), ServiceHelper.stopPendingIntent(this))
+        } else {
+            builder.setContentText(formatTime((seconds / 3600).pad(), ((seconds % 3600) / 60).pad(), (seconds % 60).pad()))
+                .addAction(0, getString(R.string.resume), ServiceHelper.resumePendingIntent(this))
+        }
+        return builder.addAction(0, getString(R.string.cancel), ServiceHelper.cancelPendingIntent(this)).build()
     }
 
     inner class StopwatchBinder : Binder() {
         fun getService(): StopwatchService = this@StopwatchService
     }
+
+    private companion object {
+        const val ACCUMULATED = "accumulatedMillis"
+        const val STARTED_AT = "startedAtMillis"
+        const val BOOT_COUNT = "bootCount"
+        const val PROJECT = "project"
+    }
 }
 
 class StopwatchGateway(
-    private val context: android.content.Context,
-    private val coordinator: no.timnor.app.core.repository.DataMutationCoordinator,
-) : StopwatchPlatform,
-    android.content.ServiceConnection {
+    private val context: Context,
+) : StopwatchPlatform, ServiceConnection {
     private val _state = MutableStateFlow(StopwatchSnapshot())
     override val state: StateFlow<StopwatchSnapshot> = _state.asStateFlow()
     private var service: StopwatchService? = null
+    private var pendingProject: Int? = null
 
     fun bind() {
-        context.bindService(
-            Intent(context, StopwatchService::class.java),
-            this,
-            android.content.Context.BIND_AUTO_CREATE,
-        )
+        context.bindService(Intent(context, StopwatchService::class.java), this, Context.BIND_AUTO_CREATE)
     }
 
-    override fun onServiceConnected(name: android.content.ComponentName?, binder: IBinder?) {
-        service = (binder as StopwatchService.StopwatchBinder).getService()
-        service?.observe { snapshot ->
-            _state.value = snapshot
-            coordinator.timerObserved(snapshot.isRunning || snapshot.elapsedSeconds > 0)
-        }
+    override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
+        val connected = (binder as StopwatchService.StopwatchBinder).getService()
+        service = connected
+        pendingProject?.let(connected::setProject)
+        pendingProject = null
+        connected.observe { _state.value = it }
     }
 
-    override fun onServiceDisconnected(name: android.content.ComponentName?) {
+    override fun onServiceDisconnected(name: ComponentName?) {
         service = null
-        _state.value = _state.value.copy(isRunning = false)
     }
 
-    override fun start() {
-        if (coordinator.timerStarted()) ServiceHelper.triggerForegroundService(context, ACTION_SERVICE_START)
+    override fun start() = ServiceHelper.triggerForegroundService(context, ACTION_SERVICE_START)
+
+    override fun pause() {
+        service?.pause()
     }
-    override fun pause() = ServiceHelper.triggerForegroundService(context, ACTION_SERVICE_STOP)
+
     override fun cancel() {
-        ServiceHelper.triggerForegroundService(context, ACTION_SERVICE_CANCEL)
+        service?.cancel()
     }
-    override fun timerSaved() = coordinator.timerCleared()
+
+    override fun timerSaved() {
+        service?.clear()
+    }
+
+    override suspend fun withPausedTimerForSave(save: suspend (StopwatchSnapshot) -> Unit) {
+        service?.savePaused(save)
+    }
+
     override fun selectProject(projectId: Int) {
-        service?.setProject(projectId)
-        _state.value = _state.value.copy(selectedProject = projectId)
+        val connected = service
+        if (connected != null) {
+            connected.setProject(projectId)
+        } else {
+            pendingProject = projectId
+            _state.value = _state.value.copy(selectedProject = projectId)
+        }
     }
 }

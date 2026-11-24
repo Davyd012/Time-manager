@@ -56,6 +56,6 @@ class DIContainer(context: Context) {
     }
     val spreadsheetExporter: SpreadsheetExporter by lazy { PoiSpreadsheetExporter(applicationContext) }
     val stopwatchRepository: StopwatchPlatform by lazy {
-        StopwatchGateway(applicationContext, mutationCoordinator).also { it.bind() }
+        StopwatchGateway(applicationContext).also { it.bind() }
     }
 }

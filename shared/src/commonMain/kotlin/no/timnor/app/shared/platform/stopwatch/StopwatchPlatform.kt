@@ -21,4 +21,9 @@ interface StopwatchPlatform {
     fun cancel()
     fun timerSaved()
     fun selectProject(projectId: Int)
+
+    suspend fun withPausedTimerForSave(save: suspend (StopwatchSnapshot) -> Unit) {
+        pause()
+        save(state.value)
+    }
 }

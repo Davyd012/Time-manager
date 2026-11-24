@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import no.timnor.app.core.database.project.Project
 import no.timnor.app.R
 import no.timnor.app.core.database.work.Work
@@ -62,19 +63,20 @@ class StopwatchViewModel(
     }
 
     private fun saveResult() {
-        val snapshot = stopwatchRepository.state.value
-        if (snapshot.elapsedSeconds == 0) return
-        stopwatchRepository.pause()
-        viewModelScope.launch(Dispatchers.IO) {
-            workRepository.upsert(
-                Work(
-                    date = LocalDateTime.now().minusSeconds(snapshot.elapsedSeconds.toLong()),
-                    project = snapshot.selectedProject,
-                    time = snapshot.elapsedSeconds,
-                ),
-            )
-            stopwatchRepository.cancel()
-            stopwatchRepository.timerSaved()
+        viewModelScope.launch {
+            stopwatchRepository.withPausedTimerForSave { snapshot ->
+                if (snapshot.elapsedSeconds == 0) return@withPausedTimerForSave
+                withContext(Dispatchers.IO) {
+                    workRepository.upsert(
+                        Work(
+                            date = LocalDateTime.now().minusSeconds(snapshot.elapsedSeconds.toLong()),
+                            project = snapshot.selectedProject,
+                            time = snapshot.elapsedSeconds,
+                        ),
+                    )
+                }
+                stopwatchRepository.timerSaved()
+            }
         }
     }
 }

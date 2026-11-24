@@ -66,6 +66,7 @@ class TimnorHomeViewModelTest {
             val nowBeforeSave = Clock.System.now().epochSeconds
 
             viewModel.saveStopwatch()
+            viewModel.saveStopwatch()
             runCurrent()
 
             val saved = persistence.works.value.single()

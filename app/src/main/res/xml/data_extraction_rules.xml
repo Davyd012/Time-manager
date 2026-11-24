@@ -6,8 +6,10 @@
 <data-extraction-rules>
     <cloud-backup>
         <exclude domain="sharedpref" path="plannor_session_secure.xml" />
+        <exclude domain="sharedpref" path="stopwatch_session.xml" />
     </cloud-backup>
     <device-transfer>
         <exclude domain="sharedpref" path="plannor_session_secure.xml" />
+        <exclude domain="sharedpref" path="stopwatch_session.xml" />
     </device-transfer>
 </data-extraction-rules>

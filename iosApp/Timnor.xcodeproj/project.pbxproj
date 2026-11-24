@@ -9,6 +9,8 @@
 		A10000000000000000000001 /* TimnorApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000001 /* TimnorApp.swift */; };
 		A10000000000000000000002 /* TimnorContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000002 /* TimnorContentView.swift */; };
 		A10000000000000000000003 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000003 /* Assets.xcassets */; };
+		A10000000000000000000004 /* TimnorStopwatchNotifications.swift in Sources */ = {isa = PBXBuildFile; fileRef = A20000000000000000000005 /* TimnorStopwatchNotifications.swift */; };
+		A10000000000000000000005 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = A40000000000000000000004 /* Localizable.strings */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -16,6 +18,9 @@
 		A20000000000000000000002 /* TimnorContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimnorContentView.swift; sourceTree = "<group>"; };
 		A20000000000000000000003 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A20000000000000000000004 /* Timnor.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Timnor.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A20000000000000000000005 /* TimnorStopwatchNotifications.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TimnorStopwatchNotifications.swift; sourceTree = "<group>"; };
+		A20000000000000000000006 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/Localizable.strings; sourceTree = "<group>"; };
+		A20000000000000000000007 /* nb */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = nb; path = nb.lproj/Localizable.strings; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -41,7 +46,9 @@
 			children = (
 				A20000000000000000000001 /* TimnorApp.swift */,
 				A20000000000000000000002 /* TimnorContentView.swift */,
+				A20000000000000000000005 /* TimnorStopwatchNotifications.swift */,
 				A20000000000000000000003 /* Assets.xcassets */,
+				A40000000000000000000004 /* Localizable.strings */,
 			);
 			path = .;
 			sourceTree = "<group>";
@@ -55,6 +62,18 @@
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
+
+/* Begin PBXVariantGroup section */
+		A40000000000000000000004 /* Localizable.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				A20000000000000000000006 /* en */,
+				A20000000000000000000007 /* nb */,
+			);
+			name = Localizable.strings;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
 
 /* Begin PBXNativeTarget section */
 		A50000000000000000000001 /* Timnor */ = {
@@ -102,6 +121,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A10000000000000000000003 /* Assets.xcassets in Resources */,
+				A10000000000000000000005 /* Localizable.strings in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -131,6 +151,7 @@
 			files = (
 				A10000000000000000000001 /* TimnorApp.swift in Sources */,
 				A10000000000000000000002 /* TimnorContentView.swift in Sources */,
+				A10000000000000000000004 /* TimnorStopwatchNotifications.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

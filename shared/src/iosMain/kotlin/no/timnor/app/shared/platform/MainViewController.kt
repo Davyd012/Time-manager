@@ -68,7 +68,7 @@ fun MainViewController(
         )
     }
     val coroutineScope = rememberCoroutineScope()
-    val stopwatch = remember { IosStopwatchPlatform() }
+    val stopwatch = IosStopwatchPlatform
     val viewModel = remember {
         val defaults = NSUserDefaults.standardUserDefaults
         val filterKey = "timnor.calendar.selectedProjectIds"

@@ -1,0 +1,5 @@
+"stopwatch.title" = "Stopwatch";
+"stopwatch.running" = "Tracking time";
+"stopwatch.paused" = "Timer paused";
+"stopwatch.pause" = "Pause";
+"stopwatch.resume" = "Resume";

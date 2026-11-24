@@ -1,0 +1,5 @@
+"stopwatch.title" = "Stoppeklokke";
+"stopwatch.running" = "Registrerer tid";
+"stopwatch.paused" = "Stoppeklokken er satt på pause";
+"stopwatch.pause" = "Pause";
+"stopwatch.resume" = "Fortsett";

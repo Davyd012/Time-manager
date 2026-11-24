@@ -103,6 +103,7 @@ class TimnorHomeViewModel(
         ),
     )
     val state: StateFlow<TimnorHomeUiState> = mutableState.asStateFlow()
+    private var stopwatchSaveInProgress = false
 
     init {
         viewModelScope.launch {
@@ -550,10 +551,12 @@ class TimnorHomeViewModel(
     }
 
     fun startOrPauseStopwatch() {
-        if (mutableState.value.stopwatch.isRunning) stopwatch.pause() else stopwatch.start()
+        if (stopwatchSaveInProgress) return
+        if (stopwatch.state.value.isRunning) stopwatch.pause() else stopwatch.start()
     }
 
     fun cancelStopwatch() {
+        if (stopwatchSaveInProgress) return
         stopwatch.cancel()
         mutableState.update { current ->
             if (current.error == TimnorHomeError.ACTIVE_STOPWATCH_PROJECT) current.copy(error = null) else current
@@ -561,23 +564,36 @@ class TimnorHomeViewModel(
     }
 
     fun saveStopwatch() {
-        stopwatch.pause()
-        val timer = mutableState.value.stopwatch
-        if (timer.elapsedSeconds <= 0) return
-        val projectId = timer.selectedProject
-        val localStart = Instant.fromEpochSeconds(Clock.System.now().epochSeconds - timer.elapsedSeconds)
-            .toLocalDateTime(TimeZone.currentSystemDefault())
-        val work = StoredWork(
-            id = 0,
-            description = "",
-            dateEpochSeconds = utcEpochSecondsFromLocalDateTime(localStart),
-            project = projectId,
-            task = mutableState.value.selectedStopwatchPlannorTaskId ?: 0,
-            time = timer.elapsedSeconds,
-        )
-        performStorageAction {
-            persistence.upsertWork(work)
-            stopwatch.timerSaved()
+        if (stopwatchSaveInProgress) return
+        stopwatchSaveInProgress = true
+        val task = mutableState.value.selectedStopwatchPlannorTaskId ?: 0
+        viewModelScope.launch {
+            try {
+                stopwatch.withPausedTimerForSave { timer ->
+                    if (timer.elapsedSeconds <= 0) return@withPausedTimerForSave
+                    val localStart = Instant.fromEpochSeconds(Clock.System.now().epochSeconds - timer.elapsedSeconds)
+                        .toLocalDateTime(TimeZone.currentSystemDefault())
+                    persistence.upsertWork(
+                        StoredWork(
+                            id = 0,
+                            description = "",
+                            dateEpochSeconds = utcEpochSecondsFromLocalDateTime(localStart),
+                            project = timer.selectedProject,
+                            task = task,
+                            time = timer.elapsedSeconds,
+                        ),
+                    )
+                    stopwatch.timerSaved()
+                    onSharedWorkChanged()
+                    mutableState.update { it.copy(error = null) }
+                }
+            } catch (cancellation: CancellationException) {
+                throw cancellation
+            } catch (_: Exception) {
+                mutableState.update { it.copy(error = TimnorHomeError.STORAGE) }
+            } finally {
+                stopwatchSaveInProgress = false
+            }
         }
     }
 

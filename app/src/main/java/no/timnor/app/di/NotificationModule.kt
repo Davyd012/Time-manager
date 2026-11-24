@@ -11,11 +11,9 @@ object NotificationModule {
     fun provideNotificationBuilder(context: Context): NotificationCompat.Builder {
         return NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_ID)
             .setContentTitle(context.getString(R.string.working_notification_title))
-            .setContentText("00:00:00")
             .setSmallIcon(R.drawable.baseline_timer_24)
             .setOngoing(true)
-            .addAction(0, context.getString(R.string.stop), ServiceHelper.stopPendingIntent(context))
-            .addAction(0, context.getString(R.string.cancel), ServiceHelper.cancelPendingIntent(context))
+            .setOnlyAlertOnce(true)
             .setContentIntent(ServiceHelper.clickPendingIntent(context))
     }
 

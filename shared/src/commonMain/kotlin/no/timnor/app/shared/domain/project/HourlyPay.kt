@@ -7,13 +7,20 @@ internal const val MAX_HOURLY_RATE_ORE = 99_999_999
 private const val ORE_PER_KRONE = 100
 private const val SECONDS_PER_HOUR = 3600
 
-private val hourlyRatePattern = Regex("[0-9]+(?:[,.][0-9]{1,2})?")
+private val hourlyRatePattern = Regex("[0-9]*(?:\\.[0-9]{0,2})?")
 
 internal fun parseHourlyRateOre(input: String): Int? {
-    val trimmed = input.trim()
-    if (!hourlyRatePattern.matches(trimmed)) return null
-    val parts = trimmed.replace(',', '.').split('.')
-    val kroner = parts[0].toIntOrNull() ?: return null
+    val normalized = buildString {
+        input.trim().forEach { character ->
+            when (character) {
+                ',', '\u066B' -> append('.')
+                else -> append(character.digitToIntOrNull()?.digitToChar() ?: character)
+            }
+        }
+    }
+    if (!hourlyRatePattern.matches(normalized)) return null
+    val parts = normalized.split('.')
+    val kroner = parts[0].ifEmpty { "0" }.toIntOrNull() ?: return null
     if (kroner > MAX_HOURLY_RATE_ORE / ORE_PER_KRONE) return null
     val ore = parts.getOrNull(1)?.padEnd(2, '0')?.toInt() ?: 0
     return (kroner * ORE_PER_KRONE + ore).takeIf { it > 0 }

@@ -12,7 +12,10 @@ class HourlyPayTest {
         assertEquals(25_050, parseHourlyRateOre("250,5"))
         assertEquals(25_050, parseHourlyRateOre("250.50"))
         assertEquals(1, parseHourlyRateOre("0,01"))
-        listOf("", "0", "-5", "12,345", "1e3", "1000000").forEach {
+        assertEquals(50, parseHourlyRateOre(",5"))
+        assertEquals(25_000, parseHourlyRateOre("250,"))
+        assertEquals(25_050, parseHourlyRateOre("\u0662\u0665\u0660\u066B\u0665"))
+        listOf("", ".", "0", "-5", "12,345", "1,234.50", "1e3", "1000000").forEach {
             assertNull(parseHourlyRateOre(it))
         }
     }

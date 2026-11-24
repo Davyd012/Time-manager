@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
@@ -14,16 +15,24 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
 import no.timnor.app.shared.generated.resources.Res
 import no.timnor.app.shared.generated.resources.invalid_hourly_rate
 import no.timnor.app.shared.generated.resources.project_hourly_rate
 import no.timnor.app.shared.generated.resources.project_hourly_rate_unit
 import no.timnor.app.shared.generated.resources.project_payment_optional
 import no.timnor.app.shared.generated.resources.project_payment_help
+import no.timnor.app.shared.platform.locale.localizedDecimalSeparator
 import no.timnor.app.shared.ui.theme.timnorSpacing
 import org.jetbrains.compose.resources.stringResource
 
@@ -61,18 +70,28 @@ internal fun ProjectHourlyRateField(
                 Switch(checked = rate != null, onCheckedChange = null)
             }
             if (rate != null) {
+                val decimalSeparator = localizedDecimalSeparator()
+                var input by remember { mutableStateOf(TextFieldValue(rate.replace('.', decimalSeparator))) }
+                val focusManager = LocalFocusManager.current
                 Text(
                     stringResource(Res.string.project_payment_help),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 OutlinedTextField(
-                    value = rate,
-                    onValueChange = onRateChange,
+                    value = input,
+                    onValueChange = { updated ->
+                        input = updated
+                        onRateChange(updated.text)
+                    },
                     modifier = Modifier.fillMaxWidth(),
                     label = { Text(stringResource(Res.string.project_hourly_rate)) },
                     suffix = { Text(stringResource(Res.string.project_hourly_rate_unit)) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Decimal,
+                        imeAction = ImeAction.Done,
+                    ),
+                    keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
                     singleLine = true,
                     isError = isError,
                     supportingText = if (isError) {

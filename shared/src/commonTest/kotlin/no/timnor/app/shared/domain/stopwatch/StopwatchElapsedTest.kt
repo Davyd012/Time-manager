@@ -13,13 +13,13 @@ class StopwatchElapsedTest {
 
     @Test
     fun derivesElapsedTimeFromPersistedStartInstantAfterResume() {
-        assertEquals(135, stopwatchElapsedSeconds(45, startedAtEpochSeconds = 1_000, nowEpochSeconds = 1_090))
+        assertEquals(135_500L, stopwatchElapsedMillis(45_500, startedAtMillis = 1_000_000, nowMillis = 1_090_000))
     }
 
     @Test
     fun keepsPausedTimeAndClampsInvalidOrUnrepresentableValues() {
-        assertEquals(120, stopwatchElapsedSeconds(120, startedAtEpochSeconds = null, nowEpochSeconds = 10_000))
-        assertEquals(30, stopwatchElapsedSeconds(30, startedAtEpochSeconds = 2_000, nowEpochSeconds = 1_900))
-        assertEquals(Int.MAX_VALUE, stopwatchElapsedSeconds(Int.MAX_VALUE.toLong(), 0, Long.MAX_VALUE))
+        assertEquals(120L, stopwatchElapsedMillis(120, startedAtMillis = null, nowMillis = 10_000))
+        assertEquals(30L, stopwatchElapsedMillis(30, startedAtMillis = 2_000, nowMillis = 1_900))
+        assertEquals(MAX_STOPWATCH_MILLIS, stopwatchElapsedMillis(MAX_STOPWATCH_MILLIS, 0, Long.MAX_VALUE))
     }
 }
