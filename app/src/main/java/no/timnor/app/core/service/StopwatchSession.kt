@@ -3,6 +3,7 @@ package no.timnor.app.core.service
 internal data class StopwatchSession(
     val accumulatedMillis: Long = 0,
     val startedAtMillis: Long? = null,
+    val pausedAtEpochSeconds: Long? = null,
 ) {
     fun elapsedMillis(nowMillis: Long): Long {
         val runningMillis = startedAtMillis?.let { (nowMillis - it).coerceIn(0, MAX_ELAPSED_MILLIS) } ?: 0
@@ -10,7 +11,7 @@ internal data class StopwatchSession(
     }
 
     fun start(nowMillis: Long): StopwatchSession =
-        if (startedAtMillis == null) copy(startedAtMillis = nowMillis) else this
+        if (startedAtMillis == null) copy(startedAtMillis = nowMillis, pausedAtEpochSeconds = null) else this
 
     fun pause(nowMillis: Long): StopwatchSession = StopwatchSession(elapsedMillis(nowMillis))
 }

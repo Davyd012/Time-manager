@@ -123,7 +123,7 @@ class SharedMonthViewTest {
     }
 
     @Test
-    fun populatedDayDoesNotShowHeaderAddActionLikeLegacyMonthView() {
+    fun populatedDayShowsWeekendPayAndOmitsTheHeaderAddAction() {
         val selectedDate = LocalDate(2026, 11, 1)
         val viewModel = TimnorHomeViewModel(
             SeededMonthViewPersistence(selectedDate),
@@ -140,6 +140,8 @@ class SharedMonthViewTest {
 
         composeRule.waitUntil(5_000) { viewModel.state.value.works.isNotEmpty() }
         composeRule.onNodeWithTag("work-entry-101").assertExists()
+        composeRule.onNodeWithText("300 kr", useUnmergedTree = true).assertIsDisplayed()
+        composeRule.onNodeWithText("Beregnet månedsbetaling: 300 kr").assertIsDisplayed()
         composeRule.onNodeWithContentDescription(addDescription).assertDoesNotExist()
     }
 
@@ -182,7 +184,13 @@ class SharedMonthViewTest {
 }
 
 private class SeededMonthViewPersistence(selectedDate: LocalDate, hasWork: Boolean = true) : TimnorPersistence {
-    private val project = StoredProject(description = "", name = "Project", id = 7)
+    private val project = StoredProject(
+        description = "",
+        name = "Project",
+        id = 7,
+        hourlyRateOre = 27_500,
+        weekendHourlyRateOre = 30_000,
+    )
     private val work = StoredWork(
         description = "Entry",
         dateEpochSeconds = selectedDate.toEpochDays() * 86_400L + 9 * 3_600L,

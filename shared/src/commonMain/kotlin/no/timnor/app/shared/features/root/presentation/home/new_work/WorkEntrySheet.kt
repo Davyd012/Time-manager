@@ -57,7 +57,7 @@ internal fun WorkEntrySheet(
     onProjectNameChange: (String) -> Unit,
     onProjectDescriptionChange: (String) -> Unit,
     onProjectHourlyRateChange: (String?) -> Unit,
-    onProjectWeekendRateChange: (String) -> Unit,
+    onProjectWeekendRateChange: (String?) -> Unit,
     onSaveProject: ((Boolean) -> Unit) -> Unit,
     onCancelProject: () -> Unit,
     onSelectPlannorTask: (Int?) -> Unit,

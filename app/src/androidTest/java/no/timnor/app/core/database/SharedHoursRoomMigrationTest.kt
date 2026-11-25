@@ -40,6 +40,23 @@ class SharedHoursRoomMigrationTest {
     }
 
     @Test
+    fun migrationFreezesTheExistingProjectRateForHistoricalWork() {
+        val name = "hourly-rate-migration"
+        migrationHelper.createDatabase(name, 3).use { database ->
+            database.execSQL(
+                "INSERT INTO Project (description, name, id, hourlyRateOre) VALUES ('', 'Paid project', 7, 18050)",
+            )
+            database.execSQL(
+                "INSERT INTO Work (description, date, project, task, time, id) VALUES ('', 1700000000, 7, 0, 3600, 11)",
+            )
+        }
+        migrationHelper.runMigrationsAndValidate(name, 4, true, MIGRATION_3_4).use { database ->
+            database.execSQL("UPDATE Project SET hourlyRateOre = 20000, weekendHourlyRateOre = 22000 WHERE id = 7")
+            assertEquals(18_050L, database.scalarLong("SELECT appliedHourlyRateOre FROM Work WHERE id = 11"))
+        }
+    }
+
+    @Test
     fun manualRestoreReplacementPreservesAccountScopedSharedHoursRecords() = runBlocking {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val database = Room.inMemoryDatabaseBuilder(context, Database::class.java)

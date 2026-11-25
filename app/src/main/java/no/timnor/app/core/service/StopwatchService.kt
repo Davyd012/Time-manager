@@ -63,7 +63,11 @@ class StopwatchService : Service() {
         val startedAt = preferences.getLong(STARTED_AT, -1L).takeIf {
             bootCount >= 0 && preferences.getInt(BOOT_COUNT, -1) == bootCount && it in 0..now
         }
-        session = StopwatchSession(preferences.getLong(ACCUMULATED, 0L).coerceAtLeast(0), startedAt)
+        session = StopwatchSession(
+            accumulatedMillis = preferences.getLong(ACCUMULATED, 0L).coerceAtLeast(0),
+            startedAtMillis = startedAt,
+            pausedAtEpochSeconds = preferences.getLong(PAUSED_AT, -1L).takeIf { it >= 0 },
+        )
         coordinator.timerObserved(session.startedAtMillis != null || session.accumulatedMillis > 0)
         ticker.run()
     }
@@ -117,7 +121,9 @@ class StopwatchService : Service() {
 
     internal fun pause() {
         if (session.startedAtMillis == null) return
-        session = session.pause(SystemClock.elapsedRealtime())
+        session = session.pause(SystemClock.elapsedRealtime()).copy(
+            pausedAtEpochSeconds = System.currentTimeMillis() / MILLIS_PER_SECOND,
+        )
         handler.removeCallbacks(ticker)
         persist()
         publish()
@@ -154,6 +160,7 @@ class StopwatchService : Service() {
         preferences.edit()
             .putLong(ACCUMULATED, session.accumulatedMillis)
             .putLong(STARTED_AT, session.startedAtMillis ?: -1L)
+            .putLong(PAUSED_AT, session.pausedAtEpochSeconds ?: -1L)
             .putInt(BOOT_COUNT, bootCount)
             .putInt(PROJECT, selectedProject)
             .apply()
@@ -163,6 +170,7 @@ class StopwatchService : Service() {
         elapsedSeconds = (elapsedMillis / MILLIS_PER_SECOND).toInt(),
         isRunning = session.startedAtMillis != null,
         selectedProject = selectedProject,
+        pausedAtEpochSeconds = session.pausedAtEpochSeconds,
     )
 
     private fun publish(elapsedMillis: Long = session.elapsedMillis(SystemClock.elapsedRealtime())) {
@@ -207,6 +215,7 @@ class StopwatchService : Service() {
     private companion object {
         const val ACCUMULATED = "accumulatedMillis"
         const val STARTED_AT = "startedAtMillis"
+        const val PAUSED_AT = "pausedAtEpochSeconds"
         const val BOOT_COUNT = "bootCount"
         const val PROJECT = "project"
     }

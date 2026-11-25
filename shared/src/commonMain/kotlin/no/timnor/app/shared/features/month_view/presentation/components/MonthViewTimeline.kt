@@ -67,7 +67,7 @@ internal fun MonthViewTimeline(
 ) {
     val unknownProject = stringResource(Res.string.unknown_project)
     val groupedWorks = remember(works) { monthViewWorkGroups(works).toList() }
-    val projectNames = remember(projects) { projects.associate { it.id to it.name } }
+    val projectsById = remember(projects) { projects.associateBy(StoredProject::id) }
     Surface(
         modifier = modifier,
         color = MaterialTheme.colorScheme.tertiaryContainer,
@@ -92,7 +92,8 @@ internal fun MonthViewTimeline(
                     MonthViewTimelineGroup(
                         hour = hour,
                         works = entries,
-                        projectName = { work -> projectNames[work.project] ?: unknownProject },
+                        projectName = { work -> projectsById[work.project]?.name ?: unknownProject },
+                        payForWork = { work -> workPayOre(work, projectsById[work.project]) },
                         linkedPlannorProjectName = { work -> linkedPlannorProjectNames[work.project] },
                         showDuration = showDuration,
                         showProjectMarker = showProjectMarker,
@@ -121,6 +122,7 @@ private fun MonthViewTimelineGroup(
     hour: Int,
     works: List<StoredWork>,
     projectName: (StoredWork) -> String,
+    payForWork: (StoredWork) -> Long?,
     linkedPlannorProjectName: (StoredWork) -> String?,
     showDuration: Boolean,
     showProjectMarker: Boolean,
@@ -249,7 +251,7 @@ private fun MonthViewTimelineGroup(
                             WorkTimelineDuration(
                                 workId = work.id,
                                 durationLabel = durationLabel,
-                                payOre = if (showEntryDetails) workPayOre(work) else null,
+                                payOre = payForWork(work),
                                 modifier = Modifier.padding(
                                     start = if (showProjectMarker) homeRowSpacing else MaterialTheme.timnorSpacing.small,
                                     end = if (showProjectMarker) {

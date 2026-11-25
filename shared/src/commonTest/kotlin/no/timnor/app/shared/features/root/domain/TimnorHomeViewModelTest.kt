@@ -19,6 +19,7 @@ import no.timnor.app.shared.data.persistence.StoredWork
 import no.timnor.app.shared.data.persistence.TimnorPersistence
 import no.timnor.app.shared.data.persistence.TimnorDataSnapshot
 import no.timnor.app.shared.domain.time.utcEpochSecondsFromLocalDateTime
+import no.timnor.app.shared.domain.project.workPayOre
 import no.timnor.app.shared.platform.stopwatch.StopwatchPlatform
 import no.timnor.app.shared.platform.stopwatch.StopwatchSnapshot
 import no.timnor.app.shared.features.shared_hours.domain.PlannorTaskOption
@@ -31,6 +32,126 @@ import kotlin.test.assertTrue
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class TimnorHomeViewModelTest {
+    @Test
+    fun projectRateDraftValidatesEnabledRatesAndCancelKeepsSavedRates() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val persistence = FakeTimnorPersistence()
+            val project = StoredProject("", "Project", 1, hourlyRateOre = 18_000, weekendHourlyRateOre = 22_000)
+            persistence.upsertProject(project)
+            val viewModel = TimnorHomeViewModel(persistence, FakeStopwatch())
+            runCurrent()
+            viewModel.editProject(project)
+
+            for (invalid in listOf("", "-1", "220.555", "abc")) {
+                viewModel.updateProjectWeekendRate(invalid)
+                viewModel.saveProject()
+                assertEquals(TimnorHomeError.INVALID_HOURLY_RATE, viewModel.state.value.error)
+            }
+            viewModel.updateProjectHourlyRate("")
+            viewModel.updateProjectWeekendRate("0")
+            viewModel.saveProject()
+            assertEquals(TimnorHomeError.INVALID_HOURLY_RATE, viewModel.state.value.error)
+            viewModel.cancelProjectEdit()
+            assertEquals(project, persistence.snapshotAll().projects.single())
+
+            viewModel.editProject(project)
+            viewModel.updateProjectName("  ")
+            viewModel.saveProject()
+            assertEquals(TimnorHomeError.INVALID_PROJECT, viewModel.state.value.error)
+            viewModel.updateProjectName(project.name)
+            viewModel.updateProjectHourlyRate("180,50")
+            viewModel.updateProjectWeekendRate("0")
+            viewModel.saveProject()
+            runCurrent()
+            val saved = persistence.snapshotAll().projects.single()
+            assertEquals(project.copy(hourlyRateOre = 18_050, weekendHourlyRateOre = 0), saved)
+            viewModel.editProject(saved)
+            assertEquals("180.50", viewModel.state.value.projectHourlyRate)
+            assertEquals("0", viewModel.state.value.projectWeekendRate)
+            viewModel.updateProjectWeekendRate(null)
+            viewModel.saveProject()
+            runCurrent()
+            assertEquals(saved.copy(weekendHourlyRateOre = null), persistence.snapshotAll().projects.single())
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
+    fun manualWorkSplitsFridayNightAndKeepsItsPayAfterRateChanges() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val persistence = FakeTimnorPersistence()
+            persistence.upsertProject(
+                StoredProject("", "Project", 1, hourlyRateOre = 18_000, weekendHourlyRateOre = 22_000),
+            )
+            val viewModel = TimnorHomeViewModel(persistence, FakeStopwatch())
+            runCurrent()
+            viewModel.addManualWork(1, "2026-11-13", "2", "0", "Shift", "23:00")
+            runCurrent()
+            val original = persistence.works.value
+            assertEquals(listOf(18_000, 22_000), original.map { it.appliedHourlyRateOre })
+            assertEquals(listOf(3600, 3600), original.map { it.time })
+            assertEquals(listOf(18_000L, 22_000L), original.map { workPayOre(it, null) })
+            assertEquals(
+                utcEpochSecondsFromLocalDateTime(LocalDateTime.parse("2026-11-14T00:00")),
+                original.last().dateEpochSeconds,
+            )
+
+            viewModel.editProject(viewModel.state.value.projects.single())
+            viewModel.updateProjectHourlyRate("200")
+            viewModel.updateProjectWeekendRate(null)
+            viewModel.saveProject()
+            runCurrent()
+            viewModel.addManualWork(1, "2026-11-15", "1", "0", "New shift", "12:00")
+            runCurrent()
+            assertEquals(original, persistence.works.value.take(2))
+            assertEquals(20_000, persistence.works.value.last().appliedHourlyRateOre)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
+    fun stopwatchUsesLocalMidnightAndKeepsPauseTimeOnRetry() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val persistence = FakeTimnorPersistence()
+            persistence.upsertProject(
+                StoredProject("", "Project", 1, hourlyRateOre = 18_000, weekendHourlyRateOre = 22_000),
+            )
+            val stopwatch = FakeStopwatch()
+            val viewModel = TimnorHomeViewModel(
+                persistence,
+                stopwatch,
+                clock = object : Clock {
+                    override fun now() = Instant.parse("2026-11-16T12:00:00Z")
+                },
+                stopwatchTimeZone = { TimeZone.of("Europe/Oslo") },
+            )
+            runCurrent()
+            stopwatch.setElapsed(
+                seconds = 7200,
+                projectId = 1,
+                pausedAtEpochSeconds = Instant.parse("2026-11-16T00:00:00Z").epochSeconds,
+            )
+            persistence.failWorkWrites = true
+            viewModel.saveStopwatch()
+            runCurrent()
+            assertTrue(persistence.works.value.isEmpty())
+            assertEquals(0, stopwatch.timerSavedCount)
+
+            persistence.failWorkWrites = false
+            viewModel.saveStopwatch()
+            runCurrent()
+            assertEquals(listOf(22_000, 18_000), persistence.works.value.map { it.appliedHourlyRateOre })
+            assertEquals(listOf(3600, 3600), persistence.works.value.map { it.time })
+            assertEquals(1, stopwatch.timerSavedCount)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
     @Test
     fun stopwatchControlStartsAndPausesThroughThePlatformBoundary() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
@@ -774,7 +895,7 @@ private class FakeStopwatch : StopwatchPlatform {
         mutableState.value = mutableState.value.copy(selectedProject = projectId)
     }
 
-    fun setElapsed(seconds: Int, projectId: Int, isRunning: Boolean = false) {
-        mutableState.value = StopwatchSnapshot(seconds, isRunning, projectId)
+    fun setElapsed(seconds: Int, projectId: Int, isRunning: Boolean = false, pausedAtEpochSeconds: Long? = null) {
+        mutableState.value = StopwatchSnapshot(seconds, isRunning, projectId, pausedAtEpochSeconds)
     }
 }

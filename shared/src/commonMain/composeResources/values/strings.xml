@@ -65,6 +65,7 @@
     <string name="project_update">Oppdater prosjekt</string>
     <string name="project_editor_title">Nytt prosjekt</string>
     <string name="project_save">Lagre</string>
+    <string name="project_save_changes">Lagre endringer</string>
     <string name="invalid_project">Skriv inn et prosjektnavn</string>
     <string name="no_projects">Ingen prosjekter ennå</string>
     <string name="unknown_project">Ukjent prosjekt</string>
@@ -166,7 +167,7 @@
     <string name="calendar_month_total_hours">Totalt antall timer</string>
     <string name="calendar_month_pay_amount">%1$s kr</string>
     <string name="calendar_month_pay_estimated">Beregnet betaling</string>
-    <string name="calendar_month_pay_no_saved_rates">Ingen registreringer med lagret sats</string>
+    <string name="calendar_month_pay_no_rates">Ingen registreringer med timesats</string>
     <string name="calendar_month_pay_partial">Delvis beregnet</string>
     <string name="calendar_month_pay_unrated_time">Tid uten timesats: %1$s</string>
     <string name="duration_hours_minutes_short">%1$d t %2$d min</string>
@@ -282,8 +283,12 @@
     <string name="calendar_estimated_pay">Beregnet månedsbetaling: %1$s kr</string>
     <string name="project_edit_title">Rediger prosjekt</string>
     <string name="project_description_optional">Beskrivelse (valgfritt)</string>
-    <string name="project_payment_help">Angi timesatsen for registrerte timer. Du kan endre den senere.</string>
+    <string name="project_payment_help">Kan endres senere</string>
     <string name="home_header_date">%1$s %2$d. %3$s</string>
     <string name="home_header_week">Uke %1$d</string>
-    <string name="project_weekend_rate">Helgesats (valgfritt)</string>
+    <string name="project_custom_weekend_rate">Egen helgesats</string>
+    <string name="project_weekend_rate">Helgesats</string>
+    <string name="project_weekend_rate_days">Valgfritt · lørdag og søndag</string>
+    <string name="project_weekend_rate_help">Erstatter vanlig timesats i helgen.</string>
+    <string name="project_rate_changes_help">Registreringer uten lagret sats bruker prosjektets gjeldende sats.</string>
 </resources>

@@ -44,8 +44,14 @@ class SharedProjectGestureTest {
         }
         composeRule.onNodeWithTag("project-editor").assertExists()
         composeRule.onNodeWithText("Rediger prosjekt").assertIsDisplayed()
-        composeRule.onNodeWithText("Lagre").assertIsDisplayed()
-        composeRule.onNodeWithText("Avbryt").assertDoesNotExist()
+        composeRule.onNodeWithText("Lagre endringer").assertIsDisplayed()
+        composeRule.onNodeWithText("Egen helgesats").assertDoesNotExist()
+        composeRule.onNodeWithText("Betaling (valgfritt)").performClick()
+        composeRule.onNodeWithText("Egen helgesats").performClick()
+        composeRule.onNodeWithText("Helgesats").assertExists()
+        composeRule.onNodeWithText("Lagre endringer").assertIsDisplayed()
+        composeRule.onNodeWithText("Avbryt").performClick()
+        composeRule.onNodeWithTag("project-editor").assertDoesNotExist()
     }
 
     @Test

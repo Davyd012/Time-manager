@@ -11,6 +11,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -26,6 +27,10 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
+import no.timnor.app.shared.generated.resources.project_custom_weekend_rate
+import no.timnor.app.shared.generated.resources.project_weekend_rate_days
+import no.timnor.app.shared.generated.resources.project_weekend_rate_help
+import no.timnor.app.shared.generated.resources.project_rate_changes_help
 import no.timnor.app.shared.generated.resources.Res
 import no.timnor.app.shared.generated.resources.invalid_hourly_rate
 import no.timnor.app.shared.generated.resources.project_hourly_rate
@@ -41,10 +46,10 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 internal fun ProjectHourlyRateField(
     rate: String?,
-    weekendRate: String,
+    weekendRate: String?,
     isError: Boolean,
     onRateChange: (String?) -> Unit,
-    onWeekendRateChange: (String) -> Unit,
+    onWeekendRateChange: (String?) -> Unit,
 ) {
     OutlinedCard(
         modifier = Modifier.fillMaxWidth(),
@@ -57,71 +62,86 @@ internal fun ProjectHourlyRateField(
             modifier = Modifier.padding(MaterialTheme.timnorSpacing.medium),
             verticalArrangement = Arrangement.spacedBy(MaterialTheme.timnorSpacing.small),
         ) {
-            Row(
-                modifier = Modifier.fillMaxWidth().toggleable(
-                    value = rate != null,
-                    role = Role.Switch,
-                    onValueChange = { enabled -> onRateChange(if (enabled) "" else null) },
-                ),
-                horizontalArrangement = Arrangement.spacedBy(MaterialTheme.timnorSpacing.medium),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(
-                    stringResource(Res.string.project_payment_optional),
-                    modifier = Modifier.weight(1f),
-                    style = MaterialTheme.typography.titleMedium,
-                )
-                Switch(checked = rate != null, onCheckedChange = null)
-            }
+            RateSwitch(
+                title = stringResource(Res.string.project_payment_optional),
+                subtitle = stringResource(Res.string.project_payment_help),
+                checked = rate != null,
+                onCheckedChange = { onRateChange(if (it) "" else null) },
+            )
             if (rate != null) {
-                val decimalSeparator = localizedDecimalSeparator()
-                var input by remember { mutableStateOf(TextFieldValue(rate.replace('.', decimalSeparator))) }
-                val focusManager = LocalFocusManager.current
-                Text(
-                    stringResource(Res.string.project_payment_help),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                RateInput(
+                    rate = rate,
+                    label = stringResource(Res.string.project_hourly_rate),
+                    showError = isError,
+                    onRateChange = onRateChange,
                 )
-                val invalidRate = isError && parseHourlyRateOre(rate) == null
-                val invalidWeekendRate = isError && weekendRate.isNotBlank() && parseHourlyRateOre(weekendRate) == null
-                OutlinedTextField(
-                    value = input,
-                    onValueChange = { updated ->
-                        input = updated
-                        onRateChange(updated.text)
-                    },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text(stringResource(Res.string.project_hourly_rate)) },
-                    suffix = { Text(stringResource(Res.string.project_hourly_rate_unit)) },
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Decimal,
-                        imeAction = ImeAction.Done,
-                    ),
-                    keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
-                    singleLine = true,
-                    isError = invalidRate,
-                    supportingText = if (invalidRate) {
-                        { Text(stringResource(Res.string.invalid_hourly_rate)) }
-                    } else null,
+                HorizontalDivider()
+                RateSwitch(
+                    title = stringResource(Res.string.project_custom_weekend_rate),
+                    subtitle = stringResource(Res.string.project_weekend_rate_days),
+                    checked = weekendRate != null,
+                    onCheckedChange = { onWeekendRateChange(if (it) "" else null) },
                 )
-                OutlinedTextField(
-                    value = weekendRate,
-                    onValueChange = onWeekendRateChange,
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text(stringResource(Res.string.project_weekend_rate)) },
-                    suffix = { Text(stringResource(Res.string.project_hourly_rate_unit)) },
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Decimal,
-                        imeAction = ImeAction.Done,
-                    ),
-                    keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
-                    singleLine = true,
-                    isError = invalidWeekendRate,
-                    supportingText = if (invalidWeekendRate) {
-                        { Text(stringResource(Res.string.invalid_hourly_rate)) }
-                    } else null,
-                )
+                if (weekendRate != null) {
+                    RateInput(
+                        rate = weekendRate,
+                        label = stringResource(Res.string.project_weekend_rate),
+                        showError = isError,
+                        onRateChange = onWeekendRateChange,
+                    )
+                    RateHelp(stringResource(Res.string.project_weekend_rate_help))
+                }
+                RateHelp(stringResource(Res.string.project_rate_changes_help))
             }
         }
     }
+}
+
+@Composable
+private fun RateSwitch(title: String, subtitle: String, checked: Boolean, onCheckedChange: (Boolean) -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth().toggleable(
+            value = checked,
+            role = Role.Switch,
+            onValueChange = onCheckedChange,
+        ),
+        horizontalArrangement = Arrangement.spacedBy(MaterialTheme.timnorSpacing.medium),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.titleMedium)
+            RateHelp(subtitle)
+        }
+        Switch(checked = checked, onCheckedChange = null)
+    }
+}
+
+@Composable
+private fun RateHelp(text: String) {
+    Text(text, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+}
+
+@Composable
+private fun RateInput(rate: String, label: String, showError: Boolean, onRateChange: (String) -> Unit) {
+    val decimalSeparator = localizedDecimalSeparator()
+    var input by remember { mutableStateOf(TextFieldValue(rate.replace('.', decimalSeparator))) }
+    val focusManager = LocalFocusManager.current
+    val invalid = showError && parseHourlyRateOre(rate) == null
+    OutlinedTextField(
+        value = input,
+        onValueChange = {
+            input = it
+            onRateChange(it.text)
+        },
+        modifier = Modifier.fillMaxWidth(),
+        label = { Text(label) },
+        suffix = { Text(stringResource(Res.string.project_hourly_rate_unit)) },
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal, imeAction = ImeAction.Done),
+        keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+        singleLine = true,
+        isError = invalid,
+        supportingText = if (invalid) {
+            { Text(stringResource(Res.string.invalid_hourly_rate)) }
+        } else null,
+    )
 }

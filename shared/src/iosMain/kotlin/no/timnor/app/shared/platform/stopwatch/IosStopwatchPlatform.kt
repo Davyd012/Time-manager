@@ -60,12 +60,19 @@ object IosStopwatchPlatform : StopwatchPlatform, TimnorRestoreGate {
 
     override fun start() {
         if (restoreInProgress || saveInProgress || timer.startedAtMillis != null) return
-        updateTimer(timer.copy(startedAtMillis = nowMillis()))
+        updateTimer(timer.copy(startedAtMillis = nowMillis(), pausedAtEpochSeconds = null))
     }
 
     override fun pause() {
         if (timer.startedAtMillis == null) return
-        updateTimer(timer.copy(accumulatedMillis = currentElapsedMillis(), startedAtMillis = null))
+        val now = nowMillis()
+        updateTimer(
+            timer.copy(
+                accumulatedMillis = currentElapsedMillis(now),
+                startedAtMillis = null,
+                pausedAtEpochSeconds = now / STOPWATCH_MILLIS_PER_SECOND,
+            ),
+        )
     }
 
     override fun cancel() = updateTimer(PersistedTimer())
@@ -145,10 +152,11 @@ object IosStopwatchPlatform : StopwatchPlatform, TimnorRestoreGate {
         elapsedSeconds = (currentElapsedMillis() / STOPWATCH_MILLIS_PER_SECOND).toInt(),
         isRunning = timer.startedAtMillis != null,
         selectedProject = selectedProject,
+        pausedAtEpochSeconds = timer.pausedAtEpochSeconds,
     )
 
-    private fun currentElapsedMillis(): Long {
-        val calculated = stopwatchElapsedMillis(timer.accumulatedMillis, timer.startedAtMillis, nowMillis())
+    private fun currentElapsedMillis(now: Long = nowMillis()): Long {
+        val calculated = stopwatchElapsedMillis(timer.accumulatedMillis, timer.startedAtMillis, now)
         elapsedMillis = maxOf(elapsedMillis, calculated)
         return elapsedMillis
     }
@@ -176,6 +184,7 @@ private data class PersistedTimer(
     val accumulatedMillis: Long = 0,
     val startedAtMillis: Long? = null,
     val revision: String = NSUUID().UUIDString,
+    val pausedAtEpochSeconds: Long? = null,
 )
 
 private const val TIMER_KEY = "timnor.stopwatch.v2"

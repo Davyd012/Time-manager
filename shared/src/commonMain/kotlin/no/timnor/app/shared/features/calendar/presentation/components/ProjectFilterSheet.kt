@@ -81,9 +81,10 @@ internal fun ProjectFilterSheet(
     val allVisibleSelected = visibleProjects.isNotEmpty() &&
         (draftProjectIds == null || visibleProjectIds.all { it in draftProjectIds.orEmpty() })
     val selectedCount = draftProjectIds?.intersect(allProjectIds)?.size ?: allProjectIds.size
-    val projectTotals = remember(works, month) {
+    val projectTotals = remember(works, month, projects) {
+        val projectsById = projects.associateBy(StoredProject::id)
         worksInCalendarMonth(works, month).groupBy(StoredWork::project).mapValues { (_, entries) ->
-            entries.sumOf { it.time.toLong() } to calendarMonthPay(entries)
+            entries.sumOf { it.time.toLong() } to calendarMonthPay(entries, projectsById)
         }
     }
 

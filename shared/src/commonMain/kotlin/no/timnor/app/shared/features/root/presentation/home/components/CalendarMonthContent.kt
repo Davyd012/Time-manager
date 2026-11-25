@@ -121,8 +121,8 @@ internal fun CalendarMonthContent(
             .mapValues { (_, entries) -> entries.sumOf(StoredWork::time) }
     }
     val monthSeconds = remember(visibleMonthWorks) { visibleMonthWorks.sumOf { it.time.toLong() } }
-    val monthPay = remember(visibleMonthWorks) {
-        calendarMonthPay(visibleMonthWorks)
+    val monthPay = remember(visibleMonthWorks, projects) {
+        calendarMonthPay(visibleMonthWorks, projects.associateBy(StoredProject::id))
     }
     val hasConfiguredPay = projects.any { project ->
         (selectedProjectIds == null || project.id in selectedProjectIds) &&

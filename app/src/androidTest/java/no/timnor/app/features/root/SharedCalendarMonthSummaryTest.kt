@@ -105,7 +105,7 @@ class SharedCalendarMonthSummaryTest {
         val december = LocalDate(2026, 12, 1)
         val longProjectName = "Bakeriet med et veldig langt prosjektnavn"
         val projects = listOf(
-            StoredProject("", longProjectName, 1, hourlyRateOre = 1, weekendHourlyRateOre = 2),
+            StoredProject("", longProjectName, 1, hourlyRateOre = 22_000, weekendHourlyRateOre = 24_000),
             StoredProject("", "Verksted", 2, hourlyRateOre = 3),
             StoredProject("", "Uten sats", 3),
         )
@@ -138,7 +138,7 @@ class SharedCalendarMonthSummaryTest {
         val inProjectList = hasAnyAncestor(hasTestTag("project-filter-list"))
         val filterButton = composeRule.onNodeWithTag("calendar-filter")
         val applyButton = composeRule.onNodeWithText("Bruk filter")
-        val partialPay = composeRule.onNode(hasText("Delvis: 987\u00A0874 kr") and inProjectList)
+        val projectPay = composeRule.onNode(hasText("988\u00A0094 kr") and inProjectList)
         composeRule.waitUntil(5_000) {
             viewModel.state.value.projects.size == projects.size && viewModel.state.value.works.size == works.size
         }
@@ -146,11 +146,11 @@ class SharedCalendarMonthSummaryTest {
 
         filterButton.performClick()
         composeRule.onNode(hasTestTag("project-filter-select-all") and hasText("November 2026")).assertIsDisplayed()
-        partialPay.assertIsDisplayed()
+        projectPay.assertIsDisplayed()
         composeRule.onNode(hasText("Uten sats") and hasText("1 t") and inProjectList).assertIsDisplayed()
         composeRule.onNodeWithText(longProjectName).performClick()
         composeRule.onNodeWithText("2 av 3 valgt").assertIsDisplayed()
-        partialPay.assertIsDisplayed()
+        projectPay.assertIsDisplayed()
         composeRule.onNodeWithTag("project-filter-cancel").performClick()
         composeRule.runOnIdle { assertEquals(setOf(2), viewModel.state.value.selectedCalendarProjectIds) }
 
@@ -161,12 +161,12 @@ class SharedCalendarMonthSummaryTest {
         composeRule.onNodeWithText("2 av 3 valgt").assertIsDisplayed()
         applyButton.performClick()
         composeRule.runOnIdle { assertEquals(setOf(1, 2), viewModel.state.value.selectedCalendarProjectIds) }
-        composeRule.onNodeWithText("988\u00A0054 kr").performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("988\u00A0274 kr").performScrollTo().assertIsDisplayed()
 
         composeRule.runOnIdle { viewModel.updateCalendarMonth(december) }
         filterButton.performClick()
         composeRule.onNode(hasTestTag("project-filter-select-all") and hasText("Desember 2026")).assertIsDisplayed()
-        partialPay.assertDoesNotExist()
+        projectPay.assertDoesNotExist()
         composeRule.onNode(hasText("440 kr") and inProjectList).assertIsDisplayed()
         composeRule.onNodeWithText("Nullstill").performClick()
         composeRule.onNodeWithText("3 av 3 valgt").assertIsDisplayed()
@@ -176,15 +176,15 @@ class SharedCalendarMonthSummaryTest {
     }
 
     @Test
-    fun configuredRateShowsPaymentSummaryForOlderEntriesWithoutEstimatingThem() {
-        val day = LocalDate(2026, 11, 13)
+    fun configuredWeekendRateEstimatesPaymentForOlderEntries() {
+        val day = LocalDate(2026, 11, 14)
         val month = LocalDate(2026, 11, 1)
         val viewModel = TimnorHomeViewModel(EmptyPersistence(), IdleStopwatch(), month)
         val state = TimnorHomeUiState(
             calendarMonth = month,
             selectedCalendarDate = day,
-            projects = listOf(StoredProject("", "Bakeri", 2, hourlyRateOre = 18_000)),
-            works = listOf(work(1, 2, day, 15_000).copy(appliedHourlyRateOre = null)),
+            projects = listOf(StoredProject("", "BrS", 2, hourlyRateOre = 27_500, weekendHourlyRateOre = 30_000)),
+            works = listOf(work(1, 2, day, 5_400).copy(appliedHourlyRateOre = null)),
         )
         composeRule.setContent {
             TimnorTheme(darkTheme = true) {
@@ -199,8 +199,9 @@ class SharedCalendarMonthSummaryTest {
         }
 
         composeRule.onNodeWithText("Beregnet betaling").performScrollTo().assertIsDisplayed()
-        composeRule.onNodeWithText("Ingen registreringer med lagret sats").performScrollTo().assertIsDisplayed()
-        composeRule.onNodeWithText("750 kr").assertDoesNotExist()
+        composeRule.onNode(hasText("450 kr") and hasAnyAncestor(hasTestTag("calendar-month-summary")))
+            .performScrollTo().assertIsDisplayed()
+        composeRule.onNodeWithText("Ingen registreringer med timesats").assertDoesNotExist()
     }
 
     @Test
@@ -233,7 +234,7 @@ class SharedCalendarMonthSummaryTest {
         composeRule.onNodeWithText("750 kr", useUnmergedTree = true).assertIsDisplayed()
         composeRule.onNodeWithText("0 kr", useUnmergedTree = true).assertIsDisplayed()
         composeRule.onNodeWithTag("work-entry-3").assertIsDisplayed()
-        composeRule.onNodeWithText("990 kr", useUnmergedTree = true).assertDoesNotExist()
+        composeRule.onNodeWithText("990 kr", useUnmergedTree = true).assertIsDisplayed()
     }
 
     private fun work(id: Int, project: Int, date: LocalDate, seconds: Int) = StoredWork(

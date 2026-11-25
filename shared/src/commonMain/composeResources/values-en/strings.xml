@@ -135,7 +135,7 @@
     <string name="calendar_month_total_hours">Total hours</string>
     <string name="calendar_month_pay_amount">%1$s NOK</string>
     <string name="calendar_month_pay_estimated">Estimated pay</string>
-    <string name="calendar_month_pay_no_saved_rates">No entries with a saved rate</string>
+    <string name="calendar_month_pay_no_rates">No entries with an hourly rate</string>
     <string name="calendar_month_pay_partial">Partially estimated</string>
     <string name="calendar_month_pay_unrated_time">Time without an hourly rate: %1$s</string>
     <string name="calendar_month_share">Share month</string>
@@ -147,7 +147,8 @@
     <string name="project_edit_title">Edit project</string>
     <string name="project_description_optional">Description (optional)</string>
     <string name="project_save">Save</string>
-    <string name="project_payment_help">Set the hourly rate for tracked time. You can change it later.</string>
+    <string name="project_save_changes">Save changes</string>
+    <string name="project_payment_help">Can be changed later</string>
     <string name="stopwatch_start">Start</string>
     <string name="stopwatch_pause">Pause</string>
     <string name="stopwatch_resume">Resume</string>
@@ -157,5 +158,9 @@
     <string name="stopwatch_paused_status">Timer paused</string>
     <string name="home_header_date">%1$s, %3$s %2$d</string>
     <string name="home_header_week">Week %1$d</string>
-    <string name="project_weekend_rate">Weekend rate (optional)</string>
+    <string name="project_custom_weekend_rate">Custom weekend rate</string>
+    <string name="project_weekend_rate">Weekend rate</string>
+    <string name="project_weekend_rate_days">Optional · Saturday and Sunday</string>
+    <string name="project_weekend_rate_help">Replaces the standard hourly rate on weekends.</string>
+    <string name="project_rate_changes_help">Entries without a saved rate use the project’s current rate.</string>
 </resources>

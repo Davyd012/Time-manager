@@ -13,6 +13,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.style.TextAlign
 import no.timnor.app.shared.domain.project.CalendarMonthPay
 import no.timnor.app.shared.domain.project.formatPayAmount
@@ -22,7 +23,7 @@ import no.timnor.app.shared.generated.resources.calendar_month_pay_amount
 import no.timnor.app.shared.generated.resources.calendar_month_pay_estimated
 import no.timnor.app.shared.generated.resources.calendar_month_pay_partial
 import no.timnor.app.shared.generated.resources.calendar_month_pay_unrated_time
-import no.timnor.app.shared.generated.resources.calendar_month_pay_no_saved_rates
+import no.timnor.app.shared.generated.resources.calendar_month_pay_no_rates
 import no.timnor.app.shared.generated.resources.calendar_month_share
 import no.timnor.app.shared.generated.resources.calendar_month_total_hours
 import no.timnor.app.shared.generated.resources.duration_hours_short
@@ -48,7 +49,7 @@ internal fun CalendarMonthSummary(
     val spacing = MaterialTheme.timnorSpacing
     val labelColor = MaterialTheme.colorScheme.onSurfaceVariant
     val partialPay = pay.unratedSeconds > 0L
-    Column(modifier.fillMaxWidth().padding(spacing.small)) {
+    Column(modifier.fillMaxWidth().padding(spacing.small).testTag("calendar-month-summary")) {
         HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -113,7 +114,7 @@ internal fun CalendarMonthSummary(
         }
         if (pay.amountOre == null && hasConfiguredPay) {
             Text(
-                text = stringResource(Res.string.calendar_month_pay_no_saved_rates),
+                text = stringResource(Res.string.calendar_month_pay_no_rates),
                 modifier = Modifier.fillMaxWidth().padding(top = spacing.extraSmall),
                 style = MaterialTheme.typography.labelMedium,
                 color = labelColor,

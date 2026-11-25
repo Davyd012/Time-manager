@@ -24,7 +24,7 @@ class HourlyPayTest {
     }
 
     @Test
-    fun calendarEstimatesOnlyForOneRatedProjectWithTrackedTime() {
+    fun calendarEstimatesOnlyForOneRatedProjectAndRoundsItsTotalTimeOnce() {
         val paid = StoredProject("", "Paid", 1, hourlyRateOre = 25_001)
         val unpaid = StoredProject("", "Unpaid", 2)
         val works = listOf(
@@ -34,8 +34,8 @@ class HourlyPayTest {
         )
         val projects = listOf(paid, unpaid)
 
-        assertEquals(12_500L, calendarHourlyPayOre(projects, setOf(1), works))
-        assertEquals(12_500L, calendarHourlyPayOre(listOf(paid), null, works))
+        assertEquals(12_501L, calendarHourlyPayOre(projects, setOf(1), works))
+        assertEquals(12_501L, calendarHourlyPayOre(listOf(paid), null, works))
         assertNull(calendarHourlyPayOre(projects, null, works))
         assertNull(calendarHourlyPayOre(projects, setOf(1, 2), works))
         assertNull(calendarHourlyPayOre(projects, setOf(2), works))
@@ -60,9 +60,10 @@ class HourlyPayTest {
             StoredWork("", 0, 0, 0, 900, 5),
         )
 
-        fun payFor(filter: Set<Int>?) = calendarMonthPay(calendarVisibleWorks(works, projects, filter))
+        val projectsById = projects.associateBy(StoredProject::id)
+        fun payFor(filter: Set<Int>?) = calendarMonthPay(calendarVisibleWorks(works, projects, filter), projectsById)
 
-        assertEquals(CalendarMonthPay(361_000L, 0L), calendarMonthPay(ratedWorks))
+        assertEquals(CalendarMonthPay(361_000L, 0L), calendarMonthPay(ratedWorks, projectsById))
         assertEquals(CalendarMonthPay(361_000L, 4_500L), payFor(null))
         assertEquals(CalendarMonthPay(361_000L, 0L), payFor(setOf(1, 2)))
         assertEquals(CalendarMonthPay(75_000L, 3_600L), payFor(setOf(2, 3)))
@@ -83,10 +84,31 @@ class HourlyPayTest {
     @Test
     fun workPayDistinguishesZeroFromAnUnknownHistoricalRate() {
         val oldWork = StoredWork("", 0, 1, 0, 3600, 1)
-        assertNull(workPayOre(oldWork))
+        assertNull(workPayOre(oldWork, null))
         val zeroRateWork = oldWork.copy(appliedHourlyRateOre = 0)
-        assertEquals(0L, workPayOre(zeroRateWork))
-        assertEquals(CalendarMonthPay(0L, 3600L), calendarMonthPay(listOf(oldWork, zeroRateWork)))
+        assertEquals(0L, workPayOre(zeroRateWork, null))
+        assertEquals(CalendarMonthPay(0L, 3600L), calendarMonthPay(listOf(oldWork, zeroRateWork), emptyMap()))
+    }
+
+    @Test
+    fun olderEntriesUseTheLinkedProjectRateForTheirWorkDate() {
+        val project = StoredProject("", "BrS", 1, hourlyRateOre = 27_500, weekendHourlyRateOre = 30_000)
+        val friday = StoredWork("", LocalDate(2026, 11, 13).toEpochDays() * 86_400L, 1, 0, 5_400, 1)
+        val saturday = friday.copy(dateEpochSeconds = friday.dateEpochSeconds + 86_400L, id = 2)
+        val sunday = saturday.copy(dateEpochSeconds = saturday.dateEpochSeconds + 86_400L, id = 3)
+        val savedZero = sunday.copy(id = 4, appliedHourlyRateOre = 0)
+        val unlinked = friday.copy(id = 5, project = 2)
+
+        assertEquals(41_250L, workPayOre(friday, project))
+        assertEquals(45_000L, workPayOre(saturday, project))
+        assertEquals(45_000L, workPayOre(sunday, project))
+        assertEquals(41_250L, workPayOre(saturday, project.copy(weekendHourlyRateOre = null)))
+        assertEquals(0L, workPayOre(saturday, project.copy(weekendHourlyRateOre = 0)))
+        assertEquals(0L, workPayOre(savedZero, project))
+        assertEquals(
+            CalendarMonthPay(131_250L, 5_400L),
+            calendarMonthPay(listOf(friday, saturday, sunday, savedZero, unlinked), mapOf(1 to project)),
+        )
     }
 
     @Test

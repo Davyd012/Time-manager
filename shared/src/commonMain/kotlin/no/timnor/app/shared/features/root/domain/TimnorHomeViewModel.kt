@@ -3,13 +3,13 @@ package no.timnor.app.shared.features.root.domain
 import no.timnor.app.shared.domain.project.formatPayAmount
 import no.timnor.app.shared.domain.project.hourlyRateFor
 import no.timnor.app.shared.domain.project.parseHourlyRateOre
+import no.timnor.app.shared.domain.project.withPayByWorkDate
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.update
@@ -55,7 +55,7 @@ data class TimnorHomeUiState(
     val projectName: String = "",
     val projectDescription: String = "",
     val projectHourlyRate: String? = null,
-    val projectWeekendRate: String = "",
+    val projectWeekendRate: String? = null,
     val editingProjectId: Int? = null,
     val workDate: String = currentLocalDate().toString(),
     val workStartTime: String = "00:00",
@@ -96,6 +96,8 @@ class TimnorHomeViewModel(
     private val loadLinkedPlannorTasks: suspend (Int) -> List<PlannorTaskOption> = { emptyList() },
     private val onSharedWorkChanged: () -> Unit = {},
     private val calendarProjectFilterStore: CalendarProjectFilterStore? = null,
+    private val clock: Clock = Clock.System,
+    private val stopwatchTimeZone: () -> TimeZone = { TimeZone.currentSystemDefault() },
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(
         TimnorHomeUiState(
@@ -184,7 +186,7 @@ class TimnorHomeViewModel(
             return
         }
         val hourlyRateOre = form.projectHourlyRate?.let(::parseHourlyRateOre)
-        val weekendRate = form.projectWeekendRate.takeIf { form.projectHourlyRate != null && it.isNotBlank() }
+        val weekendRate = form.projectWeekendRate.takeIf { form.projectHourlyRate != null }
         val weekendHourlyRateOre = weekendRate?.let(::parseHourlyRateOre)
         if ((form.projectHourlyRate != null && hourlyRateOre == null) ||
             (weekendRate != null && weekendHourlyRateOre == null)
@@ -200,14 +202,11 @@ class TimnorHomeViewModel(
             description = form.projectDescription.trim(),
             id = form.editingProjectId ?: 0,
         )
-        val existingIds = form.projects.mapTo(mutableSetOf(), StoredProject::id)
         performStorageAction(onResult) {
-            persistence.upsertProject(project)
             if (selection != null && form.editingProjectId == null) {
-                persistence.observeProjects().first()
-                    .filterNot { it.id in existingIds }
-                    .maxByOrNull(StoredProject::id)
-                    ?.let { created -> selection(created.id) }
+                selection(persistence.createProject(project).id)
+            } else {
+                persistence.upsertProject(project)
             }
             cancelProjectEdit()
         }
@@ -223,11 +222,11 @@ class TimnorHomeViewModel(
 
     fun updateProjectHourlyRate(rate: String?) {
         mutableState.update {
-            it.copy(projectHourlyRate = rate, projectWeekendRate = if (rate == null) "" else it.projectWeekendRate, error = null)
+            it.copy(projectHourlyRate = rate, projectWeekendRate = it.projectWeekendRate.takeIf { rate != null }, error = null)
         }
     }
 
-    fun updateProjectWeekendRate(rate: String) {
+    fun updateProjectWeekendRate(rate: String?) {
         mutableState.update { it.copy(projectWeekendRate = rate, error = null) }
     }
 
@@ -237,7 +236,7 @@ class TimnorHomeViewModel(
                 projectName = project.name,
                 projectDescription = project.description,
                 projectHourlyRate = project.hourlyRateOre?.let { formatPayAmount(it.toLong(), ".") },
-                projectWeekendRate = project.weekendHourlyRateOre?.let { formatPayAmount(it.toLong(), ".") }.orEmpty(),
+                projectWeekendRate = project.weekendHourlyRateOre?.let { formatPayAmount(it.toLong(), ".") },
                 editingProjectId = project.id,
                 error = null,
             )
@@ -250,9 +249,11 @@ class TimnorHomeViewModel(
                 projectName = "",
                 projectDescription = "",
                 projectHourlyRate = null,
-                projectWeekendRate = "",
+                projectWeekendRate = null,
                 editingProjectId = null,
-                error = it.error.takeUnless { error -> error == TimnorHomeError.INVALID_HOURLY_RATE },
+                error = it.error.takeUnless { error ->
+                    error == TimnorHomeError.INVALID_PROJECT || error == TimnorHomeError.INVALID_HOURLY_RATE
+                },
             )
         }
     }
@@ -443,12 +444,7 @@ class TimnorHomeViewModel(
                 id = workId ?: entry.id,
                 time = time.toInt(),
                 task = taskId ?: 0,
-                appliedHourlyRateOre = if (workId == null) {
-                    mutableState.value.projects.firstOrNull { it.id == entry.project }
-                        ?.hourlyRateFor(utcLocalDateTimeFromEpochSeconds(entry.dateEpochSeconds).date)
-                } else {
-                    existing?.takeIf { it.project == entry.project }?.appliedHourlyRateOre
-                },
+                appliedHourlyRateOre = existing?.takeIf { it.project == entry.project }?.appliedHourlyRateOre,
             )
         }
         if (work == null) {
@@ -456,8 +452,10 @@ class TimnorHomeViewModel(
             onResult(false)
             return
         }
+        val project = mutableState.value.projects.firstOrNull { it.id == work.project }
         performStorageAction(onResult) {
-            persistence.upsertWork(work)
+            if (workId == null) persistNewWork(work.withPayByWorkDate(project))
+            else persistence.upsertWork(work)
             mutableState.update {
                 it.copy(
                     workStartTime = "00:00",
@@ -594,20 +592,19 @@ class TimnorHomeViewModel(
             try {
                 stopwatch.withPausedTimerForSave { timer ->
                     if (timer.elapsedSeconds <= 0) return@withPausedTimerForSave
-                    val localStart = Instant.fromEpochSeconds(Clock.System.now().epochSeconds - timer.elapsedSeconds)
-                        .toLocalDateTime(TimeZone.currentSystemDefault())
-                    persistence.upsertWork(
-                        StoredWork(
-                            id = 0,
-                            description = "",
-                            dateEpochSeconds = utcEpochSecondsFromLocalDateTime(localStart),
-                            project = timer.selectedProject,
-                            task = task,
-                            time = timer.elapsedSeconds,
-                            appliedHourlyRateOre = mutableState.value.projects
-                                .firstOrNull { it.id == timer.selectedProject }?.hourlyRateFor(localStart.date),
-                        ),
+                    val end = timer.pausedAtEpochSeconds ?: clock.now().epochSeconds
+                    val start = Instant.fromEpochSeconds(end - timer.elapsedSeconds)
+                    val zone = stopwatchTimeZone()
+                    val project = mutableState.value.projects.firstOrNull { it.id == timer.selectedProject }
+                    val work = StoredWork(
+                        id = 0,
+                        description = "",
+                        dateEpochSeconds = utcEpochSecondsFromLocalDateTime(start.toLocalDateTime(zone)),
+                        project = timer.selectedProject,
+                        task = task,
+                        time = timer.elapsedSeconds,
                     )
+                    persistNewWork(work.withPayByWorkDate(project, start, zone))
                     stopwatch.timerSaved()
                     onSharedWorkChanged()
                     mutableState.update { it.copy(error = null) }
@@ -624,6 +621,11 @@ class TimnorHomeViewModel(
 
     fun clearError() {
         mutableState.update { it.copy(error = null) }
+    }
+
+    private suspend fun persistNewWork(works: List<StoredWork>) {
+        if (works.size == 1) persistence.upsertWork(works.single())
+        else persistence.upsertWorks(works)
     }
 
     private fun performStorageAction(onResult: ((Boolean) -> Unit)? = null, action: suspend () -> Unit) {

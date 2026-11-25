@@ -7,6 +7,7 @@ data class StopwatchSnapshot(
     val elapsedSeconds: Int = 0,
     val isRunning: Boolean = false,
     val selectedProject: Int = 1,
+    val pausedAtEpochSeconds: Long? = null,
 )
 
 /**
