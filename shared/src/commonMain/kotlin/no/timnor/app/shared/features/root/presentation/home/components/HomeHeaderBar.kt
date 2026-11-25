@@ -1,5 +1,6 @@
 package no.timnor.app.shared.features.root.presentation.home.components
 
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -27,7 +28,11 @@ import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.plus
+import no.timnor.app.shared.generated.resources.home_header_date
+import no.timnor.app.shared.generated.resources.home_header_week
 import no.timnor.app.shared.generated.resources.Res
 import no.timnor.app.shared.generated.resources.export_spreadsheet
 import no.timnor.app.shared.generated.resources.icon_add
@@ -85,19 +90,32 @@ internal fun HomeHeaderBar(
             .then(if (expansionProgress >= 0.98f) Modifier.clearAndSetSemantics {} else Modifier),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(
-            text = weekday,
+        Column(
             modifier = Modifier.weight(1f)
                 .padding(start = MaterialTheme.timnorSpacing.extraSmall)
                 .testTag("home-header")
                 .clickable(onClick = onToggleCalendar)
                 .semantics { role = Role.Button },
-            style = MaterialTheme.typography.headlineSmall,
-            fontWeight = FontWeight.Medium,
-            color = MaterialTheme.colorScheme.onSurface,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-        )
+        ) {
+            Text(
+                text = stringResource(
+                    Res.string.home_header_date,
+                    weekday,
+                    selectedDate.day,
+                    monthName(selectedDate.month),
+                ),
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Medium,
+                color = MaterialTheme.colorScheme.onSurface,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                text = stringResource(Res.string.home_header_week, isoWeekNumber(selectedDate)),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
         IconButton(onClick = onSettings) {
             Icon(
                 painter = painterResource(Res.drawable.icon_settings),
@@ -142,3 +160,9 @@ internal fun calendarExpansionTarget(
 }
 
 internal fun isHomeWeekRowInteractive(expansionProgress: Float): Boolean = expansionProgress < 0.5f
+
+internal fun isoWeekNumber(date: LocalDate): Int {
+    // The Thursday of an ISO week determines its week-year.
+    val thursday = date.plus(3 - date.dayOfWeek.ordinal, DateTimeUnit.DAY)
+    return (thursday.dayOfYear - 1) / 7 + 1
+}

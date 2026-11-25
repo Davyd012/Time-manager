@@ -1,6 +1,7 @@
 package no.timnor.app.shared.features.root.presentation.home.components
 
 import no.timnor.app.shared.domain.calendar.calendarVisibleWorks
+import no.timnor.app.shared.domain.calendar.worksInCalendarMonth
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.EnterTransition
@@ -107,10 +108,7 @@ internal fun CalendarMonthContent(
     val fontScale = LocalDensity.current.fontScale.coerceAtLeast(1f)
     val expandedActionRowHeight = MaterialTheme.timnorSpacing.extraLarge * 2 * fontScale
     val visibleMonthWorks = remember(works, projects, selectedProjectIds, month) {
-        calendarVisibleWorks(works, projects, selectedProjectIds).filter { work ->
-            val date = utcLocalDateTimeFromEpochSeconds(work.dateEpochSeconds).date
-            date.year == month.year && date.month == month.month
-        }
+        worksInCalendarMonth(calendarVisibleWorks(works, projects, selectedProjectIds), month)
     }
     val byDate = remember(works, projects, selectedProjectIds) {
         calendarVisibleWorks(works, projects, selectedProjectIds)
@@ -123,8 +121,12 @@ internal fun CalendarMonthContent(
             .mapValues { (_, entries) -> entries.sumOf(StoredWork::time) }
     }
     val monthSeconds = remember(visibleMonthWorks) { visibleMonthWorks.sumOf { it.time.toLong() } }
-    val monthPay = remember(projects, visibleMonthWorks) {
-        calendarMonthPay(projects, visibleMonthWorks)
+    val monthPay = remember(visibleMonthWorks) {
+        calendarMonthPay(visibleMonthWorks)
+    }
+    val hasConfiguredPay = projects.any { project ->
+        (selectedProjectIds == null || project.id in selectedProjectIds) &&
+            (project.hourlyRateOre != null || project.weekendHourlyRateOre != null)
     }
     val monthLabel = "${monthName(month.month)} ${month.year}"
     val monthSummary = when (monthShareSummaryKind(monthSeconds)) {
@@ -271,6 +273,7 @@ internal fun CalendarMonthContent(
                     CalendarMonthSummary(
                         totalSeconds = monthSeconds,
                         pay = monthPay,
+                        hasConfiguredPay = hasConfiguredPay,
                         interactive = interactive,
                         onShare = onShareMonth?.let { share -> { share(shareSubject, monthSummary) } },
                         modifier = if (progress >= 0.999f) Modifier else Modifier.layout { measurable, constraints ->
@@ -285,7 +288,7 @@ internal fun CalendarMonthContent(
 }
 
 @Composable
-private fun monthName(month: Month): String = stringResource(
+internal fun monthName(month: Month): String = stringResource(
     when (month) {
         Month.JANUARY -> Res.string.calendar_month_january
         Month.FEBRUARY -> Res.string.calendar_month_february

@@ -157,7 +157,7 @@ internal fun CalendarSection(
             month = month,
             linkedPlannorProjectNames = linkedPlannorProjectNames,
             sharedProjectIndicators = sharedProjectIndicators,
-            selectedProjectIds = selectedProjectIds,
+            appliedProjectIds = selectedProjectIds,
             onApply = onApplyProjectFilter,
             onDismiss = { showFilterSheet = false },
         )

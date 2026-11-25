@@ -57,7 +57,7 @@ fun encodeTimnorBackupV2(
         format = TIMNOR_BACKUP_FORMAT,
         version = TIMNOR_BACKUP_V2_VERSION,
         createdAt = createdAt,
-        projects = projects.map { TimnorBackupProject(it.id, it.description, it.name, it.hourlyRateOre) },
+        projects = projects.map { TimnorBackupProject(it.id, it.description, it.name, it.hourlyRateOre, it.weekendHourlyRateOre) },
         works = works.map { work ->
             TimnorBackupWork(
                 id = work.id,
@@ -66,6 +66,7 @@ fun encodeTimnorBackupV2(
                 project = work.project,
                 task = work.task,
                 time = work.time,
+                appliedHourlyRateOre = work.appliedHourlyRateOre,
             )
         },
         sharedHoursRecords = sharedHoursRecords,
@@ -95,7 +96,7 @@ fun decodeTimnorBackup(contents: String): TimnorBackupImport {
 }
 
 fun TimnorBackupImport.toStoredProjects(): List<StoredProject> =
-    projects.map { StoredProject(it.description, it.name, it.id, it.hourlyRateOre) }
+    projects.map { StoredProject(it.description, it.name, it.id, it.hourlyRateOre, it.weekendHourlyRateOre) }
 
 fun TimnorBackupImport.toStoredWorks(): List<StoredWork> = works.map { backupWork ->
     val date = kotlinx.datetime.LocalDateTime.parse(backupWork.date)
@@ -106,6 +107,7 @@ fun TimnorBackupImport.toStoredWorks(): List<StoredWork> = works.map { backupWor
         task = backupWork.task,
         time = backupWork.time,
         id = backupWork.id,
+        appliedHourlyRateOre = backupWork.appliedHourlyRateOre,
     )
 }
 
@@ -113,11 +115,15 @@ fun validateTimnorBackupV2(value: TimnorBackupV2) {
     require(value.format == TIMNOR_BACKUP_FORMAT && value.version == TIMNOR_BACKUP_V2_VERSION)
     require(value.projects.size <= 100_000 && value.works.size <= 100_000)
     require(value.projects.map(TimnorBackupProject::id).toSet().size == value.projects.size)
-    require(value.projects.all { it.hourlyRateOre == null || it.hourlyRateOre in 1..MAX_HOURLY_RATE_ORE })
+    require(value.projects.all { it.hourlyRateOre == null || it.hourlyRateOre in 0..MAX_HOURLY_RATE_ORE })
+    require(value.projects.all { it.weekendHourlyRateOre == null || it.weekendHourlyRateOre in 0..MAX_HOURLY_RATE_ORE })
     require(value.works.map(TimnorBackupWork::id).toSet().size == value.works.size)
     require(value.sharedHoursRecords.size <= MAX_SHARED_HOURS_RECORDS)
     require(value.sharedHoursRecords.map { Triple(it.accountId, it.type, it.key) }.toSet().size == value.sharedHoursRecords.size)
-    value.works.forEach { kotlinx.datetime.LocalDateTime.parse(it.date) }
+    value.works.forEach {
+        kotlinx.datetime.LocalDateTime.parse(it.date)
+        require(it.appliedHourlyRateOre == null || it.appliedHourlyRateOre in 0..MAX_HOURLY_RATE_ORE)
+    }
     kotlin.time.Instant.parse(value.createdAt)
     value.sharedHoursRecords.forEach { record ->
         require(record.accountId > 0 && record.type in BACKUP_SHARED_HOURS_TYPES && record.key.isNotBlank())

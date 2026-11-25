@@ -27,23 +27,28 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalDateTime
 import no.timnor.app.shared.data.persistence.StoredProject
 import no.timnor.app.shared.data.persistence.StoredWork
 import no.timnor.app.core.repository.SharedWorkSyncIndicator
 import no.timnor.app.shared.features.shared_hours.presentation.SharedWorkSyncLabel
+import no.timnor.app.shared.domain.project.workPayOre
 import no.timnor.app.shared.domain.time.utcLocalDateTimeFromEpochSeconds
+import no.timnor.app.shared.features.root.presentation.home.components.workDurationLabel
+import no.timnor.app.shared.features.root.presentation.home.components.workPayLabel
 import no.timnor.app.shared.generated.resources.Res
 import no.timnor.app.shared.generated.resources.unknown_project
 import no.timnor.app.shared.generated.resources.plannor_linked_project_label
 import no.timnor.app.shared.generated.resources.plannor_project_marker_description
 import no.timnor.app.shared.generated.resources.plannor_link_24
+import no.timnor.app.shared.generated.resources.work_entry_time_range
 import no.timnor.app.shared.platform.locale.localizedDecimalSeparator
 import no.timnor.app.shared.ui.theme.timnorSpacing
 import org.jetbrains.compose.resources.painterResource
-import org.jetbrains.compose.resources.stringResource
 import org.jetbrains.compose.resources.stringResource
 
 @Composable
@@ -54,6 +59,7 @@ internal fun MonthViewTimeline(
     shape: Shape? = null,
     showDuration: Boolean = true,
     showProjectMarker: Boolean = false,
+    showEntryDetails: Boolean = false,
     linkedPlannorProjectNames: Map<Int, String> = emptyMap(),
     sharedWorkIndicators: Map<Int, SharedWorkSyncIndicator> = emptyMap(),
     nestedScrollConnection: NestedScrollConnection? = null,
@@ -90,6 +96,7 @@ internal fun MonthViewTimeline(
                         linkedPlannorProjectName = { work -> linkedPlannorProjectNames[work.project] },
                         showDuration = showDuration,
                         showProjectMarker = showProjectMarker,
+                        showEntryDetails = showEntryDetails,
                         sharedWorkIndicators = sharedWorkIndicators,
                         onSelectWork = onSelectWork,
                     )
@@ -117,6 +124,7 @@ private fun MonthViewTimelineGroup(
     linkedPlannorProjectName: (StoredWork) -> String?,
     showDuration: Boolean,
     showProjectMarker: Boolean,
+    showEntryDetails: Boolean,
     sharedWorkIndicators: Map<Int, SharedWorkSyncIndicator>,
     onSelectWork: (StoredWork) -> Unit,
 ) {
@@ -200,6 +208,7 @@ private fun MonthViewTimelineGroup(
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis,
                             )
+                            if (showEntryDetails) WorkTimelineTimeRange(work)
                             linkedName?.let { name ->
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
@@ -231,28 +240,66 @@ private fun MonthViewTimelineGroup(
                                 SharedWorkSyncLabel(indicator)
                             }
                         }
-                        workTimelineDurationLabel(work.time, showDuration, localizedDecimalSeparator())?.let { durationLabel ->
-                            Text(
-                                text = durationLabel,
-                                modifier = Modifier
-                                    .padding(
-                                        start = if (showProjectMarker) {
-                                            homeRowSpacing
-                                        } else MaterialTheme.timnorSpacing.small,
-                                        end = if (showProjectMarker) {
-                                            MaterialTheme.timnorSpacing.small + MaterialTheme.timnorSpacing.extraSmall / 2
-                                        } else MaterialTheme.timnorSpacing.small,
-                                    )
-                                    .testTag("work-entry-duration-${work.id}"),
-                                style = MaterialTheme.typography.bodyLarge,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
+                        val durationLabel = if (showEntryDetails && showDuration) {
+                            workDurationLabel(work.time.toLong())
+                        } else {
+                            workTimelineDurationLabel(work.time, showDuration, localizedDecimalSeparator())
+                        }
+                        if (durationLabel != null) {
+                            WorkTimelineDuration(
+                                workId = work.id,
+                                durationLabel = durationLabel,
+                                payOre = if (showEntryDetails) workPayOre(work) else null,
+                                modifier = Modifier.padding(
+                                    start = if (showProjectMarker) homeRowSpacing else MaterialTheme.timnorSpacing.small,
+                                    end = if (showProjectMarker) {
+                                        MaterialTheme.timnorSpacing.small + MaterialTheme.timnorSpacing.extraSmall / 2
+                                    } else MaterialTheme.timnorSpacing.small,
+                                ),
                             )
                         }
                     }
                 }
                 if (showProjectMarker) Spacer(Modifier.width(MaterialTheme.timnorSpacing.extraSmall))
             }
+        }
+    }
+}
+
+@Composable
+private fun WorkTimelineTimeRange(work: StoredWork) {
+    val start = utcLocalDateTimeFromEpochSeconds(work.dateEpochSeconds)
+    val end = utcLocalDateTimeFromEpochSeconds(work.dateEpochSeconds + work.time)
+    Text(
+        text = stringResource(Res.string.work_entry_time_range, start.hourAndMinute(), end.hourAndMinute()),
+        style = MaterialTheme.typography.bodySmall,
+    )
+}
+
+private fun LocalDateTime.hourAndMinute(): String =
+    "${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}"
+
+@Composable
+private fun WorkTimelineDuration(
+    workId: Int,
+    durationLabel: String,
+    payOre: Long?,
+    modifier: Modifier = Modifier,
+) {
+    Column(modifier, horizontalAlignment = Alignment.End) {
+        Text(
+            text = durationLabel,
+            modifier = Modifier.testTag("work-entry-duration-$workId"),
+            style = MaterialTheme.typography.bodyLarge,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+        payOre?.let {
+            Text(
+                text = workPayLabel(it),
+                style = MaterialTheme.typography.bodySmall,
+                textAlign = TextAlign.End,
+            )
         }
     }
 }

@@ -43,6 +43,7 @@ internal fun ProjectEditorSheet(
     onProjectNameChange: (String) -> Unit,
     onProjectDescriptionChange: (String) -> Unit,
     onProjectHourlyRateChange: (String?) -> Unit,
+    onProjectWeekendRateChange: (String) -> Unit,
     onSaveProject: ((Boolean) -> Unit) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -85,8 +86,10 @@ internal fun ProjectEditorSheet(
             )
             ProjectHourlyRateField(
                 rate = state.projectHourlyRate,
+                weekendRate = state.projectWeekendRate,
                 isError = state.error == TimnorHomeError.INVALID_HOURLY_RATE,
                 onRateChange = onProjectHourlyRateChange,
+                onWeekendRateChange = onProjectWeekendRateChange,
             )
             state.error?.let { error ->
                 when (error) {

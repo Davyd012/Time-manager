@@ -14,6 +14,7 @@
     <string name="work_end_next_day">Finish time is the next day</string>
     <string name="work_minutes_hint">Minutes</string>
     <string name="backup_cancel">Cancel</string>
+    <string name="cancel">Cancel</string>
     <string name="back_to_home">Back to home</string>
     <string name="spreadsheet_creating">Creating spreadsheet…</string>
     <string name="spreadsheet_success">Spreadsheet saved.</string>
@@ -121,14 +122,25 @@
     <string name="invalid_hourly_rate">Enter a rate from 0.01 to 999,999.99 NOK.</string>
     <string name="pay_decimal_separator">.</string>
     <string name="calendar_estimated_pay">Estimated monthly pay: %1$s NOK</string>
+    <string name="project_filter_title">Filter projects</string>
+    <string name="project_filter_search_hint">Search projects</string>
+    <string name="project_filter_select_all">Select all</string>
+    <string name="project_filter_active">Filter: %1$d of %2$d</string>
+    <string name="project_filter_no_results">No projects match your search</string>
+    <string name="project_filter_selected_count">%1$d of %2$d selected</string>
+    <string name="project_filter_reset">Reset</string>
+    <string name="project_filter_apply">Apply filter</string>
+    <string name="project_filter_partial_pay">Partial: %1$s</string>
     <string name="calendar_month_overview">Monthly overview</string>
     <string name="calendar_month_total_hours">Total hours</string>
     <string name="calendar_month_pay_amount">%1$s NOK</string>
     <string name="calendar_month_pay_estimated">Estimated pay</string>
+    <string name="calendar_month_pay_no_saved_rates">No entries with a saved rate</string>
     <string name="calendar_month_pay_partial">Partially estimated</string>
     <string name="calendar_month_pay_unrated_time">Time without an hourly rate: %1$s</string>
     <string name="calendar_month_share">Share month</string>
     <string name="duration_hours_minutes_short">%1$d h %2$d min</string>
+    <string name="work_entry_time_range">%1$s–%2$s</string>
     <string name="duration_less_than_minute">Under 1 min</string>
     <string name="pay_grouping_separator">,</string>
     <string name="project_editor_title">New project</string>
@@ -143,4 +155,7 @@
     <string name="stopwatch_idle_status">Ready to start</string>
     <string name="stopwatch_running_status">Tracking time</string>
     <string name="stopwatch_paused_status">Timer paused</string>
+    <string name="home_header_date">%1$s, %3$s %2$d</string>
+    <string name="home_header_week">Week %1$d</string>
+    <string name="project_weekend_rate">Weekend rate (optional)</string>
 </resources>

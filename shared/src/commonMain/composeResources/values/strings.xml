@@ -150,11 +150,15 @@
     <string name="close_calendar_action">Lukk kalender</string>
     <string name="calendar_scroll_mode_enable">Aktiver rulling</string>
     <string name="calendar_scroll_mode_disable">Aktiver kalendersveip</string>
-    <string name="project_filter_title">Velg prosjekter</string>
-    <string name="project_filter_search_hint">Søk prosjekter…</string>
+    <string name="project_filter_title">Filtrer prosjekter</string>
+    <string name="project_filter_search_hint">Søk etter prosjekt</string>
     <string name="project_filter_select_all">Velg alle</string>
     <string name="project_filter_active">Filter: %1$d av %2$d</string>
     <string name="project_filter_no_results">Ingen prosjekter samsvarer med søket</string>
+    <string name="project_filter_selected_count">%1$d av %2$d valgt</string>
+    <string name="project_filter_reset">Nullstill</string>
+    <string name="project_filter_apply">Bruk filter</string>
+    <string name="project_filter_partial_pay">Delvis: %1$s</string>
     <string name="project_hours">%1$s t</string>
     <string name="calendar_previous_month">Forrige måned</string>
     <string name="calendar_next_month">Neste måned</string>
@@ -162,9 +166,11 @@
     <string name="calendar_month_total_hours">Totalt antall timer</string>
     <string name="calendar_month_pay_amount">%1$s kr</string>
     <string name="calendar_month_pay_estimated">Beregnet betaling</string>
+    <string name="calendar_month_pay_no_saved_rates">Ingen registreringer med lagret sats</string>
     <string name="calendar_month_pay_partial">Delvis beregnet</string>
     <string name="calendar_month_pay_unrated_time">Tid uten timesats: %1$s</string>
     <string name="duration_hours_minutes_short">%1$d t %2$d min</string>
+    <string name="work_entry_time_range">%1$s–%2$s</string>
     <string name="duration_less_than_minute">Under 1 min</string>
     <string name="pay_grouping_separator">\u00A0</string>
     <string name="calendar_month_share">Del måned</string>
@@ -277,4 +283,7 @@
     <string name="project_edit_title">Rediger prosjekt</string>
     <string name="project_description_optional">Beskrivelse (valgfritt)</string>
     <string name="project_payment_help">Angi timesatsen for registrerte timer. Du kan endre den senere.</string>
+    <string name="home_header_date">%1$s %2$d. %3$s</string>
+    <string name="home_header_week">Uke %1$d</string>
+    <string name="project_weekend_rate">Helgesats (valgfritt)</string>
 </resources>

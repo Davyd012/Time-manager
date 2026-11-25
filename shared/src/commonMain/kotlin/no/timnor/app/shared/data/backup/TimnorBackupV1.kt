@@ -34,6 +34,7 @@ data class TimnorBackupProject(
     val description: String,
     val name: String,
     val hourlyRateOre: Int? = null,
+    val weekendHourlyRateOre: Int? = null,
 )
 
 @Serializable
@@ -44,6 +45,7 @@ data class TimnorBackupWork(
     val project: Int,
     val task: Int,
     val time: Int,
+    val appliedHourlyRateOre: Int? = null,
 )
 
 class UnsupportedTimnorBackupVersionException(val backupVersion: Int) : IllegalArgumentException()
@@ -60,7 +62,7 @@ fun encodeTimnorBackupV1(
         format = TIMNOR_BACKUP_FORMAT,
         version = TIMNOR_BACKUP_VERSION,
         createdAt = createdAt,
-        projects = projects.map { TimnorBackupProject(it.id, it.description, it.name, it.hourlyRateOre) },
+        projects = projects.map { TimnorBackupProject(it.id, it.description, it.name, it.hourlyRateOre, it.weekendHourlyRateOre) },
         works = works.map {
             TimnorBackupWork(
                 id = it.id,
@@ -69,6 +71,7 @@ fun encodeTimnorBackupV1(
                 project = it.project,
                 task = it.task,
                 time = it.time,
+                appliedHourlyRateOre = it.appliedHourlyRateOre,
             )
         },
     )
@@ -93,14 +96,18 @@ fun validateTimnorBackupV1(value: TimnorBackupV1) {
     require(value.format == TIMNOR_BACKUP_FORMAT && value.version == TIMNOR_BACKUP_VERSION)
     require(value.projects.size <= MAX_RECORDS_PER_TABLE && value.works.size <= MAX_RECORDS_PER_TABLE)
     require(value.projects.map(TimnorBackupProject::id).toSet().size == value.projects.size)
-    require(value.projects.all { it.hourlyRateOre == null || it.hourlyRateOre in 1..MAX_HOURLY_RATE_ORE })
+    require(value.projects.all { it.hourlyRateOre == null || it.hourlyRateOre in 0..MAX_HOURLY_RATE_ORE })
+    require(value.projects.all { it.weekendHourlyRateOre == null || it.weekendHourlyRateOre in 0..MAX_HOURLY_RATE_ORE })
     require(value.works.map(TimnorBackupWork::id).toSet().size == value.works.size)
-    value.works.forEach { LocalDateTime.parse(it.date) }
+    value.works.forEach {
+        LocalDateTime.parse(it.date)
+        require(it.appliedHourlyRateOre == null || it.appliedHourlyRateOre in 0..MAX_HOURLY_RATE_ORE)
+    }
     Instant.parse(value.createdAt)
 }
 
 fun TimnorBackupV1.toStoredProjects(): List<StoredProject> =
-    projects.map { StoredProject(it.description, it.name, it.id, it.hourlyRateOre) }
+    projects.map { StoredProject(it.description, it.name, it.id, it.hourlyRateOre, it.weekendHourlyRateOre) }
 
 fun TimnorBackupV1.toStoredWorks(): List<StoredWork> = works.map { backupWork ->
     val date = LocalDateTime.parse(backupWork.date)
@@ -111,5 +118,6 @@ fun TimnorBackupV1.toStoredWorks(): List<StoredWork> = works.map { backupWork ->
         task = backupWork.task,
         time = backupWork.time,
         id = backupWork.id,
+        appliedHourlyRateOre = backupWork.appliedHourlyRateOre,
     )
 }

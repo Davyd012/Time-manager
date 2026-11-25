@@ -1,6 +1,7 @@
 package no.timnor.app.shared.features.root.domain
 
 import no.timnor.app.shared.domain.project.formatPayAmount
+import no.timnor.app.shared.domain.project.hourlyRateFor
 import no.timnor.app.shared.domain.project.parseHourlyRateOre
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -54,6 +55,7 @@ data class TimnorHomeUiState(
     val projectName: String = "",
     val projectDescription: String = "",
     val projectHourlyRate: String? = null,
+    val projectWeekendRate: String = "",
     val editingProjectId: Int? = null,
     val workDate: String = currentLocalDate().toString(),
     val workStartTime: String = "00:00",
@@ -182,7 +184,11 @@ class TimnorHomeViewModel(
             return
         }
         val hourlyRateOre = form.projectHourlyRate?.let(::parseHourlyRateOre)
-        if (form.projectHourlyRate != null && hourlyRateOre == null) {
+        val weekendRate = form.projectWeekendRate.takeIf { form.projectHourlyRate != null && it.isNotBlank() }
+        val weekendHourlyRateOre = weekendRate?.let(::parseHourlyRateOre)
+        if ((form.projectHourlyRate != null && hourlyRateOre == null) ||
+            (weekendRate != null && weekendHourlyRateOre == null)
+        ) {
             mutableState.update { it.copy(error = TimnorHomeError.INVALID_HOURLY_RATE) }
             onResult(false)
             return
@@ -190,6 +196,7 @@ class TimnorHomeViewModel(
         val project = StoredProject(
             name = cleanName,
             hourlyRateOre = hourlyRateOre,
+            weekendHourlyRateOre = weekendHourlyRateOre,
             description = form.projectDescription.trim(),
             id = form.editingProjectId ?: 0,
         )
@@ -215,7 +222,13 @@ class TimnorHomeViewModel(
     }
 
     fun updateProjectHourlyRate(rate: String?) {
-        mutableState.update { it.copy(projectHourlyRate = rate, error = null) }
+        mutableState.update {
+            it.copy(projectHourlyRate = rate, projectWeekendRate = if (rate == null) "" else it.projectWeekendRate, error = null)
+        }
+    }
+
+    fun updateProjectWeekendRate(rate: String) {
+        mutableState.update { it.copy(projectWeekendRate = rate, error = null) }
     }
 
     fun editProject(project: StoredProject) {
@@ -224,6 +237,7 @@ class TimnorHomeViewModel(
                 projectName = project.name,
                 projectDescription = project.description,
                 projectHourlyRate = project.hourlyRateOre?.let { formatPayAmount(it.toLong(), ".") },
+                projectWeekendRate = project.weekendHourlyRateOre?.let { formatPayAmount(it.toLong(), ".") }.orEmpty(),
                 editingProjectId = project.id,
                 error = null,
             )
@@ -236,6 +250,7 @@ class TimnorHomeViewModel(
                 projectName = "",
                 projectDescription = "",
                 projectHourlyRate = null,
+                projectWeekendRate = "",
                 editingProjectId = null,
                 error = it.error.takeUnless { error -> error == TimnorHomeError.INVALID_HOURLY_RATE },
             )
@@ -428,6 +443,12 @@ class TimnorHomeViewModel(
                 id = workId ?: entry.id,
                 time = time.toInt(),
                 task = taskId ?: 0,
+                appliedHourlyRateOre = if (workId == null) {
+                    mutableState.value.projects.firstOrNull { it.id == entry.project }
+                        ?.hourlyRateFor(utcLocalDateTimeFromEpochSeconds(entry.dateEpochSeconds).date)
+                } else {
+                    existing?.takeIf { it.project == entry.project }?.appliedHourlyRateOre
+                },
             )
         }
         if (work == null) {
@@ -489,6 +510,7 @@ class TimnorHomeViewModel(
             onResult(false)
             return
         }
+        val project = form.projects.first { it.id == projectId }
         performStorageAction(onResult) {
             persistence.upsertWorks(
                 plannedDays.map { day ->
@@ -501,6 +523,7 @@ class TimnorHomeViewModel(
                         project = projectId,
                         task = 0,
                         time = day.timeSeconds,
+                        appliedHourlyRateOre = project.hourlyRateFor(day.date),
                     )
                 },
             )
@@ -581,6 +604,8 @@ class TimnorHomeViewModel(
                             project = timer.selectedProject,
                             task = task,
                             time = timer.elapsedSeconds,
+                            appliedHourlyRateOre = mutableState.value.projects
+                                .firstOrNull { it.id == timer.selectedProject }?.hourlyRateFor(localStart.date),
                         ),
                     )
                     stopwatch.timerSaved()

@@ -22,6 +22,7 @@ import no.timnor.app.shared.generated.resources.calendar_month_pay_amount
 import no.timnor.app.shared.generated.resources.calendar_month_pay_estimated
 import no.timnor.app.shared.generated.resources.calendar_month_pay_partial
 import no.timnor.app.shared.generated.resources.calendar_month_pay_unrated_time
+import no.timnor.app.shared.generated.resources.calendar_month_pay_no_saved_rates
 import no.timnor.app.shared.generated.resources.calendar_month_share
 import no.timnor.app.shared.generated.resources.calendar_month_total_hours
 import no.timnor.app.shared.generated.resources.duration_hours_short
@@ -39,6 +40,7 @@ import org.jetbrains.compose.resources.stringResource
 internal fun CalendarMonthSummary(
     totalSeconds: Long,
     pay: CalendarMonthPay,
+    hasConfiguredPay: Boolean,
     interactive: Boolean,
     onShare: (() -> Unit)?,
     modifier: Modifier = Modifier,
@@ -72,23 +74,16 @@ internal fun CalendarMonthSummary(
             horizontalArrangement = Arrangement.spacedBy(spacing.small),
         ) {
             Text(
-                text = monthSummaryDuration(totalSeconds),
+                text = workDurationLabel(totalSeconds),
                 modifier = Modifier.weight(1f).alignByBaseline(),
                 style = MaterialTheme.typography.titleMedium,
             )
             pay.amountOre?.let { amountOre ->
                 Text(
-                    text = stringResource(
-                        Res.string.calendar_month_pay_amount,
-                        formatPayAmount(
-                            amountOre,
-                            decimalSeparator = stringResource(Res.string.pay_decimal_separator),
-                            groupingSeparator = stringResource(Res.string.pay_grouping_separator),
-                        ),
-                    ),
+                    text = workPayLabel(amountOre),
                     modifier = Modifier.weight(1f).alignByBaseline(),
                     style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.primary,
+                    color = MaterialTheme.colorScheme.onSurface,
                     textAlign = TextAlign.End,
                 )
             }
@@ -103,10 +98,11 @@ internal fun CalendarMonthSummary(
                 style = MaterialTheme.typography.labelMedium,
                 color = labelColor,
             )
-            if (pay.amountOre != null) {
+            if (pay.amountOre != null || hasConfiguredPay) {
                 Text(
                     text = stringResource(
-                        if (partialPay) Res.string.calendar_month_pay_partial else Res.string.calendar_month_pay_estimated,
+                        if (pay.amountOre != null && partialPay) Res.string.calendar_month_pay_partial
+                        else Res.string.calendar_month_pay_estimated,
                     ),
                     modifier = Modifier.weight(1f),
                     style = MaterialTheme.typography.labelMedium,
@@ -115,11 +111,20 @@ internal fun CalendarMonthSummary(
                 )
             }
         }
+        if (pay.amountOre == null && hasConfiguredPay) {
+            Text(
+                text = stringResource(Res.string.calendar_month_pay_no_saved_rates),
+                modifier = Modifier.fillMaxWidth().padding(top = spacing.extraSmall),
+                style = MaterialTheme.typography.labelMedium,
+                color = labelColor,
+                textAlign = TextAlign.End,
+            )
+        }
         if (pay.amountOre != null && partialPay) {
             Text(
                 text = stringResource(
                     Res.string.calendar_month_pay_unrated_time,
-                    monthSummaryDuration(pay.unratedSeconds),
+                    workDurationLabel(pay.unratedSeconds),
                 ),
                 modifier = Modifier.fillMaxWidth().padding(top = spacing.extraSmall),
                 style = MaterialTheme.typography.labelMedium,
@@ -131,7 +136,7 @@ internal fun CalendarMonthSummary(
 }
 
 @Composable
-private fun monthSummaryDuration(seconds: Long): String {
+internal fun workDurationLabel(seconds: Long): String {
     val totalMinutes = (seconds.coerceAtLeast(0L) + 30L) / 60L
     val hours = totalMinutes / 60L
     val minutes = totalMinutes % 60L
@@ -142,3 +147,13 @@ private fun monthSummaryDuration(seconds: Long): String {
         else -> stringResource(Res.string.duration_hours_minutes_short, hours, minutes)
     }
 }
+
+@Composable
+internal fun workPayLabel(amountOre: Long): String = stringResource(
+    Res.string.calendar_month_pay_amount,
+    formatPayAmount(
+        amountOre,
+        decimalSeparator = stringResource(Res.string.pay_decimal_separator),
+        groupingSeparator = stringResource(Res.string.pay_grouping_separator),
+    ),
+)

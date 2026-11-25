@@ -30,6 +30,8 @@ import no.timnor.app.shared.generated.resources.Res
 import no.timnor.app.shared.generated.resources.invalid_hourly_rate
 import no.timnor.app.shared.generated.resources.project_hourly_rate
 import no.timnor.app.shared.generated.resources.project_hourly_rate_unit
+import no.timnor.app.shared.generated.resources.project_weekend_rate
+import no.timnor.app.shared.domain.project.parseHourlyRateOre
 import no.timnor.app.shared.generated.resources.project_payment_optional
 import no.timnor.app.shared.generated.resources.project_payment_help
 import no.timnor.app.shared.platform.locale.localizedDecimalSeparator
@@ -39,8 +41,10 @@ import org.jetbrains.compose.resources.stringResource
 @Composable
 internal fun ProjectHourlyRateField(
     rate: String?,
+    weekendRate: String,
     isError: Boolean,
     onRateChange: (String?) -> Unit,
+    onWeekendRateChange: (String) -> Unit,
 ) {
     OutlinedCard(
         modifier = Modifier.fillMaxWidth(),
@@ -78,6 +82,8 @@ internal fun ProjectHourlyRateField(
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                val invalidRate = isError && parseHourlyRateOre(rate) == null
+                val invalidWeekendRate = isError && weekendRate.isNotBlank() && parseHourlyRateOre(weekendRate) == null
                 OutlinedTextField(
                     value = input,
                     onValueChange = { updated ->
@@ -93,8 +99,25 @@ internal fun ProjectHourlyRateField(
                     ),
                     keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
                     singleLine = true,
-                    isError = isError,
-                    supportingText = if (isError) {
+                    isError = invalidRate,
+                    supportingText = if (invalidRate) {
+                        { Text(stringResource(Res.string.invalid_hourly_rate)) }
+                    } else null,
+                )
+                OutlinedTextField(
+                    value = weekendRate,
+                    onValueChange = onWeekendRateChange,
+                    modifier = Modifier.fillMaxWidth(),
+                    label = { Text(stringResource(Res.string.project_weekend_rate)) },
+                    suffix = { Text(stringResource(Res.string.project_hourly_rate_unit)) },
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Decimal,
+                        imeAction = ImeAction.Done,
+                    ),
+                    keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
+                    singleLine = true,
+                    isError = invalidWeekendRate,
+                    supportingText = if (invalidWeekendRate) {
                         { Text(stringResource(Res.string.invalid_hourly_rate)) }
                     } else null,
                 )

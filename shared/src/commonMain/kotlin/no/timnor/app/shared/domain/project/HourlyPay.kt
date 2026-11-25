@@ -1,5 +1,7 @@
 package no.timnor.app.shared.domain.project
 
+import kotlinx.datetime.DayOfWeek
+import kotlinx.datetime.LocalDate
 import no.timnor.app.shared.data.persistence.StoredProject
 import no.timnor.app.shared.data.persistence.StoredWork
 
@@ -18,12 +20,12 @@ internal fun parseHourlyRateOre(input: String): Int? {
             }
         }
     }
-    if (!hourlyRatePattern.matches(normalized)) return null
+    if (normalized.none { it.isDigit() } || !hourlyRatePattern.matches(normalized)) return null
     val parts = normalized.split('.')
     val kroner = parts[0].ifEmpty { "0" }.toIntOrNull() ?: return null
     if (kroner > MAX_HOURLY_RATE_ORE / ORE_PER_KRONE) return null
     val ore = parts.getOrNull(1)?.padEnd(2, '0')?.toInt() ?: 0
-    return (kroner * ORE_PER_KRONE + ore).takeIf { it > 0 }
+    return kroner * ORE_PER_KRONE + ore
 }
 
 internal fun formatPayAmount(
@@ -45,26 +47,28 @@ internal fun formatPayAmount(
 internal data class CalendarMonthPay(val amountOre: Long?, val unratedSeconds: Long)
 
 /** Summarizes work already limited to the displayed month and project filter. */
-internal fun calendarMonthPay(
-    projects: List<StoredProject>,
-    visibleMonthWorks: List<StoredWork>,
-): CalendarMonthPay {
-    val ratesByProject = projects.associate { it.id to it.hourlyRateOre }
-    val secondsByProject = visibleMonthWorks.groupingBy(StoredWork::project)
-        .fold(0L) { seconds, work -> seconds + work.time }
+internal fun calendarMonthPay(visibleMonthWorks: List<StoredWork>): CalendarMonthPay {
     var amountOre: Long? = null
     var unratedSeconds = 0L
-    for ((projectId, seconds) in secondsByProject) {
-        if (seconds <= 0) continue
-        val rate = ratesByProject[projectId]
-        if (rate == null) {
-            unratedSeconds += seconds
+    for (work in visibleMonthWorks) {
+        if (work.time <= 0) continue
+        val amount = workPayOre(work)
+        if (amount == null) {
+            unratedSeconds += work.time
         } else {
-            amountOre = (amountOre ?: 0L) + estimateHourlyPayOre(rate, seconds)
+            amountOre = (amountOre ?: 0L) + amount
         }
     }
     return CalendarMonthPay(amountOre, unratedSeconds)
 }
+
+internal fun StoredProject.hourlyRateFor(date: LocalDate): Int? = when (date.dayOfWeek) {
+    DayOfWeek.SATURDAY, DayOfWeek.SUNDAY -> weekendHourlyRateOre ?: hourlyRateOre
+    else -> hourlyRateOre
+}
+
+internal fun workPayOre(work: StoredWork): Long? =
+    work.appliedHourlyRateOre?.takeIf { work.time > 0 }?.let { estimateHourlyPayOre(it, work.time.toLong()) }
 
 internal fun estimateHourlyPayOre(hourlyRateOre: Int, seconds: Long): Long {
     val wholeHours = seconds / SECONDS_PER_HOUR
@@ -84,5 +88,5 @@ internal fun calendarHourlyPayOre(
         val selectedId = selectedProjectIds.singleOrNull() ?: return null
         projects.firstOrNull { it.id == selectedId }
     } ?: return null
-    return calendarMonthPay(listOf(project), monthWorks.filter { it.project == project.id }).amountOre
+    return calendarMonthPay(monthWorks.filter { it.project == project.id }).amountOre
 }

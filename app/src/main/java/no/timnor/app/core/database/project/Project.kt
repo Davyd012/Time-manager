@@ -9,4 +9,5 @@ data class Project(
     val name: String = "",
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val hourlyRateOre: Int? = null,
+    val weekendHourlyRateOre: Int? = null,
 )

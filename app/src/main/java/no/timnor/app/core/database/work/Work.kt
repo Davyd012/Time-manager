@@ -11,5 +11,6 @@ data class Work(
     val project: Int,
     val task: Int = 0,
     val time: Int,
-    @PrimaryKey(autoGenerate = true) val id: Int = 0
+    @PrimaryKey(autoGenerate = true) val id: Int = 0,
+    val appliedHourlyRateOre: Int? = null,
 )

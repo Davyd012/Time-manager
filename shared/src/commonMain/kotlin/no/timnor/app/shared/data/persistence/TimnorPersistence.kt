@@ -13,6 +13,7 @@ data class StoredProject(
     val name: String,
     val id: Int,
     val hourlyRateOre: Int? = null,
+    val weekendHourlyRateOre: Int? = null,
 )
 
 /** Work date is stored as UTC epoch seconds, matching the existing Room converter. */
@@ -24,6 +25,7 @@ data class StoredWork(
     val task: Int,
     val time: Int,
     val id: Int,
+    val appliedHourlyRateOre: Int? = null,
 )
 
 data class TimnorDataSnapshot(

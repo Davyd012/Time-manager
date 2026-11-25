@@ -82,6 +82,7 @@ internal fun HomeDailyWorkList(
                 shape = homeDailyTimelineShape(MaterialTheme.shapes.large),
                 showDuration = true,
                 showProjectMarker = true,
+                showEntryDetails = true,
                 linkedPlannorProjectNames = linkedPlannorProjectNames,
                 sharedWorkIndicators = sharedWorkIndicators,
                 onSelectWork = onEditWork,

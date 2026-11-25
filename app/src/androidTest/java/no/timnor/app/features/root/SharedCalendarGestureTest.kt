@@ -863,7 +863,7 @@ class SharedCalendarGestureTest {
                 TimnorHomeScreen(state = state, viewModel = viewModel, homeReselectionCount = 0, onMonthView = {})
             }
         }
-        composeRule.onNodeWithTag("home-header").assertTextContains("Tirsdag")
+        composeRule.onNodeWithTag("home-header").assertTextContains("Tirsdag 10. november")
         composeRule.onNodeWithTag("calendar-month-day-2026-11-10").assertTextContains("Tir")
     }
 
@@ -895,7 +895,7 @@ class SharedCalendarGestureTest {
         composeRule.onNodeWithTag("home-pull-handle").performClick()
         composeRule.onNodeWithTag("calendar-filter").performClick()
         composeRule.onNodeWithTag("project-filter-select-all").performClick()
-        composeRule.onNodeWithTag("project-filter-back").performClick()
+        composeRule.onNodeWithText("Bruk filter").performClick()
         composeRule.runOnIdle { assertEquals(null, viewModel.state.value.selectedCalendarProjectIds) }
     }
 }

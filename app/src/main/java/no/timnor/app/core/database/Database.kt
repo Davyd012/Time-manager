@@ -12,7 +12,7 @@ import no.timnor.app.core.database.sharedhours.SharedHoursRecordDao
 
 @Database(
     entities = [Work::class, Project::class, SharedHoursRecord::class],
-    version = 3,
+    version = 4,
 )
 @TypeConverters(Converters::class)
 abstract class Database : RoomDatabase() {

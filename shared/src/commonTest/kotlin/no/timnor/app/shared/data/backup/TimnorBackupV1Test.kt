@@ -9,7 +9,7 @@ import no.timnor.app.shared.data.persistence.StoredWork
 class TimnorBackupV1Test {
     @Test
     fun roundTripsVersionOneFieldsAndUtcWorkDate() {
-        val projects = listOf(StoredProject(description = "Client", name = "Project", id = 3))
+        val projects = listOf(StoredProject(description = "Client", name = "Project", id = 3, hourlyRateOre = 18_000, weekendHourlyRateOre = 0))
         val works = listOf(
             StoredWork(
                 description = "Review",
@@ -18,6 +18,7 @@ class TimnorBackupV1Test {
                 task = 0,
                 time = 3_600,
                 id = 9,
+                appliedHourlyRateOre = 0,
             ),
         )
 

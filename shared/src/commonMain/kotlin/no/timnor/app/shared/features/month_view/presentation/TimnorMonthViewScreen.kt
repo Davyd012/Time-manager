@@ -132,6 +132,7 @@ fun TimnorMonthViewScreen(
             onProjectNameChange = viewModel::updateProjectName,
             onProjectDescriptionChange = viewModel::updateProjectDescription,
             onProjectHourlyRateChange = viewModel::updateProjectHourlyRate,
+            onProjectWeekendRateChange = viewModel::updateProjectWeekendRate,
             onSaveProject = viewModel::saveProjectForWork,
             onCancelProject = viewModel::cancelProjectEdit,
             onSelectPlannorTask = viewModel::selectPlannorTask,

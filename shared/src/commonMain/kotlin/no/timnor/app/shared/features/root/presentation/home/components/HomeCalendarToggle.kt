@@ -41,7 +41,7 @@ internal fun HomeCalendarToggle(
                     width = MaterialTheme.timnorSpacing.medium * 2 + MaterialTheme.timnorSpacing.extraSmall,
                     height = MaterialTheme.timnorSpacing.small / 2 + MaterialTheme.timnorSpacing.extraSmall / 4,
                 ),
-                color = MaterialTheme.colorScheme.onPrimary.copy(alpha = 0.52f),
+                color = MaterialTheme.colorScheme.outline,
                 shape = MaterialTheme.shapes.extraLarge,
             ) {}
         }

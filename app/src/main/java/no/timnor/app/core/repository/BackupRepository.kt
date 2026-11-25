@@ -68,7 +68,7 @@ class RoomBackupRepository(
             database.withTransaction {
                 encodeTimnorBackupV1(
                     projects = database.projectDao().getAll().map {
-                        StoredProject(it.description, it.name, it.id, it.hourlyRateOre)
+                        StoredProject(it.description, it.name, it.id, it.hourlyRateOre, it.weekendHourlyRateOre)
                     },
                     works = database.workDao().getAll().map {
                         StoredWork(
@@ -78,6 +78,7 @@ class RoomBackupRepository(
                             task = it.task,
                             time = it.time,
                             id = it.id,
+                            appliedHourlyRateOre = it.appliedHourlyRateOre,
                         )
                     },
                     createdAt = java.time.Instant.now().toString(),
