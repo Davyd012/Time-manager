@@ -158,7 +158,15 @@
     <string name="project_hours">%1$s t</string>
     <string name="calendar_previous_month">Forrige måned</string>
     <string name="calendar_next_month">Neste måned</string>
-    <string name="calendar_month_total">Totalt for måneden: %1$d t %2$d m</string>
+    <string name="calendar_month_overview">Månedsoversikt</string>
+    <string name="calendar_month_total_hours">Totalt antall timer</string>
+    <string name="calendar_month_pay_amount">%1$s kr</string>
+    <string name="calendar_month_pay_estimated">Beregnet betaling</string>
+    <string name="calendar_month_pay_partial">Delvis beregnet</string>
+    <string name="calendar_month_pay_unrated_time">Tid uten timesats: %1$s</string>
+    <string name="duration_hours_minutes_short">%1$d t %2$d min</string>
+    <string name="duration_less_than_minute">Under 1 min</string>
+    <string name="pay_grouping_separator">\u00A0</string>
     <string name="calendar_month_share">Del måned</string>
     <string name="share_chooser_title">Del</string>
     <string name="summary_no_hours">Ingen timer registrert i %1$s.&#10;Ny måned, nye muligheter.</string>

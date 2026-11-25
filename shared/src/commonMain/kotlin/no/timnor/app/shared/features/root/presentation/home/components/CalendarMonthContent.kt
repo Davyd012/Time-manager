@@ -1,7 +1,6 @@
 package no.timnor.app.shared.features.root.presentation.home.components
 
 import no.timnor.app.shared.domain.calendar.calendarVisibleWorks
-import no.timnor.app.shared.features.calendar.presentation.components.CalendarPayLabel
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.EnterTransition
@@ -24,7 +23,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.MaterialTheme
@@ -37,13 +35,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import kotlin.math.roundToInt
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.Month
@@ -51,7 +50,7 @@ import kotlinx.datetime.minus
 import kotlinx.datetime.plus
 import no.timnor.app.shared.data.persistence.StoredProject
 import no.timnor.app.shared.data.persistence.StoredWork
-import no.timnor.app.shared.domain.project.calendarHourlyPayOre
+import no.timnor.app.shared.domain.project.calendarMonthPay
 import no.timnor.app.shared.domain.time.utcLocalDateTimeFromEpochSeconds
 import no.timnor.app.shared.features.calendar.presentation.components.MonthShareSummaryKind
 import no.timnor.app.shared.features.calendar.presentation.components.formatMonthShareHours
@@ -71,11 +70,8 @@ import no.timnor.app.shared.generated.resources.calendar_month_may
 import no.timnor.app.shared.generated.resources.calendar_month_november
 import no.timnor.app.shared.generated.resources.calendar_month_october
 import no.timnor.app.shared.generated.resources.calendar_month_september
-import no.timnor.app.shared.generated.resources.calendar_month_share
-import no.timnor.app.shared.generated.resources.calendar_month_total
 import no.timnor.app.shared.generated.resources.calendar_next_month
 import no.timnor.app.shared.generated.resources.calendar_previous_month
-import no.timnor.app.shared.generated.resources.share
 import no.timnor.app.shared.generated.resources.share_chooser_title
 import no.timnor.app.shared.generated.resources.summary_no_hours
 import no.timnor.app.shared.generated.resources.summary_quiet_month
@@ -127,13 +123,9 @@ internal fun CalendarMonthContent(
             .mapValues { (_, entries) -> entries.sumOf(StoredWork::time) }
     }
     val monthSeconds = remember(visibleMonthWorks) { visibleMonthWorks.sumOf { it.time.toLong() } }
-    val monthPayOre = remember(projects, selectedProjectIds, visibleMonthWorks) {
-        calendarHourlyPayOre(projects, selectedProjectIds, visibleMonthWorks)
+    val monthPay = remember(projects, visibleMonthWorks) {
+        calendarMonthPay(projects, visibleMonthWorks)
     }
-    val payLineHeight = if (monthPayOre == null) 0.dp else MaterialTheme.timnorSpacing.large
-    val monthTotalRowHeight = expandedActionRowHeight +
-        (MaterialTheme.timnorSpacing.medium * 2 + payLineHeight) * fontScale
-    val monthTotalMinutes = (monthSeconds + 30) / 60
     val monthLabel = "${monthName(month.month)} ${month.year}"
     val monthSummary = when (monthShareSummaryKind(monthSeconds)) {
         MonthShareSummaryKind.NoHours -> stringResource(Res.string.summary_no_hours, monthLabel)
@@ -159,7 +151,6 @@ internal fun CalendarMonthContent(
     val shareSubject = stringResource(Res.string.share_chooser_title)
     val previousMonthLabel = stringResource(Res.string.calendar_previous_month)
     val nextMonthLabel = stringResource(Res.string.calendar_next_month)
-    val shareMonthLabel = stringResource(Res.string.calendar_month_share)
     val swipeThreshold = with(LocalDensity.current) { (MaterialTheme.timnorSpacing.extraLarge * 2).toPx() }
     fun requestMonthChange(target: LocalDate) {
         if (interactive && target != currentMonth) {
@@ -276,47 +267,17 @@ internal fun CalendarMonthContent(
                         onSelectDate = onSelectDate,
                     )
                 }
-                Box(
-                    modifier = Modifier.fillMaxWidth()
-                        .height(monthTotalRowHeight * progress)
-                        .clipToBounds()
-                        .alpha(if (progress >= 0.999f) 1f else 0f),
-                    contentAlignment = Alignment.Center,
-                ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = MaterialTheme.timnorSpacing.medium),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(MaterialTheme.timnorSpacing.small),
-                ) {
-                    HorizontalDivider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outlineVariant)
-                    Surface(
-                        modifier = if (monthPayOre == null) Modifier else Modifier.weight(6f, fill = false),
-                        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-                        contentColor = MaterialTheme.colorScheme.onSurface,
-                        shape = MaterialTheme.shapes.extraLarge,
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(MaterialTheme.timnorSpacing.medium),
-                            horizontalAlignment = Alignment.CenterHorizontally,
-                        ) {
-                            Text(
-                                stringResource(Res.string.calendar_month_total, monthTotalMinutes / 60, monthTotalMinutes % 60),
-                                style = MaterialTheme.typography.labelLarge,
-                            )
-                            CalendarPayLabel(monthPayOre)
-                        }
-                    }
-                    onShareMonth?.let { share ->
-                        IconButton(
-                            onClick = { share(shareSubject, monthSummary) },
-                            modifier = Modifier.semantics { contentDescription = shareMonthLabel },
-                            enabled = interactive,
-                        ) {
-                            Icon(painterResource(Res.drawable.share), contentDescription = null)
-                        }
-                    }
-                    HorizontalDivider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outlineVariant)
-                }
+                if (progress > 0f) {
+                    CalendarMonthSummary(
+                        totalSeconds = monthSeconds,
+                        pay = monthPay,
+                        interactive = interactive,
+                        onShare = onShareMonth?.let { share -> { share(shareSubject, monthSummary) } },
+                        modifier = if (progress >= 0.999f) Modifier else Modifier.layout { measurable, constraints ->
+                            val summary = measurable.measure(constraints)
+                            layout(summary.width, (summary.height * progress).roundToInt()) {}
+                        },
+                    )
                 }
             }
         }

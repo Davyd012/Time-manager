@@ -8,6 +8,14 @@ import kotlinx.datetime.LocalDate
 
 class MonthGridLayoutTest {
     @Test
+    fun mondayStartingNonLeapFebruaryFitsFourWeeks() {
+        assertEquals(
+            MonthGridLayout(leadingEmptyDays = 0, daysInMonth = 28, trailingEmptyDays = 0),
+            monthGridLayout(year = 2021, month = 2),
+        )
+    }
+
+    @Test
     fun leapFebruaryHasTwentyNineDaysAndMondayFirstOffset() {
         assertEquals(
             MonthGridLayout(leadingEmptyDays = 3, daysInMonth = 29, trailingEmptyDays = 3),

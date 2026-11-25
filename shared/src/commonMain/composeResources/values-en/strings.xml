@@ -121,6 +121,16 @@
     <string name="invalid_hourly_rate">Enter a rate from 0.01 to 999,999.99 NOK.</string>
     <string name="pay_decimal_separator">.</string>
     <string name="calendar_estimated_pay">Estimated monthly pay: %1$s NOK</string>
+    <string name="calendar_month_overview">Monthly overview</string>
+    <string name="calendar_month_total_hours">Total hours</string>
+    <string name="calendar_month_pay_amount">%1$s NOK</string>
+    <string name="calendar_month_pay_estimated">Estimated pay</string>
+    <string name="calendar_month_pay_partial">Partially estimated</string>
+    <string name="calendar_month_pay_unrated_time">Time without an hourly rate: %1$s</string>
+    <string name="calendar_month_share">Share month</string>
+    <string name="duration_hours_minutes_short">%1$d h %2$d min</string>
+    <string name="duration_less_than_minute">Under 1 min</string>
+    <string name="pay_grouping_separator">,</string>
     <string name="project_editor_title">New project</string>
     <string name="project_edit_title">Edit project</string>
     <string name="project_description_optional">Description (optional)</string>

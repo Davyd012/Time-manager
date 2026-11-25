@@ -31,6 +31,7 @@ final class TimnorStopwatchNotifications: NSObject, UIApplicationDelegate, UNUse
     }
 
     func setAppActive(_ active: Bool) {
+        logger.info("App scene active: \(active, privacy: .public)")
         timer.setAppActive(active: active)
         if active {
             refresh(requestPermission: desired?.isRunning == true)
@@ -46,19 +47,40 @@ final class TimnorStopwatchNotifications: NSObject, UIApplicationDelegate, UNUse
 
     nonisolated func userNotificationCenter(
         _ center: UNUserNotificationCenter,
-        didReceive response: UNNotificationResponse
-    ) async {
+        didReceive response: UNNotificationResponse,
+        withCompletionHandler completionHandler: @escaping @Sendable () -> Void
+    ) {
+        let responseLogger = Logger(subsystem: "no.timnor.ios", category: "Stopwatch notifications")
         let request = response.notification.request
         let action = response.actionIdentifier
-        guard request.identifier == StopwatchNotification.identifier,
-              let revision = request.content.userInfo[StopwatchNotification.revisionKey] as? String,
-              action == StopwatchNotification.pause || action == StopwatchNotification.resume else { return }
-        await applyAction(revision: revision, resume: action == StopwatchNotification.resume)
+        guard request.identifier == StopwatchNotification.identifier else {
+            responseLogger.notice("Ignored response for notification \(request.identifier, privacy: .public), action \(action, privacy: .public)")
+            completionHandler()
+            return
+        }
+
+        guard action == StopwatchNotification.pause || action == StopwatchNotification.resume else {
+            responseLogger.info("Received notification response action \(action, privacy: .public); no stopwatch action to apply")
+            completionHandler()
+            return
+        }
+
+        guard let revision = request.content.userInfo[StopwatchNotification.revisionKey] as? String else {
+            responseLogger.error("Stopwatch notification action \(action, privacy: .public) has no revision")
+            completionHandler()
+            return
+        }
+
+        responseLogger.info("Received stopwatch notification action \(action, privacy: .public)")
+        Task { @MainActor [weak self] in
+            self?.applyAction(revision: revision, resume: action == StopwatchNotification.resume)
+            completionHandler()
+        }
     }
 
-    private func applyAction(revision: String, resume: Bool) async {
+    private func applyAction(revision: String, resume: Bool) {
         timer.handleNotificationAction(revision: revision, resume: resume)
-        await refresh().value
+        refresh()
     }
 
     @discardableResult

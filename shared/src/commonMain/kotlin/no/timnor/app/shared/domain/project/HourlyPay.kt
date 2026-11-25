@@ -26,11 +26,44 @@ internal fun parseHourlyRateOre(input: String): Int? {
     return (kroner * ORE_PER_KRONE + ore).takeIf { it > 0 }
 }
 
-internal fun formatPayAmount(ore: Long, decimalSeparator: String): String {
-    val kroner = ore / ORE_PER_KRONE
+internal fun formatPayAmount(
+    ore: Long,
+    decimalSeparator: String,
+    groupingSeparator: String? = null,
+): String {
+    val wholeKroner = (ore / ORE_PER_KRONE).toString()
+    val kroner = if (groupingSeparator == null) {
+        wholeKroner
+    } else {
+        wholeKroner.reversed().chunked(3).asReversed().joinToString(groupingSeparator) { it.reversed() }
+    }
     val fraction = ore % ORE_PER_KRONE
-    return if (fraction == 0L) kroner.toString()
+    return if (fraction == 0L) kroner
     else "$kroner$decimalSeparator${fraction.toString().padStart(2, '0')}"
+}
+
+internal data class CalendarMonthPay(val amountOre: Long?, val unratedSeconds: Long)
+
+/** Summarizes work already limited to the displayed month and project filter. */
+internal fun calendarMonthPay(
+    projects: List<StoredProject>,
+    visibleMonthWorks: List<StoredWork>,
+): CalendarMonthPay {
+    val ratesByProject = projects.associate { it.id to it.hourlyRateOre }
+    val secondsByProject = visibleMonthWorks.groupingBy(StoredWork::project)
+        .fold(0L) { seconds, work -> seconds + work.time }
+    var amountOre: Long? = null
+    var unratedSeconds = 0L
+    for ((projectId, seconds) in secondsByProject) {
+        if (seconds <= 0) continue
+        val rate = ratesByProject[projectId]
+        if (rate == null) {
+            unratedSeconds += seconds
+        } else {
+            amountOre = (amountOre ?: 0L) + estimateHourlyPayOre(rate, seconds)
+        }
+    }
+    return CalendarMonthPay(amountOre, unratedSeconds)
 }
 
 internal fun estimateHourlyPayOre(hourlyRateOre: Int, seconds: Long): Long {
@@ -51,7 +84,5 @@ internal fun calendarHourlyPayOre(
         val selectedId = selectedProjectIds.singleOrNull() ?: return null
         projects.firstOrNull { it.id == selectedId }
     } ?: return null
-    val rate = project.hourlyRateOre ?: return null
-    val seconds = monthWorks.sumOf { if (it.project == project.id) it.time.toLong() else 0L }
-    return if (seconds > 0) estimateHourlyPayOre(rate, seconds) else null
+    return calendarMonthPay(listOf(project), monthWorks.filter { it.project == project.id }).amountOre
 }

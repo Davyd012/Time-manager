@@ -479,7 +479,7 @@ class SharedCalendarGestureTest {
                 }
             }
             if (stage == 1f) {
-                composeRule.onNodeWithText("Totalt for måneden: 0 t 0 m").assertIsDisplayed()
+                composeRule.onNodeWithText("Totalt antall timer").assertIsDisplayed()
             }
             forwardBounds[stage] = dateNodes.single().boundsInRoot
             bottomBarBounds[stage] = composeRule.onNodeWithTag("app-bottom-navigation")
