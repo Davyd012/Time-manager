@@ -35,3 +35,11 @@ fun manualWorkDurationSeconds(hours: Int?, minutes: Int?): Int? {
     val seconds = hours.toLong() * 3600L + minutes.toLong() * 60L
     return seconds.takeIf { it in 1..Int.MAX_VALUE.toLong() }?.toInt()
 }
+
+internal fun durationBetweenWorkTimes(start: String, end: String): Int? {
+    val startTime = runCatching { LocalTime.parse(start) }.getOrNull() ?: return null
+    val endTime = runCatching { LocalTime.parse(end) }.getOrNull() ?: return null
+    val startMinutes = startTime.hour * 60 + startTime.minute
+    val endMinutes = endTime.hour * 60 + endTime.minute
+    return (endMinutes - startMinutes + 24 * 60) % (24 * 60)
+}

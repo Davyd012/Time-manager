@@ -2,10 +2,8 @@ package no.timnor.app.shared.features.root.presentation.home.new_work
 
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDefaults
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
@@ -67,12 +65,6 @@ internal fun WorkEntryDialogs(
             DatePicker(
                 state = pickerState,
                 showModeToggle = true,
-                colors = DatePickerDefaults.colors(
-                    selectedDayContainerColor = MaterialTheme.colorScheme.secondaryContainer,
-                    selectedDayContentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                    todayContentColor = MaterialTheme.colorScheme.secondaryContainer,
-                    todayDateBorderColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                ),
             )
         }
     }

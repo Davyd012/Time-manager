@@ -105,7 +105,7 @@ private fun AccountDetails(session: PlannorSession, state: PlannorConnectionUiSt
             Column {
                 Text(stringResource(R.string.plannor_connection_title), style = MaterialTheme.typography.titleMedium)
                 Text(session.username, style = MaterialTheme.typography.bodyMedium)
-                Text(stringResource(R.string.account_connected), color = MaterialTheme.colorScheme.secondary,
+                Text(stringResource(R.string.account_connected), color = MaterialTheme.colorScheme.onSurfaceVariant,
                     style = MaterialTheme.typography.labelMedium)
             }
         }

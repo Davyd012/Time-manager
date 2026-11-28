@@ -49,8 +49,8 @@ internal fun WorkEntrySheet(
     linkedPlannorProjectNames: Map<Int, String> = emptyMap(),
     onUpdateWorkDate: (String) -> Unit,
     onUpdateWorkStartTime: (String) -> Unit,
-    onUpdateWorkHours: (String) -> Unit,
-    onUpdateWorkMinutes: (String) -> Unit,
+    onUpdateWorkEndTime: (Int, Int) -> Unit,
+    onUpdateWorkDuration: (Int, Int) -> Unit,
     onUpdateWorkDescription: (String) -> Unit,
     onSelectWorkProject: (Int) -> Unit,
     onBeginProject: () -> Unit,
@@ -111,10 +111,8 @@ internal fun WorkEntrySheet(
                 onDateChange = onUpdateWorkDate,
                 startTime = state.workStartTime,
                 onStartTimeChange = onUpdateWorkStartTime,
-                onDurationChange = { hours, minutes ->
-                    onUpdateWorkHours(hours.toString())
-                    onUpdateWorkMinutes(minutes.toString())
-                },
+                endTime = state.workEndTime,
+                onEndTimeChange = onUpdateWorkEndTime,
                 hours = state.workHours,
                 minutes = state.workMinutes,
                 description = state.workDescription,
@@ -158,8 +156,7 @@ internal fun WorkEntrySheet(
                 initialMinutes = state.workMinutes,
                 onDismiss = { showDurationPicker = false },
                 onConfirm = { hours, minutes ->
-                    onUpdateWorkHours(hours.toString())
-                    onUpdateWorkMinutes(minutes.toString())
+                    onUpdateWorkDuration(hours, minutes)
                     showDurationPicker = false
                 },
             )

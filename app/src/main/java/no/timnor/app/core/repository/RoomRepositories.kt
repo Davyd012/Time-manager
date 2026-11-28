@@ -58,6 +58,7 @@ private fun StoredWork.toWork() = Work(
     time = time,
     id = id,
     appliedHourlyRateOre = appliedHourlyRateOre,
+    enteredEndMinute = enteredEndMinute,
 )
 
 private fun Work.toStored() = StoredWork(
@@ -68,6 +69,7 @@ private fun Work.toStored() = StoredWork(
     time = time,
     id = id,
     appliedHourlyRateOre = appliedHourlyRateOre,
+    enteredEndMinute = enteredEndMinute,
 )
 
 private fun StoredProject.toProject() = Project(description, name, id, hourlyRateOre, weekendHourlyRateOre)

@@ -145,6 +145,7 @@ private fun Work.toStored() = StoredWork(
     time = time,
     id = id,
     appliedHourlyRateOre = appliedHourlyRateOre,
+    enteredEndMinute = enteredEndMinute,
 )
 
 private fun StoredProject.toEntity() = Project(description, name, id, hourlyRateOre, weekendHourlyRateOre)
@@ -157,4 +158,5 @@ private fun StoredWork.toEntity() = Work(
     time = time,
     id = id,
     appliedHourlyRateOre = appliedHourlyRateOre,
+    enteredEndMinute = enteredEndMinute,
 )

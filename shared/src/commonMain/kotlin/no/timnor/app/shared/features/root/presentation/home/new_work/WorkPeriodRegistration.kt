@@ -17,7 +17,6 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.DatePickerDialog
-import androidx.compose.material3.DatePickerDefaults
 import androidx.compose.material3.DateRangePicker
 import androidx.compose.material3.DateRangePickerState
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -126,16 +125,10 @@ internal fun WorkPeriodRegistration(
                         text = stringResource(Res.string.work_period_select_range_title),
                         modifier = Modifier.padding(MaterialTheme.timnorSpacing.small),
                         style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onPrimary,
+                        color = MaterialTheme.colorScheme.onSurface,
                     )
                 },
                 showModeToggle = false,
-                colors = DatePickerDefaults.colors(
-                    selectedDayContainerColor = MaterialTheme.colorScheme.secondaryContainer,
-                    selectedDayContentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                    todayContentColor = MaterialTheme.colorScheme.secondaryContainer,
-                    todayDateBorderColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                ),
             )
         }
     }

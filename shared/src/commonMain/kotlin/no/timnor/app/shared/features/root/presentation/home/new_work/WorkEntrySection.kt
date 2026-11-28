@@ -19,6 +19,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalTime
 import kotlinx.datetime.Month
 import no.timnor.app.shared.data.persistence.StoredProject
 import no.timnor.app.shared.features.shared_hours.domain.PlannorTaskOption
@@ -74,7 +75,8 @@ internal fun WorkEntrySection(
     onDateChange: (String) -> Unit,
     startTime: String,
     onStartTimeChange: (String) -> Unit,
-    onDurationChange: (Int, Int) -> Unit,
+    endTime: LocalTime?,
+    onEndTimeChange: (Int, Int) -> Unit,
     hours: String,
     minutes: String,
     description: String,
@@ -124,7 +126,8 @@ internal fun WorkEntrySection(
             onDateChange = onDateChange,
             startTime = startTime,
             onStartTimeChange = onStartTimeChange,
-            onDurationChange = onDurationChange,
+            endTime = endTime,
+            onEndTimeChange = onEndTimeChange,
             hours = hours,
             minutes = minutes,
             periodRegistration = periodRegistration,

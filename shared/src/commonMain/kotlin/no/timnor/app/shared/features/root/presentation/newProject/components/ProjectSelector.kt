@@ -51,7 +51,7 @@ internal fun ProjectSelector(
         projects.forEach { project ->
             val isSelected = project.id == selectedProjectId
             val containerColor = animateColorAsState(
-                targetValue = if (isSelected) colors.primaryContainer else colors.primary,
+                targetValue = if (isSelected) colors.primaryContainer else colors.surface,
                 animationSpec = if (animationsEnabled) tween() else snap(),
                 label = "projectSelectorContainer",
             )
@@ -68,7 +68,7 @@ internal fun ProjectSelector(
                 shape = MaterialTheme.shapes.small,
                 color = containerColor.value,
                 contentColor = contentColor.value,
-                border = if (isSelected) null else BorderStroke(1.dp, colors.outlineVariant),
+                border = BorderStroke(1.dp, colors.outline),
             ) {
                 androidx.compose.foundation.layout.Column(
                     modifier = Modifier

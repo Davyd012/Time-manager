@@ -27,6 +27,7 @@ import kotlin.time.Clock
 import kotlin.time.Instant
 import kotlin.test.Test
 import kotlin.test.assertEquals
+import kotlin.test.assertNull
 import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
@@ -79,6 +80,40 @@ class TimnorHomeViewModelTest {
     }
 
     @Test
+    fun manualWorkReopensWithEnteredEndTimeAndClearsItWhenDurationIsSet() = runTest {
+        Dispatchers.setMain(StandardTestDispatcher(testScheduler))
+        try {
+            val persistence = FakeTimnorPersistence()
+            persistence.upsertProject(StoredProject("", "Project", 1))
+            val viewModel = TimnorHomeViewModel(persistence, FakeStopwatch())
+            runCurrent()
+            viewModel.beginManualWork()
+            viewModel.updateWorkStartTime("16:00")
+            viewModel.updateWorkEndTime(19, 45)
+            viewModel.submitManualWork()
+            runCurrent()
+
+            val saved = persistence.works.value.single()
+            assertEquals(13_500, saved.time)
+            viewModel.editWork(saved)
+            assertEquals("19:45", viewModel.state.value.workEndTime.toString())
+            viewModel.updateWorkStartTime("17:15")
+            assertEquals("2", viewModel.state.value.workHours)
+            assertEquals("30", viewModel.state.value.workMinutes)
+            viewModel.updateWorkDuration(2, 0)
+            viewModel.submitManualWork()
+            runCurrent()
+
+            val edited = persistence.works.value.single()
+            assertEquals(7_200, edited.time)
+            viewModel.editWork(edited)
+            assertNull(viewModel.state.value.workEndTime)
+        } finally {
+            Dispatchers.resetMain()
+        }
+    }
+
+    @Test
     fun manualWorkSplitsFridayNightAndKeepsItsPayAfterRateChanges() = runTest {
         Dispatchers.setMain(StandardTestDispatcher(testScheduler))
         try {
@@ -88,11 +123,17 @@ class TimnorHomeViewModelTest {
             )
             val viewModel = TimnorHomeViewModel(persistence, FakeStopwatch())
             runCurrent()
-            viewModel.addManualWork(1, "2026-11-13", "2", "0", "Shift", "23:00")
+            viewModel.beginManualWork()
+            viewModel.updateWorkDate("2026-11-13")
+            viewModel.updateWorkDescription("Shift")
+            viewModel.updateWorkStartTime("23:00")
+            viewModel.updateWorkEndTime(1, 0)
+            viewModel.submitManualWork()
             runCurrent()
             val original = persistence.works.value
             assertEquals(listOf(18_000, 22_000), original.map { it.appliedHourlyRateOre })
             assertEquals(listOf(3600, 3600), original.map { it.time })
+            assertEquals(listOf(0, 60), original.map { it.enteredEndMinute })
             assertEquals(listOf(18_000L, 22_000L), original.map { workPayOre(it, null) })
             assertEquals(
                 utcEpochSecondsFromLocalDateTime(LocalDateTime.parse("2026-11-14T00:00")),
@@ -558,7 +599,7 @@ class TimnorHomeViewModelTest {
             viewModel.addProject("Research")
             runCurrent()
             viewModel.updateWorkDescription("Keep this draft")
-            viewModel.updateWorkHours("1")
+            viewModel.updateWorkDuration(1, 0)
             persistence.failWorkWrites = true
             var result: Boolean? = null
 
@@ -727,8 +768,7 @@ class TimnorHomeViewModelTest {
             assertEquals("07:00", viewModel.state.value.workStartTime)
             viewModel.updateWorkDate("2024-03-01")
             viewModel.updateWorkStartTime("09:35")
-            viewModel.updateWorkHours("3")
-            viewModel.updateWorkMinutes("0")
+            viewModel.updateWorkDuration(3, 0)
             viewModel.updateWorkDescription("Updated")
             viewModel.submitManualWork()
             runCurrent()
@@ -798,7 +838,7 @@ class TimnorHomeViewModelTest {
             assertEquals(listOf(91), viewModel.state.value.linkedPlannorTasks.map { it.taskId })
 
             viewModel.selectPlannorTask(91)
-            viewModel.updateWorkHours("1")
+            viewModel.updateWorkDuration(1, 0)
             viewModel.submitManualWork()
             runCurrent()
             assertEquals(91, persistence.works.value.single().task)

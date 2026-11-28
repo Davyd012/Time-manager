@@ -29,6 +29,7 @@ import no.timnor.app.shared.domain.time.utcEpochSecondsFromLocalDateTime
 import no.timnor.app.shared.domain.time.utcLocalDateTimeFromEpochSeconds
 import no.timnor.app.shared.domain.work.createManualWork
 import no.timnor.app.shared.domain.work.defaultManualWorkStart
+import no.timnor.app.shared.domain.work.durationBetweenWorkTimes
 import no.timnor.app.shared.domain.work.manualWorkDurationSeconds
 import no.timnor.app.shared.domain.work.plannedWeekdayWork
 import no.timnor.app.shared.domain.calendar.monthGridLayout
@@ -60,6 +61,7 @@ data class TimnorHomeUiState(
     val workDate: String = currentLocalDate().toString(),
     val workStartTime: String = "00:00",
     val workStartTimeManuallySet: Boolean = false,
+    val workEndTime: LocalTime? = null,
     val workHours: String = "0",
     val workMinutes: String = "0",
     val workDescription: String = "",
@@ -291,15 +293,36 @@ class TimnorHomeViewModel(
     }
 
     fun updateWorkStartTime(time: String) {
-        mutableState.update { it.copy(workStartTime = time, workStartTimeManuallySet = true, error = null) }
+        mutableState.update { current ->
+            val duration = current.workEndTime?.let { durationBetweenWorkTimes(time, it.toString()) }
+            current.copy(
+                workStartTime = time,
+                workStartTimeManuallySet = true,
+                workHours = duration?.let { (it / 60).toString() } ?: current.workHours,
+                workMinutes = duration?.let { (it % 60).toString() } ?: current.workMinutes,
+                error = null,
+            )
+        }
     }
 
-    fun updateWorkHours(hours: String) {
-        mutableState.update { it.copy(workHours = hours, error = null) }
+    fun updateWorkEndTime(hour: Int, minute: Int) {
+        val endTime = LocalTime(hour, minute)
+        mutableState.update { current ->
+            val duration = durationBetweenWorkTimes(current.workStartTime, endTime.toString()) ?: return@update current
+            current.copy(
+                workStartTimeManuallySet = true,
+                workEndTime = endTime,
+                workHours = (duration / 60).toString(),
+                workMinutes = (duration % 60).toString(),
+                error = null,
+            )
+        }
     }
 
-    fun updateWorkMinutes(minutes: String) {
-        mutableState.update { it.copy(workMinutes = minutes, error = null) }
+    fun updateWorkDuration(hours: Int, minutes: Int) {
+        mutableState.update {
+            it.copy(workHours = hours.toString(), workMinutes = minutes.toString(), workEndTime = null, error = null)
+        }
     }
 
     fun updateWorkDescription(description: String) {
@@ -314,6 +337,7 @@ class TimnorHomeViewModel(
                 workDate = current.selectedCalendarDate.toString(),
                 workStartTime = "00:00",
                 workStartTimeManuallySet = false,
+                workEndTime = null,
                 workHours = "0",
                 workMinutes = "0",
                 workDescription = "",
@@ -426,6 +450,7 @@ class TimnorHomeViewModel(
         description: String,
         startTime: String = "07:00",
         taskId: Int? = null,
+        endTime: LocalTime? = null,
         onResult: (Boolean) -> Unit = {},
     ) {
         val draft = createManualWork(
@@ -437,12 +462,13 @@ class TimnorHomeViewModel(
             startTime = startTime,
         )
         val existing = workId?.let { id -> mutableState.value.works.firstOrNull { it.id == id } }
-        val secondsRemainder = existing?.time?.rem(60) ?: 0
+        val secondsRemainder = if (endTime == null) existing?.time?.rem(60) ?: 0 else 0
         val work = draft?.let { entry ->
             val time = entry.time.toLong() + secondsRemainder
             if (time > Int.MAX_VALUE) null else entry.copy(
                 id = workId ?: entry.id,
                 time = time.toInt(),
+                enteredEndMinute = endTime?.let { it.hour * 60 + it.minute },
                 task = taskId ?: 0,
                 appliedHourlyRateOre = existing?.takeIf { it.project == entry.project }?.appliedHourlyRateOre,
             )
@@ -460,6 +486,7 @@ class TimnorHomeViewModel(
                 it.copy(
                     workStartTime = "00:00",
                     workStartTimeManuallySet = false,
+                    workEndTime = null,
                     workHours = "0",
                     workMinutes = "0",
                     workDescription = "",
@@ -494,6 +521,7 @@ class TimnorHomeViewModel(
             description = form.workDescription,
             startTime = startTime,
             taskId = form.selectedPlannorTaskId,
+            endTime = form.workEndTime,
             onResult = onResult,
         )
     }
@@ -531,6 +559,9 @@ class TimnorHomeViewModel(
 
     fun editWork(work: StoredWork) {
         val start = utcLocalDateTimeFromEpochSeconds(work.dateEpochSeconds)
+        val endTime = work.enteredEndMinute?.takeIf { it in 0 until 24 * 60 }
+            ?.let { LocalTime(it / 60, it % 60) }
+            ?.takeIf { durationBetweenWorkTimes(start.time.toString(), it.toString()) == work.time / 60 }
         mutableState.update {
             it.copy(
                 workProjectId = work.project,
@@ -538,6 +569,7 @@ class TimnorHomeViewModel(
                 workDate = start.date.toString(),
                 workStartTime = "${start.hour.toString().padStart(2, '0')}:${start.minute.toString().padStart(2, '0')}",
                 workStartTimeManuallySet = true,
+                workEndTime = endTime,
                 workHours = (work.time / 3600).toString(),
                 workMinutes = (work.time % 3600 / 60).toString(),
                 workDescription = work.description,
@@ -557,6 +589,7 @@ class TimnorHomeViewModel(
                 workMinutes = "0",
                 workStartTime = "00:00",
                 workStartTimeManuallySet = false,
+                workEndTime = null,
                 workDescription = "",
                 linkedPlannorTasks = emptyList(),
                 selectedPlannorTaskId = null,

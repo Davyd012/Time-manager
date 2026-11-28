@@ -79,6 +79,7 @@ class RoomBackupRepository(
                             time = it.time,
                             id = it.id,
                             appliedHourlyRateOre = it.appliedHourlyRateOre,
+                            enteredEndMinute = it.enteredEndMinute,
                         )
                     },
                     createdAt = java.time.Instant.now().toString(),

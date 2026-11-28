@@ -49,7 +49,7 @@ class TimnorBackupV2Test {
 
         val encoded = encodeTimnorBackupV2(
             projects = listOf(StoredProject("local", "Workshop", 3, hourlyRateOre = 25_050, weekendHourlyRateOre = 35_000)),
-            works = listOf(StoredWork("private description", 1_794_456_000, 3, 0, 3_600, 12, appliedHourlyRateOre = 18_000)),
+            works = listOf(StoredWork("private description", 1_794_456_000, 3, 0, 3_600, 12, appliedHourlyRateOre = 18_000, enteredEndMinute = 840)),
             sharedHoursRecords = shared,
             createdAt = "2026-11-13T08:00:00Z",
         )
@@ -59,6 +59,7 @@ class TimnorBackupV2Test {
         assertEquals(25_050, decoded.toStoredProjects().single().hourlyRateOre)
         assertEquals(35_000, decoded.toStoredProjects().single().weekendHourlyRateOre)
         assertEquals(18_000, decoded.toStoredWorks().single().appliedHourlyRateOre)
+        assertEquals(840, decoded.toStoredWorks().single().enteredEndMinute)
         assertEquals(shared, decoded.sharedHoursRecords)
         assertEquals("immutable-key", Json.decodeFromString(
             SharedTimeOutboxItem.serializer(), decoded.sharedHoursRecords.last().payloadJson,

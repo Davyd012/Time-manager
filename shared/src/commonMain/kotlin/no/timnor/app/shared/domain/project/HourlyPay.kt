@@ -102,6 +102,7 @@ internal fun StoredWork.withPayByWorkDate(
                 copy(
                     dateEpochSeconds = utcEpochSecondsFromLocalDateTime(localStart),
                     time = seconds,
+                    enteredEndMinute = if (enteredEndMinute != null && remaining > seconds) 0 else enteredEndMinute,
                     appliedHourlyRateOre = project.hourlyRateFor(localStart.date),
                 ),
             )

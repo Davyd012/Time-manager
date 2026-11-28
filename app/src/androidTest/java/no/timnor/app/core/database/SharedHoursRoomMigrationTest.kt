@@ -30,9 +30,12 @@ class SharedHoursRoomMigrationTest {
             close()
         }
 
-        migrationHelper.runMigrationsAndValidate(TEST_DATABASE, 4, true, MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4).use { migrated ->
+        migrationHelper.runMigrationsAndValidate(
+            TEST_DATABASE, 5, true, MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5,
+        ).use { migrated ->
             assertEquals("Local project", migrated.scalarString("SELECT name FROM Project WHERE id = 7"))
             assertEquals("local work", migrated.scalarString("SELECT description FROM Work WHERE id = 11"))
+            assertEquals(1L, migrated.scalarLong("SELECT COUNT(*) FROM Work WHERE id = 11 AND enteredEndMinute IS NULL"))
             assertEquals(1L, migrated.scalarLong("SELECT COUNT(*) FROM Work WHERE id = 11 AND appliedHourlyRateOre IS NULL"))
             assertEquals(0, migrated.scalarLong("SELECT COUNT(*) FROM shared_hours_record"))
             assertEquals(1, migrated.scalarLong("SELECT COUNT(*) FROM Project WHERE id = 7 AND hourlyRateOre IS NULL"))
@@ -74,7 +77,7 @@ class SharedHoursRoomMigrationTest {
 
             RoomPersistenceStore(database).replaceAll(
                 projects = listOf(StoredProject("restored", "Restored project", 3, hourlyRateOre = 25_050, weekendHourlyRateOre = 0)),
-                works = listOf(StoredWork("restored work", 1700000000, 3, 0, 1800, 4, appliedHourlyRateOre = 0)),
+                works = listOf(StoredWork("restored work", 1700000000, 3, 0, 1800, 4, appliedHourlyRateOre = 0, enteredEndMinute = 1363)),
             )
 
             assertEquals(preserved, database.sharedHoursRecordDao().record(42, "personal_time_entry", "entry-9"))
@@ -83,6 +86,7 @@ class SharedHoursRoomMigrationTest {
             assertEquals(0, database.projectDao().getAll().single().weekendHourlyRateOre)
             assertEquals("restored work", database.workDao().getAll().single().description)
             assertEquals(0, database.workDao().getAll().single().appliedHourlyRateOre)
+            assertEquals(1363, RoomPersistenceStore(database).snapshotAll().works.single().enteredEndMinute)
         } finally {
             database.close()
         }

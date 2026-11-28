@@ -26,6 +26,8 @@ data class StoredWork(
     val time: Int,
     val id: Int,
     val appliedHourlyRateOre: Int? = null,
+    /** Minute of day for entries created with the end-time picker. */
+    val enteredEndMinute: Int? = null,
 )
 
 data class TimnorDataSnapshot(

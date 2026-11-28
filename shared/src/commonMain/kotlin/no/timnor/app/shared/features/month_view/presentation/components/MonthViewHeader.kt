@@ -77,8 +77,8 @@ internal fun MonthViewHeader(
 
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = MaterialTheme.colorScheme.primary,
-        contentColor = MaterialTheme.colorScheme.onPrimary,
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        contentColor = MaterialTheme.colorScheme.onSurface,
         shape = MaterialTheme.shapes.large,
     ) {
         Column(
@@ -118,13 +118,13 @@ internal fun MonthViewHeader(
                     )
                     val containerColor by animateColorAsState(
                         targetValue = if (selected) MaterialTheme.colorScheme.primaryContainer
-                        else MaterialTheme.colorScheme.primary,
+                        else MaterialTheme.colorScheme.surfaceContainerHigh,
                         animationSpec = if (animationsEnabled) tween(160) else snap(),
                         label = "monthViewDayCellContainerColor",
                     )
                     val contentColor by animateColorAsState(
                         targetValue = if (selected) MaterialTheme.colorScheme.onPrimaryContainer
-                        else MaterialTheme.colorScheme.onPrimary,
+                        else MaterialTheme.colorScheme.onSurface,
                         animationSpec = if (animationsEnabled) tween(160) else snap(),
                         label = "monthViewDayCellContentColor",
                     )

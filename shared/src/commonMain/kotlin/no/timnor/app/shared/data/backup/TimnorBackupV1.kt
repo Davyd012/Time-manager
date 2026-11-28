@@ -46,6 +46,7 @@ data class TimnorBackupWork(
     val task: Int,
     val time: Int,
     val appliedHourlyRateOre: Int? = null,
+    val enteredEndMinute: Int? = null,
 )
 
 class UnsupportedTimnorBackupVersionException(val backupVersion: Int) : IllegalArgumentException()
@@ -72,6 +73,7 @@ fun encodeTimnorBackupV1(
                 task = it.task,
                 time = it.time,
                 appliedHourlyRateOre = it.appliedHourlyRateOre,
+                enteredEndMinute = it.enteredEndMinute,
             )
         },
     )
@@ -102,6 +104,7 @@ fun validateTimnorBackupV1(value: TimnorBackupV1) {
     value.works.forEach {
         LocalDateTime.parse(it.date)
         require(it.appliedHourlyRateOre == null || it.appliedHourlyRateOre in 0..MAX_HOURLY_RATE_ORE)
+        require(it.enteredEndMinute == null || it.enteredEndMinute in 0 until 24 * 60)
     }
     Instant.parse(value.createdAt)
 }
@@ -119,5 +122,6 @@ fun TimnorBackupV1.toStoredWorks(): List<StoredWork> = works.map { backupWork ->
         time = backupWork.time,
         id = backupWork.id,
         appliedHourlyRateOre = backupWork.appliedHourlyRateOre,
+        enteredEndMinute = backupWork.enteredEndMinute,
     )
 }

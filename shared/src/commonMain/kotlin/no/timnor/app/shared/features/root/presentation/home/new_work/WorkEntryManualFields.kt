@@ -18,11 +18,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
+import kotlinx.datetime.LocalTime
 import no.timnor.app.shared.domain.work.formatWorkDateInput
 import no.timnor.app.shared.generated.resources.Res
 import no.timnor.app.shared.generated.resources.calendar
@@ -45,7 +45,8 @@ internal fun WorkEntryManualFields(
     onDateChange: (String) -> Unit,
     startTime: String,
     onStartTimeChange: (String) -> Unit,
-    onDurationChange: (Int, Int) -> Unit,
+    endTime: LocalTime?,
+    onEndTimeChange: (Int, Int) -> Unit,
     hours: String,
     minutes: String,
     periodRegistration: Boolean,
@@ -55,11 +56,6 @@ internal fun WorkEntryManualFields(
     var showDatePicker by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
     var showEndTimePicker by remember { mutableStateOf(false) }
-    var endTime by rememberSaveable { mutableStateOf<String?>(null) }
-    fun applyDuration(start: String, end: String) {
-        val total = durationBetweenWorkTimes(start, end) ?: return
-        onDurationChange(total / 60, total % 60)
-    }
     val animationsEnabled = rememberSystemAnimationsEnabled()
 
     androidx.compose.animation.AnimatedVisibility(
@@ -76,7 +72,7 @@ internal fun WorkEntryManualFields(
                 value = "${hours.padStart(2, '0')}:${minutes.padStart(2, '0')}",
                 label = stringResource(Res.string.work_hours_hint),
                 icon = Res.drawable.clock_outline,
-                onClick = { endTime = null; onOpenDurationPicker() },
+                onClick = onOpenDurationPicker,
                 modifier = Modifier.testTag("work-duration-picker-field"),
             )
             WorkEntryPickerField(
@@ -89,10 +85,10 @@ internal fun WorkEntryManualFields(
             Row(horizontalArrangement = Arrangement.spacedBy(MaterialTheme.timnorSpacing.small)) {
                 WorkTimeField(startTime, stringResource(Res.string.work_start_time_hint),
                     { showTimePicker = true }, Modifier.weight(1f).testTag("work-start-time-picker-field"))
-                WorkTimeField(endTime ?: "—", stringResource(Res.string.work_end_time_hint),
+                WorkTimeField(endTime?.toString() ?: "—", stringResource(Res.string.work_end_time_hint),
                     { showEndTimePicker = true }, Modifier.weight(1f).testTag("work-end-time-picker-field"))
             }
-            if (endTime != null && endTime!! < startTime) {
+            if (endTime != null && endTime.toString() < startTime) {
                 Text(stringResource(Res.string.work_end_next_day), style = MaterialTheme.typography.bodySmall)
             }
         }
@@ -103,38 +99,24 @@ internal fun WorkEntryManualFields(
         isEditing = isEditing,
         onDateChange = onDateChange,
         startTime = startTime,
-        onStartTimeChange = { start ->
-            onStartTimeChange(start)
-            endTime?.let { applyDuration(start, it) }
-        },
+        onStartTimeChange = onStartTimeChange,
         showDatePicker = showDatePicker,
         onDismissDatePicker = { showDatePicker = false },
         showTimePicker = showTimePicker,
         onDismissTimePicker = { showTimePicker = false },
     )
     if (showEndTimePicker) {
-        val initial = endTime ?: startTime
+        val initial = endTime ?: runCatching { LocalTime.parse(startTime) }.getOrElse { LocalTime(0, 0) }
         WorkTimePickerDialog(
-            initialHour = initial.substringBefore(":").toIntOrNull() ?: 0,
-            initialMinute = initial.substringAfter(":", "0").toIntOrNull() ?: 0,
+            initialHour = initial.hour,
+            initialMinute = initial.minute,
             onDismiss = { showEndTimePicker = false },
             onConfirm = { hour, minute ->
-                val selected = "${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}"
-                endTime = selected
-                onStartTimeChange(startTime)
-                applyDuration(startTime, selected)
+                onEndTimeChange(hour, minute)
                 showEndTimePicker = false
             },
         )
     }
-}
-
-internal fun durationBetweenWorkTimes(start: String, end: String): Int? {
-    val startTime = runCatching { kotlinx.datetime.LocalTime.parse(start) }.getOrNull() ?: return null
-    val endTime = runCatching { kotlinx.datetime.LocalTime.parse(end) }.getOrNull() ?: return null
-    val startMinutes = startTime.hour * 60 + startTime.minute
-    val endMinutes = endTime.hour * 60 + endTime.minute
-    return (endMinutes - startMinutes + 24 * 60) % (24 * 60)
 }
 
 @Composable
@@ -143,7 +125,7 @@ private fun WorkTimeField(value: String, label: String, onClick: () -> Unit, mod
         modifier = modifier.clickable(role = Role.Button, onClick = onClick),
         shape = MaterialTheme.shapes.medium,
         color = MaterialTheme.colorScheme.surfaceContainerLow,
-        border = BorderStroke(androidx.compose.ui.unit.Dp.Hairline, MaterialTheme.colorScheme.outlineVariant),
+        border = BorderStroke(androidx.compose.ui.unit.Dp.Hairline, MaterialTheme.colorScheme.outline),
     ) {
         Column(Modifier.padding(MaterialTheme.timnorSpacing.medium)) {
             Text(label, style = MaterialTheme.typography.bodyMedium)
@@ -164,7 +146,7 @@ private fun WorkEntryPickerField(
         modifier = modifier.fillMaxWidth().clickable(role = Role.Button, onClick = onClick),
         shape = MaterialTheme.shapes.medium,
         color = MaterialTheme.colorScheme.surfaceContainerLow,
-        border = BorderStroke(androidx.compose.ui.unit.Dp.Hairline, MaterialTheme.colorScheme.outlineVariant),
+        border = BorderStroke(androidx.compose.ui.unit.Dp.Hairline, MaterialTheme.colorScheme.outline),
     ) {
         ListItem(
             headlineContent = { Text(label, style = MaterialTheme.typography.bodyMedium) },

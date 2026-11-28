@@ -1,5 +1,6 @@
 package no.timnor.app.shared.features.root.presentation.home.new_work
 
+import no.timnor.app.shared.domain.work.durationBetweenWorkTimes
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertNull

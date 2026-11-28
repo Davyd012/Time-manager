@@ -67,6 +67,7 @@ fun encodeTimnorBackupV2(
                 task = work.task,
                 time = work.time,
                 appliedHourlyRateOre = work.appliedHourlyRateOre,
+                enteredEndMinute = work.enteredEndMinute,
             )
         },
         sharedHoursRecords = sharedHoursRecords,
@@ -108,6 +109,7 @@ fun TimnorBackupImport.toStoredWorks(): List<StoredWork> = works.map { backupWor
         time = backupWork.time,
         id = backupWork.id,
         appliedHourlyRateOre = backupWork.appliedHourlyRateOre,
+        enteredEndMinute = backupWork.enteredEndMinute,
     )
 }
 
@@ -123,6 +125,7 @@ fun validateTimnorBackupV2(value: TimnorBackupV2) {
     value.works.forEach {
         kotlinx.datetime.LocalDateTime.parse(it.date)
         require(it.appliedHourlyRateOre == null || it.appliedHourlyRateOre in 0..MAX_HOURLY_RATE_ORE)
+        require(it.enteredEndMinute == null || it.enteredEndMinute in 0 until 24 * 60)
     }
     kotlin.time.Instant.parse(value.createdAt)
     value.sharedHoursRecords.forEach { record ->

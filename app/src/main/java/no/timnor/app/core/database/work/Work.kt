@@ -13,4 +13,5 @@ data class Work(
     val time: Int,
     @PrimaryKey(autoGenerate = true) val id: Int = 0,
     val appliedHourlyRateOre: Int? = null,
+    val enteredEndMinute: Int? = null,
 )
